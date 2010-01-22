@@ -1,0 +1,4 @@
+void poo(void)
+{
+	return;
+}

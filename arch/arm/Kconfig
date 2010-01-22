@@ -728,6 +728,16 @@ config ARCH_U8500
 	help
 	  Support for ST-Ericsson's Ux500 architecture
 
+config ARCH_TEGRA
+        bool "NVIDIA Tegra"
+        select GENERIC_TIME
+        select GENERIC_CLOCKEVENTS
+        select GENERIC_GPIO
+        select HAVE_CLK
+        help
+          This enables support for NVIDIA Tegra based systems (Tegra APX,
+          Tegra 6xx and Tegra 2 series).
+
 endchoice
 
 source "arch/arm/mach-aaec2000/Kconfig"
@@ -827,6 +837,8 @@ source "arch/arm/plat-stmp3xxx/Kconfig"
 if ARCH_S5PC1XX
 source "arch/arm/mach-s5pc100/Kconfig"
 endif
+
+source "arch/arm/mach-tegra/Kconfig"
 
 source "arch/arm/mach-u300/Kconfig"
 
