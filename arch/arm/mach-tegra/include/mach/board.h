@@ -24,5 +24,5 @@ void __init tegra_map_common_io(void);
 void __init tegra_init_irq(void);
 void __init tegra_init_gpio(void);
 void __init tegra_init_clock(void);
-
+void __init tegra_init_timer(void);
 #endif
