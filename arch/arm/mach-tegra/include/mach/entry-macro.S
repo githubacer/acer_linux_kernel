@@ -32,7 +32,7 @@
 #if defined(CONFIG_ARCH_TEGRA_1x_SOC)
 	ldr	\base, =0xfe604000
 #elif defined(CONFIG_ARCH_TEGRA_2x_SOC)
-	ldr	\base, =0xfe540100
+	ldr	\base, =0xfc040100
 #else
 #error "Invalid Tegra SoC family selection"
 #endif

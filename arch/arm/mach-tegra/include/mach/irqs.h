@@ -17,95 +17,151 @@
 #ifndef __MACH_TEGRA_IRQS_H
 #define __MACH_TEGRA_IRQS_H
 
+#define INT_GIC_BASE			0
+
 /* Primary Interrupt Controller */
-#define INT_TMR1			0
-#define INT_TMR2			1
-#define INT_RTC				2
-#define INT_I2S2			3
-#define INT_SHR_SEM_INBOX_IBF		4
-#define INT_SHR_SEM_INBOX_IBE		5
-#define INT_SHR_SEM_OUTBOX_IBF		6
-#define INT_SHR_SEM_OUTBOX_IBE		7
-#define INT_VDE_UCQ_ERROR		8
-#define INT_VDE_SYNC_TOKEN		9
-#define INT_VDE_BSE_V			10
-#define INT_VDE_BSE_A			11
-#define INT_VDE_SXE			12
-#define INT_I2S1			13
-#define INT_SDIO1			14
-#define INT_SDIO2			15
-#define INT_VDE				17
-#define INT_USB				20
-#define INT_HSMMC			22
-#define INT_EIDE			23
-#define INT_NANDFLASH			24
-#define INT_VCP				25
-#define INT_APB_DMA			26
-#define INT_AHB_DMA			27
-#define INT_GNT_0			28
-#define INT_GNT_1			29
-#define INT_SECONDARY_NIRQ		30
-#define INT_SECONDARY_NFIQ		31
+#define INT_PRI_BASE			(INT_GIC_BASE + 32)
+#define INT_TMR1			(INT_PRI_BASE + 0)
+#define INT_TMR2			(INT_PRI_BASE + 1)
+#define INT_RTC				(INT_PRI_BASE + 2)
+#define INT_I2S2			(INT_PRI_BASE + 3)
+#define INT_SHR_SEM_INBOX_IBF		(INT_PRI_BASE + 4)
+#define INT_SHR_SEM_INBOX_IBE		(INT_PRI_BASE + 5)
+#define INT_SHR_SEM_OUTBOX_IBF		(INT_PRI_BASE + 6)
+#define INT_SHR_SEM_OUTBOX_IBE		(INT_PRI_BASE + 7)
+#define INT_VDE_UCQ_ERROR		(INT_PRI_BASE + 8)
+#define INT_VDE_SYNC_TOKEN		(INT_PRI_BASE + 9)
+#define INT_VDE_BSE_V			(INT_PRI_BASE + 10)
+#define INT_VDE_BSE_A			(INT_PRI_BASE + 11)
+#define INT_VDE_SXE			(INT_PRI_BASE + 12)
+#define INT_I2S1			(INT_PRI_BASE + 13)
+#define INT_SDMMC1			(INT_PRI_BASE + 14)
+#define INT_SDMMC2			(INT_PRI_BASE + 15)
+#define INT_XIO				(INT_PRI_BASE + 16)
+#define INT_VDE				(INT_PRI_BASE + 17)
+#define INT_AVP_UCQ			(INT_PRI_BASE + 18)
+#define INT_SDMMC3			(INT_PRI_BASE + 19)
+#define INT_USB				(INT_PRI_BASE + 20)
+#define INT_USB2			(INT_PRI_BASE + 21)
+#define INT_PRI_RES_22			(INT_PRI_BASE + 22)
+#define INT_EIDE			(INT_PRI_BASE + 23)
+#define INT_NANDFLASH			(INT_PRI_BASE + 24)
+#define INT_VCP				(INT_PRI_BASE + 25)
+#define INT_APB_DMA			(INT_PRI_BASE + 26)
+#define INT_AHB_DMA			(INT_PRI_BASE + 27)
+#define INT_GNT_0			(INT_PRI_BASE + 28)
+#define INT_GNT_1			(INT_PRI_BASE + 29)
+#define INT_OWR				(INT_PRI_BASE + 30)
+#define INT_SDMMC4			(INT_PRI_BASE + 31)
 
 /* Secondary Interrupt Controller */
-#define INT_GPIO1			32
-#define INT_GPIO2			33
-#define INT_GPIO3			34
-#define INT_GPIO4			35
-#define INT_UARTA			36
-#define INT_UARTB			37
-#define INT_I2C				38
-#define INT_SPI				39
-#define INT_TWC				40
-#define INT_TMR3			41
-#define INT_TMR4			42
-#define INT_FLOW_RSM0			43
-#define INT_FLOW_RSM1			44
-#define INT_SPDIF			45
-#define INT_UARTC			46
-#define INT_MIPI			47
-#define INT_EVENTA			48
-#define INT_EVENTB			49
-#define INT_EVENTC			50
-#define INT_EVENTD			51
-#define INT_VFIR			52
-#define INT_DVC				53
-#define INT_SYS_STATS_MON		54
-#define INT_GPIO5			55
-#define INT_CPU_INTR			56
-#define INT_SPI1			59
-#define INT_SPB_DMA_COP			60
-#define INT_AHB_DMA_COP			61
-#define INT_DMA_TX			62
-#define INT_DMA_RX			63
+#define INT_SEC_BASE			(INT_PRI_BASE + 32)
+#define INT_GPIO1			(INT_SEC_BASE + 0)
+#define INT_GPIO2			(INT_SEC_BASE + 1)
+#define INT_GPIO3			(INT_SEC_BASE + 2)
+#define INT_GPIO4			(INT_SEC_BASE + 3)
+#define INT_UARTA			(INT_SEC_BASE + 4)
+#define INT_UARTB			(INT_SEC_BASE + 5)
+#define INT_I2C				(INT_SEC_BASE + 6)
+#define INT_SPI				(INT_SEC_BASE + 7)
+#define INT_TWC				(INT_SEC_BASE + 8)
+#define INT_TMR3			(INT_SEC_BASE + 9)
+#define INT_TMR4			(INT_SEC_BASE + 10)
+#define INT_FLOW_RSM0			(INT_SEC_BASE + 11)
+#define INT_FLOW_RSM1			(INT_SEC_BASE + 12)
+#define INT_SPDIF			(INT_SEC_BASE + 13)
+#define INT_UARTC			(INT_SEC_BASE + 14)
+#define INT_MIPI			(INT_SEC_BASE + 15)
+#define INT_EVENTA			(INT_SEC_BASE + 16)
+#define INT_EVENTB			(INT_SEC_BASE + 17)
+#define INT_EVENTC			(INT_SEC_BASE + 18)
+#define INT_EVENTD			(INT_SEC_BASE + 19)
+#define INT_VFIR			(INT_SEC_BASE + 20)
+#define INT_DVC				(INT_SEC_BASE + 21)
+#define INT_SYS_STATS_MON		(INT_SEC_BASE + 22)
+#define INT_GPIO5			(INT_SEC_BASE + 23)
+#define INT_CPU0_PMU_INTR		(INT_SEC_BASE + 24)
+#define INT_CPU2_PMU_INTR		(INT_SEC_BASE + 25)
+#define INT_SEC_RES_26			(INT_SEC_BASE + 26)
+#define INT_S_LINK1			(INT_SEC_BASE + 27)
+#define INT_APB_DMA_COP			(INT_SEC_BASE + 28)
+#define INT_AHB_DMA_COP			(INT_SEC_BASE + 29)
+#define INT_DMA_TX			(INT_SEC_BASE + 30)
+#define INT_DMA_RX			(INT_SEC_BASE + 31)
 
 /* Tertiary Interrupt Controller */
-#define INT_HOST1X_COP_SYNCPT		65
-#define INT_HOST1X_MPCORE_SYNCPT	66
-#define INT_HOST1X_COP_GENERAL		67
-#define INT_HOST1X_MPCORE_GENERAL	68
-#define INT_MPE_GENERAL			69
-#define INT_VI_GENERAL			70
-#define INT_EPP_GENERAL			71
-#define INT_ISP_GENERAL			72
-#define INT_2D_GENERAL			73
-#define INT_DISPLAY_GENERAL		74
-#define INT_DISPLAY_B_GENERAL		75
-#define INT_HDMI			76
-#define INT_TVO_GENERAL			77
-#define INT_MC_GENERAL			78
-#define INT_EMC_GENERAL			79
-#define INT_CMC_GENERAL			80
-#define INT_NOR_FLASH			81
-#define INT_AC97			82
-#define INT_SPI_2			83
-#define INT_SPI_3			84
-#define INT_I2C2			85
-#define INT_KBC				86
-#define INT_EXTERNAL_PMU		87
-#define INT_GPIO6			88
-#define INT_TVDAC			89
-#define INT_SW_RESERVED			95
+#define INT_TRI_BASE			(INT_SEC_BASE + 32)
+#define INT_HOST1X_COP_SYNCPT		(INT_TRI_BASE + 0)
+#define INT_HOST1X_MPCORE_SYNCPT	(INT_TRI_BASE + 1)
+#define INT_HOST1X_COP_GENERAL		(INT_TRI_BASE + 2)
+#define INT_HOST1X_MPCORE_GENERAL	(INT_TRI_BASE + 3)
+#define INT_MPE_GENERAL			(INT_TRI_BASE + 4)
+#define INT_VI_GENERAL			(INT_TRI_BASE + 5)
+#define INT_EPP_GENERAL			(INT_TRI_BASE + 6)
+#define INT_ISP_GENERAL			(INT_TRI_BASE + 7)
+#define INT_2D_GENERAL			(INT_TRI_BASE + 8)
+#define INT_DISPLAY_GENERAL		(INT_TRI_BASE + 9)
+#define INT_DISPLAY_B_GENERAL		(INT_TRI_BASE + 10)
+#define INT_HDMI			(INT_TRI_BASE + 11)
+#define INT_TVO_GENERAL			(INT_TRI_BASE + 12)
+#define INT_MC_GENERAL			(INT_TRI_BASE + 13)
+#define INT_EMC_GENERAL			(INT_TRI_BASE + 14)
+#define INT_TRI_RES_15			(INT_TRI_BASE + 15)
+#define INT_TRI_RES_16			(INT_TRI_BASE + 16)
+#define INT_AC97			(INT_TRI_BASE + 17)
+#define INT_SPI_2			(INT_TRI_BASE + 18)
+#define INT_SPI_3			(INT_TRI_BASE + 19)
+#define INT_I2C2			(INT_TRI_BASE + 20)
+#define INT_KBC				(INT_TRI_BASE + 21)
+#define INT_EXTERNAL_PMU		(INT_TRI_BASE + 22)
+#define INT_GPIO6			(INT_TRI_BASE + 23)
+#define INT_TVDAC			(INT_TRI_BASE + 24)
+#define INT_GPIO7			(INT_TRI_BASE + 25)
+#define INT_UARTD			(INT_TRI_BASE + 26)
+#define INT_UARTE			(INT_TRI_BASE + 27)
+#define INT_I2C3			(INT_TRI_BASE + 28)
+#define INT_SPI4			(INT_TRI_BASE + 29)
+#define INT_TRI_RES_30			(INT_TRI_BASE + 30)
+#define INT_SW_RESERVED			(INT_TRI_BASE + 31)
 
-#define NR_IRQS 96
+/* Quaternary Interrupt Controller */
+#define INT_QUAD_BASE			(INT_TRI_BASE + 32)
+#define INT_SNOR			(INT_QUAD_BASE + 0)
+#define INT_USB3			(INT_QUAD_BASE + 1)
+#define INT_PCIE_INTR			(INT_QUAD_BASE + 2)
+#define INT_PCIE_MSI			(INT_QUAD_BASE + 3)
+#define INT_QUAD_RES_4			(INT_QUAD_BASE + 4)
+#define INT_QUAD_RES_5			(INT_QUAD_BASE + 5)
+#define INT_QUAD_RES_6			(INT_QUAD_BASE + 6)
+#define INT_QUAD_RES_7			(INT_QUAD_BASE + 7)
+#define INT_APB_DMA_CH0			(INT_QUAD_BASE + 8)
+#define INT_APB_DMA_CH1			(INT_QUAD_BASE + 9)
+#define INT_APB_DMA_CH2			(INT_QUAD_BASE + 10)
+#define INT_APB_DMA_CH3			(INT_QUAD_BASE + 11)
+#define INT_APB_DMA_CH4			(INT_QUAD_BASE + 12)
+#define INT_APB_DMA_CH5			(INT_QUAD_BASE + 13)
+#define INT_APB_DMA_CH6			(INT_QUAD_BASE + 14)
+#define INT_APB_DMA_CH7			(INT_QUAD_BASE + 15)
+#define INT_APB_DMA_CH8			(INT_QUAD_BASE + 16)
+#define INT_APB_DMA_CH9			(INT_QUAD_BASE + 17)
+#define INT_APB_DMA_CH10		(INT_QUAD_BASE + 18)
+#define INT_APB_DMA_CH11		(INT_QUAD_BASE + 19)
+#define INT_APB_DMA_CH12		(INT_QUAD_BASE + 20)
+#define INT_APB_DMA_CH13		(INT_QUAD_BASE + 21)
+#define INT_APB_DMA_CH14		(INT_QUAD_BASE + 22)
+#define INT_APB_DMA_CH15		(INT_QUAD_BASE + 23)
+#define INT_QUAD_RES_24			(INT_QUAD_BASE + 24)
+#define INT_QUAD_RES_25			(INT_QUAD_BASE + 25)
+#define INT_QUAD_RES_26			(INT_QUAD_BASE + 26)
+#define INT_QUAD_RES_27			(INT_QUAD_BASE + 27)
+#define INT_QUAD_RES_28			(INT_QUAD_BASE + 28)
+#define INT_QUAD_RES_29			(INT_QUAD_BASE + 29)
+#define INT_QUAD_RES_30			(INT_QUAD_BASE + 30)
+#define INT_QUAD_RES_31			(INT_QUAD_BASE + 31)
+
+#define INT_GPIO_BASE			(INT_QUAD_BASE + 32)
+#define INT_GPIO_NR			(28 * 8)
+
+#define NR_IRQS				(INT_GPIO_BASE + INT_GPIO_NR)
+
 #endif
