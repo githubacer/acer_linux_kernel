@@ -734,6 +734,7 @@ config ARCH_TEGRA
         select GENERIC_CLOCKEVENTS
         select GENERIC_GPIO
         select HAVE_CLK
+        select COMMON_CLKDEV
         help
           This enables support for NVIDIA Tegra based systems (Tegra APX,
           Tegra 6xx and Tegra 2 series).

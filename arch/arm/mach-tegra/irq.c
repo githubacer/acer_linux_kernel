@@ -102,4 +102,6 @@ void __init tegra_init_irq(void) {
 			BUG();
 		set_irq_handler(i, handle_level_irq);
 	}*/
+
+	tegra_init_clock();
 }
