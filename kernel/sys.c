@@ -319,6 +319,54 @@ void kernel_restart_prepare(char *cmd)
 	syscore_shutdown();
 }
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+#define MSC_PATH "/dev/block/mmcblk0p5"
+
+typedef struct{
+	    char command[32];
+	    char status[32];
+	    unsigned debug_switch;
+} BootloaderMessage;
+
+/**
+ *	misc_mcd - write data to misc partition
+ *	@cmd: pointer to buffer containing the data need to be wrote to misc partition
+ */
+void misc_cmd(char *cmd)
+{
+	BootloaderMessage BLMsg;
+	struct file *fp = filp_open(MSC_PATH, O_RDWR, 0);
+	mm_segment_t oldfs;
+
+	if(cmd == NULL || !strcmp(cmd, ""))
+		return;
+
+	oldfs = get_fs();
+	set_fs(get_ds());
+
+	if(fp != NULL) {
+		pr_emerg("%s: write cmd [%s] to misc\n", __func__, cmd);
+		fp->f_op->read(fp, (char*) &BLMsg, sizeof(BootloaderMessage), &fp->f_pos);
+		vfs_llseek(fp, 0, 0);
+
+		if (!strncmp(cmd, "recovery", 8)) {
+			strcpy(BLMsg.command, "boot-recovery");
+		}else if (!strncmp(cmd, "bootloader", 10)) {
+			strcpy(BLMsg.command, "boot-bootloader");
+		}else if (!strncmp(cmd, "debug_on", 8)) {
+			BLMsg.debug_switch = 1;
+		} else if (!strncmp(cmd, "debug_off", 9)) {
+			BLMsg.debug_switch = 0;
+		}
+		fp->f_op->write(fp, (char*) &BLMsg, sizeof(BootloaderMessage), &fp->f_pos);
+	}else{
+		pr_emerg("fp is NULL!\n");
+	}
+	filp_close(fp, 0);
+	set_fs(oldfs);
+}
+#endif
+
 /**
  *	kernel_restart - reboot the system
  *	@cmd: pointer to buffer containing command to execute for restart
@@ -329,6 +377,9 @@ void kernel_restart_prepare(char *cmd)
  */
 void kernel_restart(char *cmd)
 {
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	misc_cmd(cmd);
+#endif
 	kernel_restart_prepare(cmd);
 	if (!cmd)
 		printk(KERN_EMERG "Restarting system.\n");
