@@ -1483,7 +1483,11 @@ static void tegra_dc_hdmi_setup_avi_infoframe(struct tegra_dc *dc, bool dvi)
 		avi.vic = 0;
 	}
 
-
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+	if (hdmi->eld.vsdb) {
+		avi.s = HDMI_AVI_S_UNDERSCAN;
+	}
+#endif
 	tegra_dc_hdmi_write_infopack(dc, HDMI_NV_PDISP_HDMI_AVI_INFOFRAME_HEADER,
 				     HDMI_INFOFRAME_TYPE_AVI,
 				     HDMI_AVI_VERSION,

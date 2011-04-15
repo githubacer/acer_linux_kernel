@@ -44,6 +44,9 @@ struct tegra_edid_hdmi_eld {
 	u8	aud_synch_delay;
 	u8	spk_alloc;
 	u8	sad_count;
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+	u8	vsdb;
+#endif
 	u8	sad[ELD_MAX_SAD];
 };
 
