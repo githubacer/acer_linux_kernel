@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/board-harmony-sdhci.c
+ * arch/arm/mach-tegra/board-acer-t30-sdhci.c
  *
  * Copyright (C) 2010 Google, Inc.
  * Copyright (C) 2011 NVIDIA Corporation.
@@ -31,7 +31,7 @@
 
 #include "gpio-names.h"
 #include "board.h"
-#include "board-cardhu.h"
+#include "board-acer-t30.h"
 
 #define CARDHU_WLAN_PWR	TEGRA_GPIO_PD4
 #define CARDHU_WLAN_RST	TEGRA_GPIO_PD3

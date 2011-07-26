@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/board-cardhu-pinmux.c
+ * arch/arm/mach-tegra/board-acer-t30-pinmux.c
  *
  * Copyright (C) 2010-2011 NVIDIA Corporation
  *
@@ -18,7 +18,7 @@
 #include <linux/init.h>
 #include <mach/pinmux.h>
 #include "board.h"
-#include "board-cardhu.h"
+#include "board-acer-t30.h"
 #include "gpio-names.h"
 
 #define DEFAULT_DRIVE(_name)					\

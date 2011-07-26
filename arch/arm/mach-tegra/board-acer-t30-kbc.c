@@ -1,6 +1,6 @@
 /*
- * arch/arm/mach-tegra/board-cardhu-kbc.c
- * Keys configuration for Nvidia tegra3 cardhu platform.
+ * arch/arm/mach-tegra/board-acer-t30-kbc.c
+ * Keys configuration for Acer tegra3 platform.
  *
  * Copyright (C) 2011 NVIDIA, Inc.
  *
@@ -35,7 +35,7 @@
 #include <mach/iomap.h>
 #include <mach/kbc.h>
 #include "board.h"
-#include "board-cardhu.h"
+#include "board-acer-t30.h"
 
 #include "gpio-names.h"
 #include "devices.h"

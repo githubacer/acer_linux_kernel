@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/board-cardhu-panel.c
+ * arch/arm/mach-tegra/board-acer-t30-panel.c
  *
  * Copyright (c) 2010-2011, NVIDIA Corporation.
  *
@@ -35,7 +35,7 @@
 #include <mach/fb.h>
 
 #include "board.h"
-#include "board-cardhu.h"
+#include "board-acer-t30.h"
 #include "devices.h"
 #include "gpio-names.h"
 

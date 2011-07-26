@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/board-cardhu.c
+ * arch/arm/mach-tegra/board-acer-t30.c
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -57,7 +57,7 @@
 
 #include "board.h"
 #include "clock.h"
-#include "board-cardhu.h"
+#include "board-acer-t30.h"
 #include "devices.h"
 #include "gpio-names.h"
 #include "fuse.h"
@@ -956,7 +956,6 @@ static void __init tegra_cardhu_init(void)
 	cardhu_scroll_init();
 	cardhu_keys_init();
 	cardhu_panel_init();
-	cardhu_pmon_init();
 	cardhu_sensors_init();
 	cardhu_setup_bluesleep();
 	cardhu_sata_init();
@@ -998,11 +997,21 @@ static void __init tegra_cardhu_reserve(void)
 	cardhu_ramconsole_reserve(SZ_1M);
 }
 
-MACHINE_START(CARDHU, "cardhu")
+MACHINE_START(PICASSO2, "picasso2")
 	.boot_params    = 0x80000100,
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_cardhu_reserve,
 	.init_early	= tegra_init_early,
+	.init_irq       = tegra_init_irq,
+	.timer          = &tegra_timer,
+	.init_machine   = tegra_cardhu_init,
+MACHINE_END
+
+MACHINE_START(PICASSO_M, "picasso_m")
+	.boot_params    = 0x80000100,
+	.map_io         = tegra_map_common_io,
+	.reserve        = tegra_cardhu_reserve,
+	.init_early     = tegra_init_early,
 	.init_irq       = tegra_init_irq,
 	.timer          = &tegra_timer,
 	.init_machine   = tegra_cardhu_init,

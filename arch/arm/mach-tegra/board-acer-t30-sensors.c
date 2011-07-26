@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/board-cardhu-sensors.c
+ * arch/arm/mach-tegra/board-acer-t30-sensors.c
  *
  * Copyright (c) 2010-2011, NVIDIA CORPORATION, All rights reserved.
  *
@@ -54,7 +54,7 @@
 #include <mach/thermal.h>
 
 #include "gpio-names.h"
-#include "board-cardhu.h"
+#include "board-acer-t30.h"
 #include "cpu-tegra.h"
 
 static struct regulator *cardhu_1v8_cam1 = NULL;

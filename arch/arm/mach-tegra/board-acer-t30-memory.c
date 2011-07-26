@@ -20,7 +20,7 @@
 #include <linux/init.h>
 
 #include "board.h"
-#include "board-cardhu.h"
+#include "board-acer-t30.h"
 #include "tegra3_emc.h"
 #include "fuse.h"
 

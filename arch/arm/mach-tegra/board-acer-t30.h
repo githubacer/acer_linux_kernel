@@ -1,5 +1,5 @@
 /*
- * arch/arm/mach-tegra/board-cardhu.h
+ * arch/arm/mach-tegra/board-acer-t30.h
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -204,11 +204,6 @@ int cardhu_pins_state_init(void);
 int cardhu_emc_init(void);
 int cardhu_power_off_init(void);
 int cardhu_edp_init(void);
-int cardhu_pmon_init(void);
-int cardhu_pm298_gpio_switch_regulator_init(void);
-int cardhu_pm298_regulator_init(void);
-int cardhu_pm299_gpio_switch_regulator_init(void);
-int cardhu_pm299_regulator_init(void);
 void __init cardhu_tsensor_init(void);
 
 /* Invensense MPU Definitions */
