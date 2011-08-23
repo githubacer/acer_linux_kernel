@@ -921,7 +921,6 @@ out:
 
 	spin_lock_irqsave(&dd->lock, flags);
 	clear_bit(FLAGS_BUSY, &eng->busy);
-	rng_ctx.eng = NULL;
 	spin_unlock_irqrestore(&dd->lock, flags);
 
 fail:
