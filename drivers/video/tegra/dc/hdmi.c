@@ -813,11 +813,27 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 	struct fb_monspecs specs;
 	int err;
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+	int i;
+#endif
 
 	if (!tegra_dc_hdmi_hpd(dc))
 		goto fail;
 
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+	for (i = 0; i < 7; i++) {
+		err = tegra_edid_get_monspecs(hdmi->edid, &specs);
+		if (err >= 0) {
+			break;
+		} else if (i < 6) {
+			pr_err("failed to read edid, wait 50ms and try again...\n");
+			mdelay(50);
+		}
+	}
+#else
 	err = tegra_edid_get_monspecs(hdmi->edid, &specs);
+#endif
+
 	if (err < 0) {
 		dev_err(&dc->ndev->dev, "error reading edid\n");
 		goto fail;
