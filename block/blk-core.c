@@ -1238,7 +1238,7 @@ static bool bio_attempt_front_merge(struct request_queue *q,
  * must be ready for this.
  */
 static bool attempt_plug_merge(struct request_queue *q, struct bio *bio,
-					unsigned int *request_count)
+			       unsigned int *request_count)
 {
 	struct blk_plug *plug;
 	struct request *rq;
