@@ -329,25 +329,22 @@ static void __init ventana_uart_init(void)
 }
 
 #ifdef CONFIG_KEYBOARD_GPIO
-#define GPIO_KEY(_id, _gpio, _iswake)		\
-	{					\
-		.code = _id,			\
-		.gpio = TEGRA_GPIO_##_gpio,	\
-		.active_low = 1,		\
-		.desc = #_id,			\
-		.type = EV_KEY,			\
-		.wakeup = _iswake,		\
-		.debounce_interval = 10,	\
+#define GPIO_KEY(_id, _gpio, _isactivelow, _iswake)            \
+	{                                       \
+		.code = _id,                    \
+		.gpio = TEGRA_GPIO_##_gpio,     \
+		.active_low = _isactivelow,     \
+		.desc = #_id,                   \
+		.type = EV_KEY,                 \
+		.wakeup = _iswake,              \
+		.debounce_interval = 10,        \
 	}
 
-static struct gpio_keys_button ventana_keys[] = {
-	[0] = GPIO_KEY(KEY_FIND, PQ3, 0),
-	[1] = GPIO_KEY(KEY_HOME, PQ1, 0),
-	[2] = GPIO_KEY(KEY_BACK, PQ2, 0),
-	[3] = GPIO_KEY(KEY_VOLUMEUP, PQ5, 0),
-	[4] = GPIO_KEY(KEY_VOLUMEDOWN, PQ4, 0),
-	[5] = GPIO_KEY(KEY_POWER, PV2, 1),
-	[6] = GPIO_KEY(KEY_MENU, PC7, 0),
+static struct gpio_keys_button picasso_keys[] = {
+       [0] = GPIO_KEY(KEY_VOLUMEUP, PQ4, 1,  0),
+       [1] = GPIO_KEY(KEY_VOLUMEDOWN, PQ5, 1, 0),
+       [2] = GPIO_KEY(KEY_POWER, PC7, 0, 1),
+       [3] = GPIO_KEY(KEY_POWER, PI3, 0, 0),
 };
 
 #define PMC_WAKE_STATUS 0x14
@@ -357,29 +354,29 @@ static int ventana_wakeup_key(void)
 	unsigned long status =
 		readl(IO_ADDRESS(TEGRA_PMC_BASE) + PMC_WAKE_STATUS);
 
-	return status & TEGRA_WAKE_GPIO_PV2 ? KEY_POWER : KEY_RESERVED;
+	return status & TEGRA_WAKE_GPIO_PC7 ? KEY_POWER : KEY_RESERVED;
 }
 
-static struct gpio_keys_platform_data ventana_keys_platform_data = {
-	.buttons	= ventana_keys,
-	.nbuttons	= ARRAY_SIZE(ventana_keys),
+static struct gpio_keys_platform_data picasso_keys_platform_data = {
+	.buttons	= picasso_keys,
+	.nbuttons	= ARRAY_SIZE(picasso_keys),
 	.wakeup_key	= ventana_wakeup_key,
 };
 
-static struct platform_device ventana_keys_device = {
+static struct platform_device picasso_keys_device = {
 	.name	= "gpio-keys",
 	.id	= 0,
 	.dev	= {
-		.platform_data	= &ventana_keys_platform_data,
+		.platform_data	= &picasso_keys_platform_data,
 	},
 };
 
-static void ventana_keys_init(void)
+static void picasso_keys_init(void)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(ventana_keys); i++)
-		tegra_gpio_enable(ventana_keys[i].gpio);
+	for (i = 0; i < ARRAY_SIZE(picasso_keys); i++)
+		tegra_gpio_enable(picasso_keys[i].gpio);
 }
 #endif
 
@@ -409,7 +406,7 @@ static struct platform_device *ventana_devices[] __initdata = {
 	&tegra_gart_device,
 	&tegra_aes_device,
 #ifdef CONFIG_KEYBOARD_GPIO
-	&ventana_keys_device,
+	&picasso_keys_device,
 #endif
 	&tegra_wdt_device,
 	&tegra_avp_device,
@@ -637,7 +634,7 @@ static void __init acer_t20_init(void)
 	touch_init_atmel_mXT768e();
 #endif
 #ifdef CONFIG_KEYBOARD_GPIO
-	ventana_keys_init();
+	picasso_keys_init();
 #endif
 	acer_board_info();
 
