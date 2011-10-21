@@ -26,6 +26,7 @@ int ventana_sensors_init(void);
 int ventana_kbc_init(void);
 int ventana_emc_init(void);
 int ventana_charger_init(void);
+int get_sku_id(void);
 
 /* external gpios */
 
@@ -85,5 +86,14 @@ int ventana_charger_init(void);
 #define MPU_COMPASS_ADDR	0x0C
 #define MPU_COMPASS_BUS_NUM	4
 #define MPU_COMPASS_ORIENTATION	{ 1, 0, 0, 0, 1, 0, 0, 0, 1 }
+
+/* Picasso board info. */
+#define BOARD_PICASSO_3G	3
+#define BOARD_PICASSO_WIFI	5
+#define BOARD_PICASSO_DVT2	7
+
+/* VanGogh board info. */
+#define BOARD_VANGOGH_WIFI	0
+#define BOARD_VANGOGH_3G	1
 
 #endif

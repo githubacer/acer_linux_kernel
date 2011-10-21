@@ -571,6 +571,75 @@ static void ventana_usb_init(void)
 	platform_device_register(&tegra_ehci3_device);
 }
 
+int get_pin_value(unsigned int gpio, char *name)
+{
+	int pin_value = 0;
+
+	tegra_gpio_enable(gpio);
+	gpio_request(gpio, name);
+	gpio_direction_input(gpio);
+	pin_value = gpio_get_value(gpio);
+	gpio_free(gpio);
+	tegra_gpio_disable(gpio);
+	return pin_value;
+}
+
+int get_sku_id(void)
+{
+#ifdef CONFIG_MACH_PICASSO
+	/* Wifi=5, 3G=3, DVT2=7 */
+	return (get_pin_value(TEGRA_GPIO_PQ0, "PIN0") << 2) + \
+		 (get_pin_value(TEGRA_GPIO_PQ3, "PIN1") << 1) + \
+		 get_pin_value(TEGRA_GPIO_PQ6, "PIN2");
+#endif
+#ifdef CONFIG_MACH_VANGOGH
+	/* Wifi=0, 3G=1 */
+	return (get_pin_value(TEGRA_GPIO_PQ0,"PIN0"));
+#endif
+}
+
+void acer_board_info(void)
+{
+#ifdef CONFIG_MACH_PICASSO_E
+	switch(get_sku_id()){
+		case BOARD_PICASSO_WIFI:
+			pr_info("Board Type: Picasso E Wifi\n");
+			break;
+		default:
+			pr_info("Board Type: Unknown\n");
+			break;
+	}
+#elif CONFIG_MACH_PICASSO
+	switch(get_sku_id()){
+		case BOARD_PICASSO_3G:
+			pr_info("Board Type: Picasso 3G\n");
+			break;
+		case BOARD_PICASSO_WIFI:
+			pr_info("Board Type: Picasso Wifi\n");
+			break;
+		case BOARD_PICASSO_DVT2:
+			pr_info("Board Type: Picasso DVT2\n");
+			break;
+		default:
+			pr_info("Board Type: Unknown\n");
+			break;
+	}
+#endif
+#ifdef CONFIG_MACH_VANGOGH
+	switch(get_sku_id()){
+		case BOARD_VANGOGH_3G:
+			pr_info("Board Type: VanGogh 3G\n");
+			break;
+		case BOARD_VANGOGH_WIFI:
+			pr_info("Board Type: VanGogh Wifi\n");
+			break;
+		default:
+			pr_info("Board Type: Unknown\n");
+			break;
+	}
+#endif
+}
+
 static void __init acer_t20_init(void)
 {
 	struct board_info BoardInfo;
@@ -602,6 +671,7 @@ static void __init acer_t20_init(void)
 #ifdef CONFIG_KEYBOARD_GPIO
 	ventana_keys_init();
 #endif
+	acer_board_info();
 
 	ventana_usb_init();
 	ventana_gps_init();
