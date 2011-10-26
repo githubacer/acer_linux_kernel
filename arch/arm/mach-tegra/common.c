@@ -102,6 +102,9 @@ static int board_panel_type;
 static enum power_supply_type pow_supply_type = POWER_SUPPLY_TYPE_MAINS;
 
 void (*arch_reset)(char mode, const char *cmd) = tegra_assert_system_reset;
+#if defined(CONFIG_ARCH_ACER_T20)
+extern void SysRestart(void);
+#endif
 
 #define NEVER_RESET 0
 
@@ -410,8 +413,12 @@ static void tegra_pm_flush_console(void)
 
 static void tegra_pm_restart(char mode, const char *cmd)
 {
+#if defined(CONFIG_ARCH_ACER_T20)
+	SysRestart();
+#else
 	tegra_pm_flush_console();
 	arm_machine_restart(mode, cmd);
+#endif
 }
 
 void __init tegra_init_early(void)
