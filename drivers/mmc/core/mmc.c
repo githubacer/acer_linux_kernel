@@ -22,6 +22,10 @@
 #include "mmc_ops.h"
 #include "sd_ops.h"
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+#define SANDISK_X3_CID_MID 69
+#endif
+
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
@@ -536,6 +540,14 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		/* Erase size depends on CSD and Extended CSD */
 		mmc_set_erase_size(card);
 	}
+
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if (card->cid.manfid == SANDISK_X3_CID_MID) {
+		err = mmc_switch(card, 0x0, EXT_CSD_POWER_CLASS, 4);
+		if (err)
+			printk(KERN_ERR "%s: switch power class fail \n", mmc_hostname(card->host));
+	}
+#endif
 
 	/*
 	 * If enhanced_area_en is TRUE, host needs to enable ERASE_GRP_DEF
