@@ -55,6 +55,9 @@
 #define GPIO_MSK_CNF(x)		(GPIO_REG(x) + 0x800)
 #define GPIO_MSK_OE(x)		(GPIO_REG(x) + 0x810)
 #define GPIO_MSK_OUT(x)		(GPIO_REG(x) + 0X820)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+#define GPIO_MSK_IN(x)		(GPIO_REG(x) + 0x830)
+#endif
 #define GPIO_MSK_INT_STA(x)	(GPIO_REG(x) + 0x840)
 #define GPIO_MSK_INT_ENB(x)	(GPIO_REG(x) + 0x850)
 #define GPIO_MSK_INT_LVL(x)	(GPIO_REG(x) + 0x860)
@@ -88,6 +91,9 @@ struct tegra_gpio_bank {
 	u32 oe[4];
 	u32 int_enb[4];
 	u32 int_lvl[4];
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	u32 in[4];
+#endif
 #endif
 };
 
@@ -356,6 +362,9 @@ static int tegra_gpio_suspend(void)
 			unsigned int gpio = (b<<5) | (p<<3);
 			bank->cnf[p] = __raw_readl(GPIO_CNF(gpio));
 			bank->out[p] = __raw_readl(GPIO_OUT(gpio));
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+			bank->in[p] = __raw_readl(GPIO_IN(gpio));
+#endif
 			bank->oe[p] = __raw_readl(GPIO_OE(gpio));
 			bank->int_enb[p] = __raw_readl(GPIO_INT_ENB(gpio));
 			bank->int_lvl[p] = __raw_readl(GPIO_INT_LVL(gpio));
@@ -482,6 +491,31 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 {
 	int i;
 	int j;
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	int k;
+
+	seq_printf(s, "GPIO Current State:\n------------------------------------------\n");
+	seq_printf(s, "GPIO CNF OE OUT IN INT_STA INT_ENB INT_LVL\n");
+	for (i = 0; i < ARRAY_SIZE(tegra_gpio_banks); i++) {
+		struct tegra_gpio_bank *bank = &tegra_gpio_banks[i];
+
+		for (j = 0; j < ARRAY_SIZE(bank->oe); j++) {
+			for (k = 0; k < 8; k++) {
+				unsigned int gpio = (i<<5) | (j<<3) | k;
+				seq_printf(s,
+					" %3d   %1x  %1x   %1x  %1x       %1x       %1x       %1x\n",
+					gpio,
+					(__raw_readl(GPIO_CNF(gpio)) >> GPIO_BIT(gpio)) & 0x1,
+					(__raw_readl(GPIO_OE(gpio)) >> GPIO_BIT(gpio)) & 0x1,
+					(__raw_readl(GPIO_OUT(gpio)) >> GPIO_BIT(gpio)) & 0x1,
+					(__raw_readl(GPIO_IN(gpio)) >> GPIO_BIT(gpio)) & 0x1,
+					(__raw_readl(GPIO_INT_STA(gpio)) >> GPIO_BIT(gpio)) & 0x1,
+					(__raw_readl(GPIO_INT_ENB(gpio)) >> GPIO_BIT(gpio)) & 0x1,
+					(__raw_readl(GPIO_INT_LVL(gpio)) >> GPIO_BIT(gpio)) & 0x1);
+			}
+		}
+	}
+#else
 
 	seq_printf(s, "Bank:Port CNF OE OUT IN INT_STA INT_ENB INT_LVL\n");
 	for (i = 0; i < ARRAY_SIZE(tegra_gpio_banks); i++) {
@@ -499,6 +533,8 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 				__raw_readl(GPIO_INT_LVL(gpio)));
 		}
 	}
+#endif
+
 	return 0;
 }
 
@@ -514,10 +550,56 @@ static const struct file_operations debug_fops = {
 	.release	= single_release,
 };
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+static int dbg_gpio_sleep_show(struct seq_file *s, void *unused)
+{
+	int i, j, k;
+
+	seq_printf(s, "GPIO Sleep State:\n------------------------------------------\n");
+	seq_printf(s, "GPIO CNF OE OUT IN INT_ENB INT_LVL\n");
+	for (i = 0; i < ARRAY_SIZE(tegra_gpio_banks); i++) {
+		struct tegra_gpio_bank *bank = &tegra_gpio_banks[i];
+
+		for (j = 0; j < ARRAY_SIZE(bank->oe); j++) {
+			for (k = 0; k < 8; k++) {
+				unsigned int gpio = (i<<5) | (j<<3) | k;
+				seq_printf(s,
+					" %3d   %1x  %1x   %1x  %1x       %1x       %1x\n",
+					gpio,
+					(bank->cnf[j] >> GPIO_BIT(gpio)) & 0x1,
+					(bank->oe[j] >> GPIO_BIT(gpio)) & 0x1,
+					(bank->out[j] >> GPIO_BIT(gpio)) & 0x1,
+					(bank->in[j] >> GPIO_BIT(gpio)) & 0x1,
+					(bank->int_enb[j] >> GPIO_BIT(gpio)) & 0x1,
+					(bank->int_lvl[j] >> GPIO_BIT(gpio)) & 0x1);
+			}
+		}
+	}
+
+	return 0;
+}
+
+static int dbg_gpio_sleep_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_gpio_sleep_show, &inode->i_private);
+}
+
+static const struct file_operations debug_sleep_fops = {
+	.open		= dbg_gpio_sleep_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+#endif
+
 static int __init tegra_gpio_debuginit(void)
 {
 	(void) debugfs_create_file("tegra_gpio", S_IRUGO,
 					NULL, NULL, &debug_fops);
+#if defined(CONFIG_ARCH_ACER_T20)
+	(void) debugfs_create_file("acer_gpio_sleep_table", S_IRUGO,
+					NULL, NULL, &debug_sleep_fops);
+#endif
 	return 0;
 }
 late_initcall(tegra_gpio_debuginit);
