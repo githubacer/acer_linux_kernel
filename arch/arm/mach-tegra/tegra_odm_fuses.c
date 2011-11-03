@@ -81,7 +81,7 @@ static struct kobj_attribute jtagdis_attr =
 	__ATTR(jtag_disable, 0440, fuse_show, fuse_store);
 
 static struct kobj_attribute odm_prod_mode_attr =
-	__ATTR(odm_production_mode, 0440, fuse_show, fuse_store);
+	__ATTR(odm_production_mode, 0444, fuse_show, fuse_store);
 
 static struct kobj_attribute sec_boot_dev_cfg_attr =
 	__ATTR(sec_boot_dev_cfg, 0440, fuse_show, fuse_store);
@@ -815,7 +815,7 @@ static ssize_t fuse_store(struct kobject *kobj, struct kobj_attribute *attr,
 
 	/* if odm prodn mode fuse is burnt, change file permissions to 0440 */
 	if (param == ODM_PROD_MODE) {
-		CHK_ERR(sysfs_chmod_file(kobj, &attr->attr, 0440));
+		CHK_ERR(sysfs_chmod_file(kobj, &attr->attr, 0444));
 		CHK_ERR(sysfs_chmod_file(kobj, &devkey_attr.attr, 0440));
 		CHK_ERR(sysfs_chmod_file(kobj, &jtagdis_attr.attr, 0440));
 		CHK_ERR(sysfs_chmod_file(kobj, &sec_boot_dev_cfg_attr.attr, 0440));
@@ -900,14 +900,13 @@ static int __init tegra_fuse_program_init(void)
 	{
 		devkey_attr.attr.mode = 0640;
 		jtagdis_attr.attr.mode = 0640;
-		odm_prod_mode_attr.attr.mode = 0640;
+		odm_prod_mode_attr.attr.mode = 0644;
 		sec_boot_dev_cfg_attr.attr.mode = 0640;
 		sec_boot_dev_sel_attr.attr.mode = 0640;
 		sbk_attr.attr.mode = 0640;
 		sw_rsvd_attr.attr.mode = 0640;
 		ignore_dev_sel_straps_attr.attr.mode = 0640;
 		odm_rsvd_attr.attr.mode = 0640;
-		odm_prod_mode_attr.attr.mode = 0640;
 	}
 
 	CHK_ERR(sysfs_create_file(fuse_kobj, &odm_prod_mode_attr.attr));
