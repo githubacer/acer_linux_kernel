@@ -46,9 +46,7 @@ static enum power_supply_property EC_Bat_properties[] = {
 	POWER_SUPPLY_PROP_TEMP,
 };
 
-#if 0 /* TBR: wait for display function */
 extern int checkLCM(void);
-#endif
 
 static enum power_supply_property EC_Bat_charge_properties[] = {
 	POWER_SUPPLY_PROP_ONLINE,
@@ -2169,11 +2167,9 @@ static int EC_Bat_probe(struct i2c_client *client,
 	}
 	//SYS_END
 
-#if 0 /* TBR: wait for display function */
 	ret = checkLCM();
 	if(ret == 1)
 		enable_CABC();
-#endif
 	readShutdownID(client);
 
 	return 0;
