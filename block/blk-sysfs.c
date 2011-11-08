@@ -472,6 +472,8 @@ static void blk_release_queue(struct kobject *kobj)
 
 	blk_sync_queue(q);
 
+	del_timer_sync(&q->backing_dev_info.wb.wakeup_timer);
+
 	if (rl->rq_pool)
 		mempool_destroy(rl->rq_pool);
 
