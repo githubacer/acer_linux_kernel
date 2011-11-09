@@ -179,8 +179,6 @@ static __initdata struct tegra_pingroup_config ventana_pinmux[] = {
 static struct tegra_gpio_table gpio_table[] = {
 	{ .gpio = TEGRA_GPIO_CDC_IRQ,		.enable = true	},
 	{ .gpio = TEGRA_GPIO_HP_DET,		.enable = true	},
-	{ .gpio = TEGRA_GPIO_INT_MIC_EN,	.enable = true	},
-	{ .gpio = TEGRA_GPIO_EXT_MIC_EN,	.enable = true	},
 };
 
 int __init ventana_pinmux_init(void)
