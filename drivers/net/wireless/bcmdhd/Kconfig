@@ -32,6 +32,13 @@ config BCMDHD_WEXT
 	help
 	  Enables WEXT support
 
+config DHD_USE_STATIC_BUF
+	bool "Enable memory preallocation"
+	depends on BCMDHD
+	default n
+	---help---
+	  Use memory preallocated in platform
+
 config BCMDHD_WIFI_CONTROL_FUNC
 	bool "Use bcmdhd_wlan device"
 	depends on BCMDHD
