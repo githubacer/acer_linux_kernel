@@ -902,7 +902,7 @@ field ## _store(struct device *dev, struct device_attribute *attr,	\
 		const char *buf, size_t size)		       		\
 {									\
 	if (size >= sizeof(buffer)) return -EINVAL;			\
-	if (sscanf(buf, "%s", buffer) == 1) {			       	\
+	if (sprintf(buffer, "%s", buf) == size) {			\
 		return size;						\
 	}								\
 	return -1;							\
