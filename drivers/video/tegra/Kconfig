@@ -121,11 +121,11 @@ config TEGRA_HDMI
 	  Say Y here to Enable HDMI.
 
 config TEGRA_NVHDCP
-	bool "Enable HDCP"
+	bool "Support NVHDCP content protection on HDMI"
 	default n
-	depends on TEGRA_HDMI
 	help
-	  Say Y here to Enable HDCP.
+	  Say Y here to support NVHDCP upstream and downstream protocols, this
+	  requires a correctly fused chip to negotiate keys.
 
 endif
 
