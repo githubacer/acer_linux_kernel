@@ -29,6 +29,11 @@
 
 #include "sdhci.h"
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+#include <linux/gpio.h>
+#include <mach/sdhci.h>
+#endif
+
 #define DRIVER_NAME "sdhci"
 
 #define DBG(f, x...) \
@@ -1545,8 +1550,38 @@ static void sdhci_tasklet_card(unsigned long param)
 {
 	struct sdhci_host *host;
 	unsigned long flags;
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	struct tegra_sdhci_platform_data *plat;
+#endif
 
 	host = (struct sdhci_host*)param;
+
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	plat = host->mmc->parent->platform_data;
+
+	if (plat->cd_gpio != -1) {
+		if (!gpio_get_value(plat->cd_gpio)) {
+			mmc_detect_change(host->mmc, msecs_to_jiffies(1000));
+		} else {
+			spin_lock_irqsave(&host->lock, flags);
+			if (host->mrq) {
+				printk(KERN_ERR "%s: Card removed during transfer!\n",
+					mmc_hostname(host->mmc));
+				printk(KERN_ERR "%s: Resetting controller.\n",
+					mmc_hostname(host->mmc));
+
+				sdhci_reset(host, SDHCI_RESET_CMD);
+				sdhci_reset(host, SDHCI_RESET_DATA);
+
+				host->mrq->cmd->error = -ENOMEDIUM;
+				tasklet_schedule(&host->finish_tasklet);
+			}
+			spin_unlock_irqrestore(&host->lock, flags);
+			mmc_detect_change(host->mmc, msecs_to_jiffies(1000));
+		}
+		return;
+	}
+#endif
 
 	spin_lock_irqsave(&host->lock, flags);
 
