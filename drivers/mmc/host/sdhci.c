@@ -1132,6 +1132,11 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	struct sdhci_host *host;
 	bool present;
 	unsigned long flags;
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+       struct tegra_sdhci_platform_data *plat;
+
+       plat = mmc->parent->platform_data;
+#endif
 
 	host = mmc_priv(mmc);
 
@@ -1153,7 +1158,14 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	/* If polling, assume that the card is always present. */
 	if (host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+               if (plat->cd_gpio != -1)
+                       present = !(gpio_get_value(plat->cd_gpio));
+               else
+                       present = true;
+#else
 		present = true;
+#endif
 	else
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 				SDHCI_CARD_PRESENT;
