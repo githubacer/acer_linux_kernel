@@ -373,6 +373,11 @@ static int ventana_wakeup_key(void)
 	unsigned long status =
 		readl(IO_ADDRESS(TEGRA_PMC_BASE) + PMC_WAKE_STATUS);
 
+#if defined(CONFIG_ARCH_ACER_T20)
+	int clr_key_pwr = 0x100;
+
+	writel(clr_key_pwr, IO_ADDRESS(TEGRA_PMC_BASE) + PMC_WAKE_STATUS);
+#endif
 	return status & TEGRA_WAKE_GPIO_PC7 ? KEY_POWER : KEY_RESERVED;
 }
 
