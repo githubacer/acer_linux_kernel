@@ -18,8 +18,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef _MACH_TEGRA_BOARD_CARDHU_H
-#define _MACH_TEGRA_BOARD_CARDHU_H
+#ifndef _MACH_TEGRA_BOARD_ACER_T30_H
+#define _MACH_TEGRA_BOARD_ACER_T30_H
 
 #include <mach/gpio.h>
 #include <mach/irqs.h>
@@ -240,4 +240,22 @@ void __init cardhu_tsensor_init(void);
 
 #define TDIODE_OFFSET	(10000)	/* in millicelsius */
 
+/* Board Type */
+#define BOARD_PICASSO_2 0
+#define BOARD_PICASSO_M 1
+
+/* Board ID */
+#define BOARD_EVT       0
+#define BOARD_DVT1      1
+#define BOARD_DVT2      2
+#define BOARD_PVT       3
+
+/* SKU type */
+#define BOARD_SKU_WIFI  0
+#define BOARD_SKU_3G    1
+#define BOARD_SKU_LTE   2
+
+/* Wifi module */
+#define BOARD_WIFI_AH663 0
+#define BOARD_WIFI_NH660 1
 #endif

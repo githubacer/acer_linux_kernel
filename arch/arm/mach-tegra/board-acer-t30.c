@@ -930,6 +930,57 @@ static void cardhu_sata_init(void)
 static void cardhu_sata_init(void) { }
 #endif
 
+extern int acer_board_type;
+extern int acer_board_id;
+extern int acer_sku;
+extern int acer_wifi_module;
+
+static void acer_board_info(void) {
+	if (acer_board_type == BOARD_PICASSO_2)
+		pr_info("Board Type: Picasso 2");
+	else if (acer_board_type == BOARD_PICASSO_M)
+		pr_info("Board Type: Picasso M");
+
+	switch (acer_board_id) {
+		case BOARD_EVT:
+			pr_info("Board Type: EVT\n");
+			break;
+		case BOARD_DVT1:
+			pr_info("Board Type: DVT1\n");
+			break;
+		case BOARD_DVT2:
+			pr_info("Board Type: DVT2\n");
+			break;
+		case BOARD_PVT:
+			pr_info("Board Type: PVT\n");
+			break;
+		default:
+			pr_info("Board Type: none\n");
+			break;
+	}
+
+	switch (acer_sku) {
+		case BOARD_SKU_WIFI:
+			pr_info("SKU Type: Wifi\n");
+			break;
+		case BOARD_SKU_3G:
+			pr_info("SKU Type: 3G\n");
+			break;
+		case BOARD_SKU_LTE:
+			pr_info("SKU Type: LTE\n");
+			break;
+		default:
+			pr_info("SKU: none");
+			break;
+	}
+
+	if (acer_wifi_module == BOARD_WIFI_AH663)
+		pr_info("Wifi module: AH663");
+	else if (acer_wifi_module == BOARD_WIFI_NH660)
+		pr_info("Wifi module: NH660");
+
+}
+
 static void __init tegra_cardhu_init(void)
 {
 	tegra_thermal_init(&thermal_data);
@@ -964,6 +1015,7 @@ static void __init tegra_cardhu_init(void)
 	cardhu_emc_init();
 	tegra_release_bootloader_fb();
 	cardhu_nfc_init();
+	acer_board_info();
 }
 
 static void __init cardhu_ramconsole_reserve(unsigned long size)

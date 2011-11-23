@@ -45,6 +45,9 @@
 #include "pm.h"
 #include "reset.h"
 #include "tegra_smmu.h"
+#if defined(CONFIG_ARCH_ACER_T30)
+#include "board-acer-t30.h"
+#endif
 
 #define MC_SECURITY_CFG2	0x7c
 
@@ -645,6 +648,51 @@ int tegra_get_modem_id(void)
 }
 
 __setup("modem_id=", tegra_modem_id);
+
+#if defined(CONFIG_ARCH_ACER_T30)
+int acer_board_type;
+int acer_board_id;
+int acer_sku;
+int acer_wifi_module;
+
+static int __init hw_ver_arg(char *options)
+{
+	int hw_ver = 0;
+	int pcb_id[4];
+	acer_board_type = 0;
+	acer_board_id = 0;
+	acer_sku = 0;
+	acer_wifi_module = 0;
+
+	hw_ver = simple_strtoul(options, &options, 16);
+
+	pcb_id[0] = hw_ver & 1;
+	pcb_id[1] = (hw_ver >> 1) & 1;
+	pcb_id[2] = (hw_ver >> 2) & 1;
+	pcb_id[3] = (hw_ver >> 3) & 1;
+	acer_board_id = hw_ver >> 4;
+
+	if (pcb_id[3] == BOARD_PICASSO_2)
+		acer_board_type = BOARD_PICASSO_2;
+	else if (pcb_id[3] == BOARD_PICASSO_M)
+		acer_board_type = BOARD_PICASSO_M;
+
+	if (pcb_id[0] && pcb_id[2])
+		acer_sku = BOARD_SKU_LTE;
+	else if (pcb_id[0] && !pcb_id[2])
+		acer_sku = BOARD_SKU_3G;
+	else
+		acer_sku = BOARD_SKU_WIFI;
+
+	if (pcb_id[1] == BOARD_WIFI_AH663)
+		acer_wifi_module = BOARD_WIFI_AH663;
+	else
+		acer_wifi_module = BOARD_WIFI_NH660;
+
+	return 0;
+}
+early_param("hw_ver", hw_ver_arg);
+#endif
 
 /*
  * Tegra has a protected aperture that prevents access by most non-CPU
