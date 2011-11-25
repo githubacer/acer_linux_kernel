@@ -421,6 +421,9 @@ EXPORT_SYMBOL_GPL(kernel_halt);
  */
 void kernel_power_off(void)
 {
+#if defined(CONFIG_ARCH_ACER_T20)
+	printk(KERN_EMERG "Ready to Power down.\n");
+#endif
 	kernel_shutdown_prepare(SYSTEM_POWER_OFF);
 	if (pm_power_off_prepare)
 		pm_power_off_prepare();
@@ -429,6 +432,9 @@ void kernel_power_off(void)
 	syscore_shutdown();
 	printk(KERN_EMERG "Power down.\n");
 	kmsg_dump(KMSG_DUMP_POWEROFF);
+#if defined(CONFIG_ARCH_ACER_T20)
+	sys_sync();
+#endif
 	machine_power_off();
 }
 EXPORT_SYMBOL_GPL(kernel_power_off);
