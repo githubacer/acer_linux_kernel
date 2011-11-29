@@ -923,6 +923,12 @@ static __devinit int tegra_wm8903_driver_probe(struct platform_device *pdev)
 		machine->dmic_reg = 0;
 	}
 
+#ifdef CONFIG_ARCH_ACER_T30
+	tegra_wm8903_dai[0].codec_name = "wm8903.4-001a",
+	tegra_wm8903_dai[0].cpu_dai_name = "tegra30-i2s.1";
+	tegra_wm8903_dai[1].cpu_dai_name = "tegra30-spdif";
+	tegra_wm8903_dai[2].cpu_dai_name = "tegra30-i2s.3";
+#else
 	if (machine_is_cardhu()) {
 		tegra_wm8903_dai[0].codec_name = "wm8903.4-001a",
 		tegra_wm8903_dai[0].cpu_dai_name = "tegra30-i2s.1";
@@ -931,6 +937,7 @@ static __devinit int tegra_wm8903_driver_probe(struct platform_device *pdev)
 
 		tegra_wm8903_dai[2].cpu_dai_name = "tegra30-i2s.3";
 	}
+#endif
 
 #ifdef CONFIG_SWITCH
 	/* Addd h2w swith class support */
