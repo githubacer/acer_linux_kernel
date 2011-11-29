@@ -438,6 +438,14 @@ static void __init cardhu_uart_init(void)
 {
 	struct clk *c;
 	int i;
+	int ret;
+
+	tegra_gpio_enable(TEGRA_GPIO_PU5);
+	ret = gpio_request(TEGRA_GPIO_PU5, "dock_int_gpio");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %d\n",__func__, TEGRA_GPIO_PU5);
+	else
+		gpio_direction_input(TEGRA_GPIO_PU5);
 
 	for (i = 0; i < ARRAY_SIZE(uart_parent_clk); ++i) {
 		c = tegra_get_clock_by_name(uart_parent_clk[i].name);
