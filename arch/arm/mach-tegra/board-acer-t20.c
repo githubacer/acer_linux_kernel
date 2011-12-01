@@ -380,7 +380,7 @@ static void rotationlock_init(void)
 #endif
 
 #ifdef CONFIG_KEYBOARD_GPIO
-#define GPIO_KEY(_id, _gpio, _isactivelow, _iswake)            \
+#define GPIO_KEY(_id, _gpio, _isactivelow, _iswake, _debounce_msec)            \
 	{                                       \
 		.code = _id,                    \
 		.gpio = TEGRA_GPIO_##_gpio,     \
@@ -388,14 +388,14 @@ static void rotationlock_init(void)
 		.desc = #_id,                   \
 		.type = EV_KEY,                 \
 		.wakeup = _iswake,              \
-		.debounce_interval = 10,        \
+		.debounce_interval = _debounce_msec,        \
 	}
 
 static struct gpio_keys_button picasso_keys[] = {
-       [0] = GPIO_KEY(KEY_VOLUMEUP, PQ4, 1,  0),
-       [1] = GPIO_KEY(KEY_VOLUMEDOWN, PQ5, 1, 0),
-       [2] = GPIO_KEY(KEY_POWER, PC7, 0, 1),
-       [3] = GPIO_KEY(KEY_POWER, PI3, 0, 0),
+       [0] = GPIO_KEY(KEY_VOLUMEUP, PQ4, 1, 0, 10),
+       [1] = GPIO_KEY(KEY_VOLUMEDOWN, PQ5, 1, 0, 10),
+       [2] = GPIO_KEY(KEY_POWER, PC7, 0, 1, 0),
+       [3] = GPIO_KEY(KEY_POWER, PI3, 0, 0, 0),
 };
 
 #define PMC_WAKE_STATUS 0x14
