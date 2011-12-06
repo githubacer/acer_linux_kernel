@@ -3074,12 +3074,12 @@ static void wl_iw_send_scan_complete(iscan_info_t *iscan)
 	union iwreq_data wrqu;
 
 	memset(&wrqu, 0, sizeof(wrqu));
-
-	wireless_send_event(iscan->dev, SIOCGIWSCAN, &wrqu, NULL);
 #if defined(CONFIG_FIRST_SCAN)
 	if (g_first_broadcast_scan == BROADCAST_SCAN_FIRST_STARTED)
 		g_first_broadcast_scan = BROADCAST_SCAN_FIRST_RESULT_READY;
 #endif
+
+	wireless_send_event(iscan->dev, SIOCGIWSCAN, &wrqu, NULL);
 	WL_SCAN(("Send Event ISCAN complete\n"));
 #endif 
 }
