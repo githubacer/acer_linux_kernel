@@ -1344,6 +1344,27 @@ static void acer_dock_init(void)
 }
 #endif
 
+#ifdef CONFIG_SIMDETECT
+static struct gpio_switch_platform_data simdetect_switch_platform_data = {
+	.gpio = TEGRA_GPIO_PO5,
+};
+
+static struct platform_device picasso_simdetect_switch = {
+	.name = "simdetect",
+	.id   = -1,
+	.dev  = {
+		.platform_data = &simdetect_switch_platform_data,
+	},
+};
+
+static void simdet_init(void)
+{
+	if (acer_sku != BOARD_SKU_WIFI) {
+		platform_device_register(&picasso_simdetect_switch);
+	}
+}
+#endif
+
 static void __init tegra_cardhu_init(void)
 {
 	tegra_thermal_init(&thermal_data);
@@ -1382,6 +1403,9 @@ static void __init tegra_cardhu_init(void)
 #endif
 	cardhu_setup_bluesleep();
 	cardhu_sata_init();
+#ifdef CONFIG_SIMDETECT
+	simdet_init();
+#endif
 	//audio_wired_jack_init();
 #if defined(CONFIG_ACER_ES305)
 	a1026_init();

@@ -25,3 +25,7 @@ config DOCK_V2
 config PSENSOR3G
 	tristate "P-Sensor Switch support for 3G"
 	default n
+
+config SIMDETECT
+	tristate "SIM Hot-swap detection support"
+	default n
