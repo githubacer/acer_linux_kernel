@@ -155,7 +155,7 @@ static unsigned int tegra_sdhci_get_cd(struct sdhci_host *sdhci)
 		return 1;
 
 	if (!gpio_is_valid(plat->cd_gpio))
-		return 0;
+		return 1;
 
 	return (gpio_get_value(plat->cd_gpio) == 0);
 }
