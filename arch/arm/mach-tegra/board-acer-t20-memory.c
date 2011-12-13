@@ -19,7 +19,7 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 
-#include "board-ventana.h"
+#include "board-acer-t20.h"
 #include "tegra2_emc.h"
 #include "board.h"
 

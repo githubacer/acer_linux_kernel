@@ -56,7 +56,7 @@
 
 #include "board.h"
 #include "clock.h"
-#include "board-ventana.h"
+#include "board-acer-t20.h"
 #include "devices.h"
 #include "gpio-names.h"
 #include "fuse.h"
@@ -571,7 +571,7 @@ static void ventana_usb_init(void)
 	platform_device_register(&tegra_ehci3_device);
 }
 
-static void __init tegra_ventana_init(void)
+static void __init acer_t20_init(void)
 {
 	struct board_info BoardInfo;
 
@@ -633,12 +633,32 @@ void __init tegra_ventana_reserve(void)
 	tegra_reserve(SZ_256M, SZ_8M, SZ_16M);
 }
 
-MACHINE_START(VENTANA, "ventana")
+MACHINE_START(VENTANA, "picasso")
 	.boot_params    = 0x00000100,
 	.map_io         = tegra_map_common_io,
 	.reserve        = tegra_ventana_reserve,
 	.init_early	= tegra_init_early,
 	.init_irq	= tegra_init_irq,
 	.timer          = &tegra_timer,
-	.init_machine	= tegra_ventana_init,
+	.init_machine	= acer_t20_init,
+MACHINE_END
+
+MACHINE_START(PICASSO, "picasso")
+	.boot_params    = 0x00000100,
+	.map_io         = tegra_map_common_io,
+	.reserve        = tegra_ventana_reserve,
+	.init_early	= tegra_init_early,
+	.init_irq	= tegra_init_irq,
+	.timer          = &tegra_timer,
+	.init_machine	= acer_t20_init,
+MACHINE_END
+
+MACHINE_START(PICASSO_E, "picasso_e")
+	.boot_params    = 0x00000100,
+	.map_io         = tegra_map_common_io,
+	.reserve        = tegra_ventana_reserve,
+	.init_early	= tegra_init_early,
+	.init_irq	= tegra_init_irq,
+	.timer          = &tegra_timer,
+	.init_machine	= acer_t20_init,
 MACHINE_END

@@ -35,7 +35,7 @@
 #include "pm.h"
 #include "wakeups-t2.h"
 #include "board.h"
-#include "board-ventana.h"
+#include "board-acer-t20.h"
 
 #define PMC_CTRL		0x0
 #define PMC_CTRL_INTR_LOW	(1 << 17)

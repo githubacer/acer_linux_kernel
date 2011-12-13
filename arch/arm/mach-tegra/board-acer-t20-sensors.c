@@ -50,7 +50,7 @@
 
 #include "gpio-names.h"
 #include "board.h"
-#include "board-ventana.h"
+#include "board-acer-t20.h"
 #include "cpu-tegra.h"
 
 #define ISL29018_IRQ_GPIO	TEGRA_GPIO_PZ2

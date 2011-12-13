@@ -19,7 +19,7 @@
 #include <linux/gpio.h>
 #include <mach/pinmux.h>
 
-#include "board-ventana.h"
+#include "board-acer-t20.h"
 #include "gpio-names.h"
 
 #define DEFAULT_DRIVE(_name)					\
