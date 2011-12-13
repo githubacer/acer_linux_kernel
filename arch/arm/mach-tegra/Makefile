@@ -168,3 +168,11 @@ obj-${CONFIG_MACH_TEGRA_ENTERPRISE}     += board-enterprise-sensors.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER}        += baseband-xmm-power.o
 obj-${CONFIG_TEGRA_BB_XMM_POWER2}       += baseband-xmm-power2.o
 
+obj-${CONFIG_MACH_PICASSO}              += board-acer-t20.o
+obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-pinmux.o
+obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-sdhci.o
+obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-power.o
+obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-panel.o
+obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-sensors.o
+obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-memory.o
+

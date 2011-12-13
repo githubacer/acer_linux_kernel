@@ -39,6 +39,10 @@ config ARCH_TEGRA_3x_SOC
 	  Support for NVIDIA Tegra 3 family of SoCs, based upon the
 	  ARM CortexA9MP CPU and the ARM PL310 L2 cache controller
 
+config ARCH_ACER_T20
+	depends on ARCH_TEGRA_2x_SOC
+	bool "Acer T20 platform"
+
 config ARCH_TEGRA_HAS_DUAL_3D
 	bool
 
@@ -55,6 +59,21 @@ config TEGRA_PCI
 	bool "PCI Express support"
 	select PCI
 	depends on ARCH_TEGRA_HAS_PCIE
+
+comment "Acer board type"
+
+config MACH_PICASSO
+       bool "Picasso"
+       depends on ARCH_ACER_T20
+       select MACH_HAS_SND_SOC_TEGRA_WM8903 if SND_SOC
+       help
+         Support for Acer Picasso Tablet
+
+config MACH_PICASSO_E
+       bool "Picasso E"
+       depends on MACH_PICASSO
+       help
+         Support for Acer Picasso E Tablet
 
 comment "Tegra board type"
 
