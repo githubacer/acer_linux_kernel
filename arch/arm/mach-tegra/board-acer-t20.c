@@ -423,67 +423,43 @@ static struct platform_device *ventana_devices[] __initdata = {
 	&ventana_audio_device,
 };
 
-
-static struct mxt_platform_data atmel_mxt_info = {
-	.x_line		= 27,
-	.y_line		= 42,
-	.x_size		= 768,
-	.y_size		= 1366,
-	.blen		= 0x20,
-	.threshold	= 0x3C,
-	.voltage	= 3300000,
-	.orient		= MXT_ROTATED_90,
-	.irqflags	= IRQF_TRIGGER_FALLING,
-};
-
-static struct i2c_board_info __initdata i2c_info[] = {
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_768E)
+static struct i2c_board_info __initdata atmel_mXT768e_i2c_info[] = {
 	{
-	 I2C_BOARD_INFO("atmel_mxt_ts", 0x5A),
-	 .irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PV6),
-	 .platform_data = &atmel_mxt_info,
-	 },
+		I2C_BOARD_INFO("maXTouch", 0X4D),
+		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PV6),
+	},
 };
 
-static int __init ventana_touch_init_atmel(void)
+static int __init touch_init_atmel_mXT768e(void)
 {
-	tegra_gpio_enable(TEGRA_GPIO_PV6);
-	tegra_gpio_enable(TEGRA_GPIO_PQ7);
+	int ret;
 
-	gpio_request(TEGRA_GPIO_PV6, "atmel-irq");
-	gpio_direction_input(TEGRA_GPIO_PV6);
+	tegra_gpio_enable(TEGRA_GPIO_PV6); /* TP INTERRUPT PIN */
+	tegra_gpio_enable(TEGRA_GPIO_PQ7); /* TP RESET PIN */
 
-	gpio_request(TEGRA_GPIO_PQ7, "atmel-reset");
-	gpio_direction_output(TEGRA_GPIO_PQ7, 0);
+	ret = gpio_request(TEGRA_GPIO_PV6, "atmel_maXTouch768e_irq_gpio");
+	if (ret < 0)
+		printk("atmel_maXTouch768e: gpio_request TEGRA_GPIO_PQ6 fail\n");
+
+	ret = gpio_request(TEGRA_GPIO_PQ7, "atmel_maXTouch768e_rst_gpio");
+	if (ret < 0)
+		printk("atmel_maXTouch768e: gpio_request fail\n");
+
+	ret = gpio_direction_output(TEGRA_GPIO_PQ7, 0);
+	if (ret < 0)
+		printk("atmel_maXTouch768e: gpio_direction_output fail\n");
+
+	gpio_set_value(TEGRA_GPIO_PQ7, 0);
 	msleep(1);
 	gpio_set_value(TEGRA_GPIO_PQ7, 1);
 	msleep(100);
 
-	i2c_register_board_info(0, i2c_info, 1);
+	i2c_register_board_info(0, atmel_mXT768e_i2c_info, 1);
 
 	return 0;
 }
-
-static struct panjit_i2c_ts_platform_data panjit_data = {
-	.gpio_reset = TEGRA_GPIO_PQ7,
-};
-
-static struct i2c_board_info __initdata ventana_i2c_bus1_touch_info[] = {
-	{
-		I2C_BOARD_INFO("panjit_touch", 0x3),
-		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PV6),
-		.platform_data = &panjit_data,
-	},
-};
-
-static int __init ventana_touch_init_panjit(void)
-{
-	tegra_gpio_enable(TEGRA_GPIO_PV6);
-
-	tegra_gpio_enable(TEGRA_GPIO_PQ7);
-	i2c_register_board_info(0, ventana_i2c_bus1_touch_info, 1);
-
-	return 0;
-}
+#endif
 
 static struct usb_phy_plat_data tegra_usb_phy_pdata[] = {
 	[0] = {
@@ -642,7 +618,6 @@ void acer_board_info(void)
 
 static void __init acer_t20_init(void)
 {
-	struct board_info BoardInfo;
 
 	tegra_clk_init_from_table(ventana_clk_init_table);
 	ventana_pinmux_init();
@@ -657,17 +632,9 @@ static void __init acer_t20_init(void)
 	ventana_regulator_init();
 	ventana_charger_init();
 
-	tegra_get_board_info(&BoardInfo);
-
-	/* boards with sku > 0 have atmel touch panels */
-	if (BoardInfo.sku) {
-		pr_info("Initializing Atmel touch driver\n");
-		ventana_touch_init_atmel();
-	} else {
-		pr_info("Initializing Panjit touch driver\n");
-		ventana_touch_init_panjit();
-	}
-
+#ifdef CONFIG_TOUCHSCREEN_ATMEL_768E
+	touch_init_atmel_mXT768e();
+#endif
 #ifdef CONFIG_KEYBOARD_GPIO
 	ventana_keys_init();
 #endif
