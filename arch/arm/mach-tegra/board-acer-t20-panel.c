@@ -42,14 +42,8 @@
 #define ventana_lvds_shutdown	TEGRA_GPIO_PB2
 #define ventana_hdmi_hpd	TEGRA_GPIO_PN7
 
-/*panel power on sequence timing*/
-#define ventana_pnl_to_lvds_ms	0
-#define ventana_lvds_to_bl_ms	200
-
-#ifdef CONFIG_TEGRA_DC
 static struct regulator *ventana_hdmi_reg = NULL;
 static struct regulator *ventana_hdmi_pll = NULL;
-#endif
 
 static int ventana_backlight_init(struct device *dev) {
 	int ret;
@@ -75,7 +69,15 @@ static void ventana_backlight_exit(struct device *dev) {
 
 static int ventana_backlight_notify(struct device *unused, int brightness)
 {
-	gpio_set_value(ventana_bl_enb, !!brightness);
+	static int ori_brightness = 0;
+
+	if (ori_brightness != !!brightness) {
+		if (!ori_brightness)
+			msleep(200);
+		gpio_set_value(ventana_bl_enb, !!brightness);
+	}
+
+	ori_brightness = !!brightness;
 	return brightness;
 }
 
@@ -85,7 +87,7 @@ static struct platform_pwm_backlight_data ventana_backlight_data = {
 	.pwm_id		= 2,
 	.max_brightness	= 255,
 	.dft_brightness	= 224,
-	.pwm_period_ns	= 5000000,
+	.pwm_period_ns	= 41667,
 	.init		= ventana_backlight_init,
 	.exit		= ventana_backlight_exit,
 	.notify		= ventana_backlight_notify,
@@ -101,7 +103,6 @@ static struct platform_device ventana_backlight_device = {
 	},
 };
 
-#ifdef CONFIG_TEGRA_DC
 static int ventana_panel_enable(void)
 {
 	struct regulator *reg = regulator_get(NULL, "vdd_ldo4");
@@ -110,11 +111,8 @@ static int ventana_panel_enable(void)
 		regulator_enable(reg);
 		regulator_put(reg);
 	}
-
 	gpio_set_value(ventana_pnl_pwr_enb, 1);
-	mdelay(ventana_pnl_to_lvds_ms);
 	gpio_set_value(ventana_lvds_shutdown, 1);
-	mdelay(ventana_lvds_to_bl_ms);
 	return 0;
 }
 
@@ -204,15 +202,15 @@ static struct resource ventana_disp2_resources[] = {
 
 static struct tegra_dc_mode ventana_panel_modes[] = {
 	{
-		.pclk = 72072000,
+		.pclk = 70500000,
 		.h_ref_to_sync = 11,
 		.v_ref_to_sync = 1,
 		.h_sync_width = 58,
 		.v_sync_width = 4,
 		.h_back_porch = 58,
 		.v_back_porch = 4,
-		.h_active = 1366,
-		.v_active = 768,
+		.h_active = 1280,
+		.v_active = 800,
 		.h_front_porch = 58,
 		.v_front_porch = 4,
 	},
@@ -220,16 +218,16 @@ static struct tegra_dc_mode ventana_panel_modes[] = {
 
 static struct tegra_fb_data ventana_fb_data = {
 	.win		= 0,
-	.xres		= 1366,
-	.yres		= 768,
+	.xres		= 1280,
+	.yres		= 800,
 	.bits_per_pixel	= 32,
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
 
 static struct tegra_fb_data ventana_hdmi_fb_data = {
 	.win		= 0,
-	.xres		= 1366,
-	.yres		= 768,
+	.xres		= 1280,
+	.yres		= 800,
 	.bits_per_pixel	= 32,
 	.flags		= TEGRA_FB_FLIP_ON_PROBE,
 };
@@ -241,6 +239,7 @@ static struct tegra_dc_out ventana_disp1_out = {
 	.order		= TEGRA_DC_ORDER_RED_BLUE,
 	.depth		= 18,
 	.dither		= TEGRA_DC_ORDERED_DITHER,
+	.parent_clk     = "pll_c",
 
 	.modes	 	= ventana_panel_modes,
 	.n_modes 	= ARRAY_SIZE(ventana_panel_modes),
@@ -301,12 +300,6 @@ static struct nvhost_device ventana_disp2_device = {
 		.platform_data = &ventana_disp2_pdata,
 	},
 };
-#else
-static int ventana_disp1_check_fb(struct device *dev, struct fb_info *info)
-{
-	return 0;
-}
-#endif
 
 static struct nvmap_platform_carveout ventana_carveouts[] = {
 	[0] = NVMAP_HEAP_CARVEOUT_IRAM_INIT,
@@ -348,27 +341,18 @@ struct early_suspend ventana_panel_early_suspender;
 static void ventana_panel_early_suspend(struct early_suspend *h)
 {
 	unsigned i;
-
+	gpio_set_value(ventana_bl_enb, 0);
+	msleep(210);
 	/* power down LCD, add use a black screen for HDMI */
 	if (num_registered_fb > 0)
 		fb_blank(registered_fb[0], FB_BLANK_POWERDOWN);
 	if (num_registered_fb > 1)
 		fb_blank(registered_fb[1], FB_BLANK_NORMAL);
-#ifdef CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
-	cpufreq_save_default_governor();
-	cpufreq_set_conservative_governor();
-	cpufreq_set_conservative_governor_param(
-		SET_CONSERVATIVE_GOVERNOR_UP_THRESHOLD,
-		SET_CONSERVATIVE_GOVERNOR_DOWN_THRESHOLD);
-#endif
 }
 
 static void ventana_panel_late_resume(struct early_suspend *h)
 {
 	unsigned i;
-#ifdef CONFIG_TEGRA_CONVSERVATIVE_GOV_ON_EARLYSUPSEND
-	cpufreq_restore_default_governor();
-#endif
 	for (i = 0; i < num_registered_fb; i++)
 		fb_blank(registered_fb[i], FB_BLANK_UNBLANK);
 }
