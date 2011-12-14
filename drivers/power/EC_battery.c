@@ -94,6 +94,10 @@ int acinout = 0;
 struct timer_list poll_timer;
 unsigned int batt_status_poll_period;
 int gpio;
+#ifdef CONFIG_ARCH_ACER_T20
+s16 AcousticTable_val = 2;
+extern int switch_audio_table(int control_mode, bool fromAP);
+#endif
 s16 ThreeGPower_val = 2;
 s16 MicSwitch_val = 2;
 s16 Coldboot_val = 0;
@@ -730,24 +734,47 @@ static ssize_t ECflashread_store(struct kobject *kobj, struct kobj_attribute *at
 	return n;
 }
 
-#ifdef CONFIG_MACH_VANGOGH
-extern void MicSwitch_int(void)
+#ifdef CONFIG_ARCH_ACER_T20
+int getAudioTable(void)
 {
-	i2c_smbus_write_word_data(EC_Bat_device->client,0x44,0);
-	msleep(100);
+	return AcousticTable_val;
 }
 
-extern void MicSwitch_ext(void)
+void setAudioTable(int table_value)
 {
-	i2c_smbus_write_word_data(EC_Bat_device->client,0x44,1);
-	msleep(100);
+	AcousticTable_val = table_value;
+
+	i2c_smbus_write_word_data(EC_Bat_device->client,0x44,table_value);
+
+}
+#endif
+
+#ifdef CONFIG_MACH_PICASSO_E
+/* Using for enable/disable CABC when recording by internal MIC. */
+void setAudioCABC(int enable)
+{
+	s32 ret;
+	u16 cur;
+	ret = i2c_smbus_read_word_data_retry(EC_Bat_device->client,0x4c);
+	cur = ret & 0x0000ffff;
+	msleep(10);
+
+	if (enable) {
+		cur = cur | (0x1 << 8);
+		i2c_smbus_write_word_data_retry(EC_Bat_device->client,0x4d,cur);
+		msleep(10);
+	} else {
+		cur = cur & (!(0x1 << 8));
+		i2c_smbus_write_word_data_retry(EC_Bat_device->client,0x4d,cur);
+		msleep(10);
+	}
 }
 #endif
 
 static ssize_t MicSwitch_show(struct kobject *kobj, struct kobj_attribute *attr, char * buf)
 {
 	char * s = buf;
-	s += sprintf(s, "%d\n",MicSwitch_val);
+	s += sprintf(s, "%d\n",AcousticTable_val);
 
 	return (s - buf);
 }
@@ -761,8 +788,10 @@ static ssize_t MicSwitch_store(struct kobject *kobj, struct kobj_attribute *attr
 	int buffer;
 	buffer = atoi(buf);
 	MicSwitch_val = buffer & 0x0000FFFF;
-	i2c_smbus_write_word_data_retry(EC_Bat_device->client,0x44,MicSwitch_val);
-	msleep(100);
+	AcousticTable_val = MicSwitch_val;
+	printk("acoustic table value: %d\n", AcousticTable_val);
+
+	switch_audio_table(AcousticTable_val, true);
 
 	return n;
 }
@@ -1606,7 +1635,6 @@ struct i2c_client *lsc_from_ec_get_i2c_client(void)
 }
 #endif
 
-#if 0 /* TBR: wait for display function */
 static void enable_CABC(void)
 {
 	s32 ret;
@@ -1619,7 +1647,6 @@ static void enable_CABC(void)
 	i2c_smbus_write_word_data_retry(EC_Bat_device->client,0x4d,cur);
 	msleep(10);
 }
-#endif
 
 //i2c retry
 static s32 i2c_smbus_read_word_data_retry(struct i2c_client *client, u8 command)

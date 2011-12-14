@@ -141,3 +141,10 @@ config SND_SOC_TEGRA_TLV320AIC326X
 	help
 	  Say Y or M here if you want to add support for SoC audio on Tegra
 	  boards using the TI AIC326X codec.
+
+config ACER_FM_SINGLE_MIC
+	tristate "SoC Audio support for Tegra boards using fm2018 single mic"
+	depends on MACH_PICASSO && MACH_PICASSO_E
+	default n
+	help
+	  Say Y or M here if you want to switch mic by fm2018.
