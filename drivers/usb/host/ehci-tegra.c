@@ -446,7 +446,9 @@ static int tegra_usb_resume(struct usb_hcd *hcd, bool is_dpd)
 	unsigned long val;
 	bool hsic;
 	bool null_ulpi;
-
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	unsigned long flags;
+#endif
 	null_ulpi = (tegra->phy->usb_phy_type == TEGRA_USB_PHY_TYPE_NULL_ULPI);
 	hsic = (tegra->phy->usb_phy_type == TEGRA_USB_PHY_TYPE_HSIC);
 
@@ -458,8 +460,12 @@ static int tegra_usb_resume(struct usb_hcd *hcd, bool is_dpd)
 		goto restart;
 
 	/* Force the phy to keep data lines in suspend state */
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if( tegra->phy->instance == 1)
+		tegra_ehci_phy_restore_start(tegra->phy, tegra->port_speed);
+#else
 	tegra_ehci_phy_restore_start(tegra->phy, tegra->port_speed);
-
+#endif
 	if ((tegra->phy->usb_phy_type == TEGRA_USB_PHY_TYPE_UTMIP) &&
 		(tegra->ehci->has_hostpc)) {
 		ehci_reset(ehci);
@@ -481,7 +487,13 @@ static int tegra_usb_resume(struct usb_hcd *hcd, bool is_dpd)
 	val |= PORT_POWER;
 	writel(val, &hw->port_status[0]);
 	udelay(10);
-
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if( tegra->phy->instance != 1) {
+		spin_lock_irqsave(&tegra->ehci->lock, flags);
+		tegra->port_speed = (readl(&hw->port_status[0]) >> 26) & 0x3;
+		spin_unlock_irqrestore(&tegra->ehci->lock, flags);
+	}
+#endif
 	if ((tegra->phy->usb_phy_type == TEGRA_USB_PHY_TYPE_UTMIP) &&
 		(tegra->ehci->has_hostpc) && (tegra->phy->remote_wakeup)) {
 		ehci->command |= CMD_RUN;
