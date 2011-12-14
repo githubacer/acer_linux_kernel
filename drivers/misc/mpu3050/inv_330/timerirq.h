@@ -17,27 +17,12 @@
   $
  */
 
-#ifndef __SLAVEIRQ__
-#define __SLAVEIRQ__
+#ifndef __TIMERIRQ__
+#define __TIMERIRQ__
 
-#ifdef __KERNEL__
-#include <linux/i2c-dev.h>
-#endif
-
-#include "mpu.h"
-#include "mpuirq.h"
-
-#define SLAVEIRQ_SET_TIMEOUT           _IOW(MPU_IOCTL, 0x50, unsigned long)
-#define SLAVEIRQ_GET_INTERRUPT_CNT     _IOR(MPU_IOCTL, 0x51, unsigned long)
-#define SLAVEIRQ_GET_IRQ_TIME          _IOR(MPU_IOCTL, 0x52, unsigned long)
-
-#ifdef __KERNEL__
-
-void slaveirq_exit(struct ext_slave_platform_data *pdata);
-int slaveirq_init(struct i2c_adapter *slave_adapter,
-		struct ext_slave_platform_data *pdata,
-		char *name);
-
-#endif
+#define TIMERIRQ_SET_TIMEOUT           (5)
+#define TIMERIRQ_GET_INTERRUPT_CNT     (7)
+#define TIMERIRQ_START                 (8)
+#define TIMERIRQ_STOP                  (9)
 
 #endif

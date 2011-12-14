@@ -72,6 +72,9 @@ static int mpuirq_open(struct inode *inode, struct file *file)
 		"%s current->pid %d\n", __func__, current->pid);
 	mpuirq_dev_data.pid = current->pid;
 	file->private_data = &mpuirq_dev_data;
+	/* we could do some checking on the flags supplied by "open" */
+	/* i.e. O_NONBLOCK */
+	/* -> set some flag to disable interruptible_sleep_on in mpuirq_read */
 	return 0;
 }
 

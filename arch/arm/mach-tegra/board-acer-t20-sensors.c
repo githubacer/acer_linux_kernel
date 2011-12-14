@@ -55,7 +55,6 @@
 #include "board-acer-t20.h"
 #include "cpu-tegra.h"
 
-#define ISL29018_IRQ_GPIO	TEGRA_GPIO_PZ2
 #define AKM8975_IRQ_GPIO	TEGRA_GPIO_PN5
 #define CAMERA_POWER_GPIO	TEGRA_GPIO_PV4
 #define CAMERA_CSI_MUX_SEL_GPIO	TEGRA_GPIO_PBB4
@@ -552,20 +551,7 @@ static struct nvc_torch_pin_state ventana_ssl3250a_pinstate = {
 	.mask		= 0x0040, /* VGP6 */
 	.values		= 0x0040,
 };
-
-static struct ssl3250a_platform_data ventana_ssl3250a_pdata = {
-	.dev_name	= "torch",
-	.pinstate	= &ventana_ssl3250a_pinstate,
-	.gpio_act	= CAMERA_FLASH_ACT_GPIO,
-};
 #endif /* !CONFIG_ARCH_ACER_T20 */
-
-static void ventana_isl29018_init(void)
-{
-	tegra_gpio_enable(ISL29018_IRQ_GPIO);
-	gpio_request(ISL29018_IRQ_GPIO, "isl29018");
-	gpio_direction_input(ISL29018_IRQ_GPIO);
-}
 
 #ifdef CONFIG_SENSORS_AK8975
 static void ventana_akm8975_init(void)
@@ -600,13 +586,6 @@ static struct nct1008_platform_data ventana_nct1008_pdata = {
 	.shutdown_local_limit = 120,
 	.throttling_ext_limit = 90,
 	.alarm_fn = tegra_throttling_enable,
-};
-
-static const struct i2c_board_info ventana_i2c0_board_info[] = {
-	{
-		I2C_BOARD_INFO("isl29018", 0x44),
-		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PZ2),
-	},
 };
 
 static const struct i2c_board_info ventana_i2c2_board_info[] = {
@@ -699,96 +678,132 @@ static struct i2c_board_info ventana_i2c8_board_info[] = {
 #endif
 
 #ifdef CONFIG_MPU_SENSORS_MPU3050
-static struct mpu_platform_data mpu3050_data = {
+#define SENSOR_MPU_NAME "mpu3050"
+static struct mpu3050_platform_data mpu3050_data = {
 	.int_config	= 0x10,
+#if defined(CONFIG_MACH_PICASSO) || defined(CONFIG_MACH_MAYA) || defined (CONFIG_MACH_PICASSO_E)
+	.orientation = {
+		 0, -1,  0,
+		-1,  0,  0,
+		 0,  0, -1
+	},
+#endif
+#ifdef CONFIG_MACH_VANGOGH
+	.orientation = {
+		 0, -1,  0,
+		 1,  0,  0,
+		 0,  0,  1
+	},
+#endif
+
 	.level_shifter	= 0,
-	.orientation	= MPU_GYRO_ORIENTATION,	/* Located in board_[platformname].h	*/
-};
-
-static struct ext_slave_platform_data mpu3050_accel_data = {
-	.address	= MPU_ACCEL_ADDR,
-	.irq		= 0,
-	.adapt_num	= MPU_ACCEL_BUS_NUM,
+	.accel = {
+#ifdef CONFIG_MPU_SENSORS_KXTF9
+	.get_slave_descr = get_accel_slave_descr,
+#else
+	.get_slave_descr = NULL,
+#endif
+	.adapt_num   = 0,
+	.irq         = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PS7),
 	.bus		= EXT_SLAVE_BUS_SECONDARY,
-	.orientation	= MPU_ACCEL_ORIENTATION,	/* Located in board_[platformname].h	*/
-};
+	.address     = 0x0F,
+#if defined(CONFIG_MACH_PICASSO) || defined(CONFIG_MACH_MAYA) || defined (CONFIG_MACH_PICASSO_E)
+		.orientation = {
+			 0, -1,  0,
+			-1,  0,  0,
+			 0,  0, -1
+		},
+#endif
+#ifdef CONFIG_MACH_VANGOGH
+		.orientation = {
+			 0,  1,  0,
+			-1,  0,  0,
+			 0,  0,  1
+		},
+#endif
+	},
 
-static struct ext_slave_platform_data mpu_compass_data = {
-	.address	= MPU_COMPASS_ADDR,
-	.irq		= 0,
-	.adapt_num	= MPU_COMPASS_BUS_NUM,
+	.compass = {
+#ifdef CONFIG_MPU_SENSORS_AK8975
+	.get_slave_descr = get_compass_slave_descr,
+#else
+	.get_slave_descr = NULL,
+#endif
+	.adapt_num   = 4,            /* bus number 4 on ventana */
+	.irq         = TEGRA_GPIO_TO_IRQ(AKM8975_IRQ_GPIO),
 	.bus		= EXT_SLAVE_BUS_PRIMARY,
-	.orientation	= MPU_COMPASS_ORIENTATION,	/* Located in board_[platformname].h	*/
+	.address     = 0x0C,
+#ifdef CONFIG_MACH_PICASSO_E
+		.orientation = {
+			0,  0,  0,
+			0,  0,  0,
+			0,  0,  0
+		},
+#endif
+#if defined(CONFIG_MACH_PICASSO) || defined(CONFIG_MACH_MAYA)
+		.orientation = {
+			1,  0,  0,
+			0, -1,  0,
+			0,  0, -1
+		},
+#endif
+#ifdef CONFIG_MACH_VANGOGH
+		.orientation = {
+			0, -1,  0,
+		       -1,  0,  0,
+			0,  0, -1
+	},
+#endif
+	},
 };
 
-static struct i2c_board_info __initdata inv_mpu_i2c2_board_info[] = {
+static struct i2c_board_info __initdata mpu3050_i2c0_boardinfo[] = {
 	{
-		I2C_BOARD_INFO(MPU_GYRO_NAME, MPU_GYRO_ADDR),
-		.irq = TEGRA_GPIO_TO_IRQ(MPU_GYRO_IRQ_GPIO),
+		I2C_BOARD_INFO(SENSOR_MPU_NAME, 0x68),
+		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PZ4),
 		.platform_data = &mpu3050_data,
 	},
-	{
-		I2C_BOARD_INFO(MPU_ACCEL_NAME, MPU_ACCEL_ADDR),
-#if	MPU_ACCEL_IRQ_GPIO
-		.irq = TEGRA_GPIO_TO_IRQ(MPU_ACCEL_IRQ_GPIO),
-#endif
-		.platform_data = &mpu3050_accel_data,
-	},
 };
 
-static struct i2c_board_info __initdata inv_mpu_i2c4_board_info[] = {
-	{
-		I2C_BOARD_INFO(MPU_COMPASS_NAME, MPU_COMPASS_ADDR),
-#if	MPU_COMPASS_IRQ_GPIO
-		.irq = TEGRA_GPIO_TO_IRQ(MPU_COMPASS_IRQ_GPIO),
-#endif
-		.platform_data = &mpu_compass_data,
-	},
-};
-
-static void mpuirq_init(void)
+static void ventana_mpuirq_init(void)
 {
-	int ret = 0;
+	int ret;
 
-	pr_info("*** MPU START *** mpuirq_init...\n");
+	pr_info("*** MPU START *** ventana_mpuirq_init...\n");
 
-#if	MPU_ACCEL_IRQ_GPIO
-	/* ACCEL-IRQ assignment */
-	tegra_gpio_enable(MPU_ACCEL_IRQ_GPIO);
-	ret = gpio_request(MPU_ACCEL_IRQ_GPIO, MPU_ACCEL_NAME);
-	if (ret < 0) {
-		pr_err("%s: gpio_request failed %d\n", __func__, ret);
-		return;
-	}
+	tegra_gpio_enable(TEGRA_GPIO_PZ4);
+	ret = gpio_request(TEGRA_GPIO_PZ4, SENSOR_MPU_NAME);
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PZ4");
+	ret = gpio_direction_input(TEGRA_GPIO_PZ4);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_input failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PZ4");
 
-	ret = gpio_direction_input(MPU_ACCEL_IRQ_GPIO);
-	if (ret < 0) {
-		pr_err("%s: gpio_direction_input failed %d\n", __func__, ret);
-		gpio_free(MPU_ACCEL_IRQ_GPIO);
-		return;
-	}
+	tegra_gpio_enable(TEGRA_GPIO_PS7);
+	ret = gpio_request(TEGRA_GPIO_PS7, "mpu_kxtf9");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PS7");
+	ret = gpio_direction_input(TEGRA_GPIO_PS7);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_input failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PS7");
+
+#ifndef CONFIG_MACH_PICASSO_E
+	tegra_gpio_enable(AKM8975_IRQ_GPIO);
+	ret = gpio_request(AKM8975_IRQ_GPIO, "mpu_akm8975");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "AKM8975_IRQ_GPIO");
+	gpio_direction_input(AKM8975_IRQ_GPIO);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_input failed for gpio %s\n",
+		__func__, "AKM8975_IRQ_GPIO");
 #endif
 
-	/* MPU-IRQ assignment */
-	tegra_gpio_enable(MPU_GYRO_IRQ_GPIO);
-	ret = gpio_request(MPU_GYRO_IRQ_GPIO, MPU_GYRO_NAME);
-	if (ret < 0) {
-		pr_err("%s: gpio_request failed %d\n", __func__, ret);
-		return;
-	}
-
-	ret = gpio_direction_input(MPU_GYRO_IRQ_GPIO);
-	if (ret < 0) {
-		pr_err("%s: gpio_direction_input failed %d\n", __func__, ret);
-		gpio_free(MPU_GYRO_IRQ_GPIO);
-		return;
-	}
-	pr_info("*** MPU END *** mpuirq_init...\n");
-
-	i2c_register_board_info(MPU_GYRO_BUS_NUM, inv_mpu_i2c2_board_info,
-		ARRAY_SIZE(inv_mpu_i2c2_board_info));
-	i2c_register_board_info(MPU_COMPASS_BUS_NUM, inv_mpu_i2c4_board_info,
-		ARRAY_SIZE(inv_mpu_i2c4_board_info));
+	pr_info("*** MPU END *** ventana_mpuirq_init...\n");
 }
 #endif
 
@@ -796,19 +811,12 @@ int __init ventana_sensors_init(void)
 {
 	struct board_info BoardInfo;
 
-	ventana_isl29018_init();
-#ifdef CONFIG_SENSORS_AK8975
-	ventana_akm8975_init();
-#endif
 #ifdef CONFIG_MPU_SENSORS_MPU3050
-	mpuirq_init();
+	ventana_mpuirq_init();
 #endif
 	ventana_camera_init();
 	ventana_nct1008_init();
 	ventana_ecbattery_init();
-
-	i2c_register_board_info(0, ventana_i2c0_board_info,
-		ARRAY_SIZE(ventana_i2c0_board_info));
 
 	tegra_get_board_info(&BoardInfo);
 
@@ -839,6 +847,12 @@ int __init ventana_sensors_init(void)
 
 	i2c_register_board_info(8, ventana_i2c8_board_info,
 		ARRAY_SIZE(ventana_i2c8_board_info));
+#endif
+
+
+#ifdef CONFIG_MPU_SENSORS_MPU3050
+	i2c_register_board_info(0, mpu3050_i2c0_boardinfo,
+		ARRAY_SIZE(mpu3050_i2c0_boardinfo));
 #endif
 
 	return 0;

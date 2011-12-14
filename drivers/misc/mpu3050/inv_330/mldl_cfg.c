@@ -57,6 +57,35 @@
 #define STANDBY 1
 #endif
 
+#define MPU3050_RETRY
+
+#ifdef MPU3050_RETRY
+#define mpu3050_retry_cnt   3
+static unsigned char gyro_retry;
+static unsigned char accel_retry;
+static unsigned char compass_retry;
+static unsigned char pressure_retry;
+
+#define MPU3050_RETRY_CHECK(x)                                                       \
+	{                                                                            \
+		if(ML_SUCCESS != x) {                                                \
+			gyro_retry++;                                                \
+			MPL_LOGE("Gyro set slave error retry(%d)\n", gyro_retry);    \
+			if (gyro_retry<mpu3050_retry_cnt) {                          \
+				MLOSSleep(5);                                        \
+				continue;                                            \
+			}                                                            \
+			else {                                                       \
+				gyro_retry=0;                                        \
+				ERROR_CHECK(x);                                      \
+				break;                                               \
+			}                                                            \
+		}                                                                    \
+		else {                                                               \
+			gyro_retry=0;                                                \
+		}                                                                    \
+        }
+#endif
 /*---------------------*/
 /*-    Prototypes.    -*/
 /*---------------------*/
@@ -297,7 +326,7 @@ static int MLDLGetSiliconRev(struct mldl_cfg *pdata,
 
 	result = MLSLSerialReadMem(mlsl_handle, pdata->addr,
 				   memAddr, 1, &index);
-	ERROR_CHECK(result);
+	ERROR_CHECK(result)
 	if (result)
 		return result;
 	index >>= 2;
@@ -306,7 +335,7 @@ static int MLDLGetSiliconRev(struct mldl_cfg *pdata,
 	result =
 	    MLSLSerialWriteSingle(mlsl_handle, pdata->addr,
 				  MPUREG_BANK_SEL, 0);
-	ERROR_CHECK(result);
+	ERROR_CHECK(result)
 	if (result)
 		return result;
 
@@ -330,28 +359,20 @@ static int MLDLGetSiliconRev(struct mldl_cfg *pdata,
 }
 
 /**
- *  @brief  Enable / Disable the use MPU's secondary I2C interface level
- *          shifters.
- *          When enabled the secondary I2C interface to which the external
- *          device is connected runs at VDD voltage (main supply).
- *          When disabled the 2nd interface runs at VDDIO voltage.
- *          See the device specification for more details.
+ *  @brief      Enable/Disable the use MPU's VDDIO level shifters.
+ *              When enabled the voltage interface with AUX or other external
+ *              accelerometer is using Vlogic instead of VDD (supply).
  *
- *  @note   using this API may produce unpredictable results, depending on how
- *          the MPU and slave device are setup on the target platform.
- *          Use of this API should entirely be restricted to system
- *          integrators. Once the correct value is found, there should be no
- *          need to change the level shifter at runtime.
+ *  @note       Must be called after MLSerialOpen().
+ *  @note       Typically be called before MLDmpOpen().
+ *              If called after MLDmpOpen(), must be followed by a call to
+ *              MLDLApplyLevelShifterBit() to write the setting on the hw.
  *
- *  @pre    Must be called after MLSerialOpen().
- *  @note   Typically called before MLDmpOpen().
+ *  @param[in]  enable
+ *                  1 to enable, 0 to disable
  *
- *  @param[in]  enable:
- *                  0 to run at VDDIO (default),
- *                  1 to run at VDD.
- *
- *  @return ML_SUCCESS if successfull, a non-zero error code otherwise.
- */
+ *  @return     ML_SUCCESS if successfull, a non-zero error code otherwise.
+**/
 static int MLDLSetLevelShifterBit(struct mldl_cfg *pdata,
 				  void *mlsl_handle,
 				  unsigned char enable)
@@ -366,9 +387,9 @@ static int MLDLSetLevelShifterBit(struct mldl_cfg *pdata,
 		return ML_ERROR_INVALID_PARAMETER;
 
 	/*-- on parts before B6 the VDDIO bit is bit 7 of ACCEL_BURST_ADDR --
-	NOTE: this is incompatible with ST accelerometers where the VDDIO
-	bit MUST be set to enable ST's internal logic to autoincrement
-	the register address on burst reads --*/
+	  NOTE: this is incompatible with ST accelerometers where the VDDIO
+		bit MUST be set to enable ST's internal logic to autoincrement
+		the register address on burst reads --*/
 	if ((pdata->silicon_revision & 0xf) < MPU_SILICON_REV_B6) {
 		reg = MPUREG_ACCEL_BURST_ADDR;
 		mask = 0x80;
@@ -861,6 +882,38 @@ int mpu_set_slave(struct mldl_cfg *mldl_cfg,
 		slave_address = slave_pdata->address;
 	}
 
+#ifdef MPU3050_RETRY
+	while(1)
+	{
+		/* Address */
+		result = MLSLSerialWriteSingle(gyro_handle,
+			mldl_cfg->addr,
+			MPUREG_AUX_SLV_ADDR,
+			slave_address);
+		MPU3050_RETRY_CHECK(result);
+		/* Register */
+		result = MLSLSerialRead(gyro_handle, mldl_cfg->addr,
+			MPUREG_ACCEL_BURST_ADDR, 1,
+			&reg);
+		MPU3050_RETRY_CHECK(result);
+		reg = ((reg & 0x80) | slave_reg);
+		result = MLSLSerialWriteSingle(gyro_handle,
+			mldl_cfg->addr,
+			MPUREG_ACCEL_BURST_ADDR,
+			reg);
+		MPU3050_RETRY_CHECK(result);
+		/* Length */
+		result = MLSLSerialRead(gyro_handle, mldl_cfg->addr,
+			MPUREG_USER_CTRL, 1, &reg);
+		MPU3050_RETRY_CHECK(result);
+		reg = (reg & ~BIT_AUX_RD_LENG);
+		result = MLSLSerialWriteSingle(gyro_handle,
+			mldl_cfg->addr,
+			MPUREG_USER_CTRL, reg);
+		MPU3050_RETRY_CHECK(result);
+		break;
+	}
+#else
 	/* Address */
 	result = MLSLSerialWriteSingle(gyro_handle,
 				mldl_cfg->addr,
@@ -907,6 +960,7 @@ int mpu_set_slave(struct mldl_cfg *mldl_cfg,
 				mldl_cfg->addr,
 				MPUREG_USER_CTRL, reg);
 	ERROR_CHECK(result);
+#endif
 #endif
 
 	if (slave_address) {
@@ -1131,7 +1185,6 @@ int mpu3050_open(struct mldl_cfg *mldl_cfg,
 {
 	int result;
 	/* Default is Logic HIGH, pushpull, latch disabled, anyread to clear */
-	mldl_cfg->ignore_system_suspend = FALSE;
 	mldl_cfg->int_config = BIT_INT_ANYRD_2CLEAR | BIT_DMP_INT_EN;
 	mldl_cfg->clk_src = MPU_CLK_SEL_PLLGYROZ;
 	mldl_cfg->lpf = MPU_FILTER_42HZ;
@@ -1377,7 +1430,22 @@ int mpu3050_resume(struct mldl_cfg *mldl_cfg,
 		return ML_ERROR_INVALID_PARAMETER;
 
 	if (resume_gyro && mldl_cfg->gyro_is_suspended) {
+#ifdef MPU3050_RETRY
+		while(gyro_retry < mpu3050_retry_cnt)
+		{
+			result = gyro_resume(mldl_cfg, gyro_handle);
+			if (result==ML_SUCCESS)
+				break;
+			else {
+				gyro_retry++;
+				MPL_LOGE("gyro_resume error, retry(%d)\n", gyro_retry);
+			}
+			MLOSSleep(5);
+		}
+		gyro_retry=0;
+#else
 		result = gyro_resume(mldl_cfg, gyro_handle);
+#endif
 		ERROR_CHECK(result);
 	}
 
@@ -1387,9 +1455,26 @@ int mpu3050_resume(struct mldl_cfg *mldl_cfg,
 			result = MLDLSetI2CBypass(mldl_cfg, gyro_handle, TRUE);
 			ERROR_CHECK(result);
 		}
+#ifdef MPU3050_RETRY
+		while(accel_retry < mpu3050_retry_cnt)
+		{
+			result = mldl_cfg->accel->resume(accel_handle,
+					mldl_cfg->accel,
+					&mldl_cfg->pdata->accel);
+			if (result==ML_SUCCESS)
+				break;
+			else {
+				accel_retry++;
+				MPL_LOGE("accel resume error, retry(%d)\n", accel_retry);
+			}
+			MLOSSleep(5);
+		}
+		accel_retry=0;
+#else
 		result = mldl_cfg->accel->resume(accel_handle,
 						 mldl_cfg->accel,
 						 &mldl_cfg->pdata->accel);
+#endif
 		ERROR_CHECK(result);
 		mldl_cfg->accel_is_suspended = FALSE;
 	}
@@ -1409,10 +1494,28 @@ int mpu3050_resume(struct mldl_cfg *mldl_cfg,
 			result = MLDLSetI2CBypass(mldl_cfg, gyro_handle, TRUE);
 			ERROR_CHECK(result);
 		}
+#ifdef MPU3050_RETRY
+		while(compass_retry < mpu3050_retry_cnt)
+		{
+			result = mldl_cfg->compass->resume(compass_handle,
+					mldl_cfg->compass,
+					&mldl_cfg->pdata->
+					compass);
+			if (result==ML_SUCCESS)
+				break;
+			else {
+				compass_retry++;
+				MPL_LOGE("compass resume error, retry(%d)\n", compass_retry);
+			}
+			MLOSSleep(5);
+		}
+		compass_retry=0;
+#else
 		result = mldl_cfg->compass->resume(compass_handle,
 						   mldl_cfg->compass,
 						   &mldl_cfg->pdata->
 						   compass);
+#endif
 		ERROR_CHECK(result);
 		mldl_cfg->compass_is_suspended = FALSE;
 	}
@@ -1432,10 +1535,28 @@ int mpu3050_resume(struct mldl_cfg *mldl_cfg,
 			result = MLDLSetI2CBypass(mldl_cfg, gyro_handle, TRUE);
 			ERROR_CHECK(result);
 		}
+#ifdef MPU3050_RETRY
+		while(pressure_retry < mpu3050_retry_cnt)
+		{
+			result = mldl_cfg->pressure->resume(pressure_handle,
+						mldl_cfg->pressure,
+						&mldl_cfg->pdata->
+						pressure);
+			if (result==ML_SUCCESS)
+				break;
+			else {
+				pressure_retry++;
+				MPL_LOGE("pressure resume error, retry(%d)\n", pressure_retry);
+			}
+			MLOSSleep(5);
+		}
+		pressure_retry=0;
+#else
 		result = mldl_cfg->pressure->resume(pressure_handle,
 						    mldl_cfg->pressure,
 						    &mldl_cfg->pdata->
 						    pressure);
+#endif
 		ERROR_CHECK(result);
 		mldl_cfg->pressure_is_suspended = FALSE;
 	}
@@ -1454,7 +1575,6 @@ int mpu3050_resume(struct mldl_cfg *mldl_cfg,
 		result = dmp_start(mldl_cfg, gyro_handle);
 		ERROR_CHECK(result);
 	}
-
 	return result;
 }
 

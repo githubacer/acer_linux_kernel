@@ -34,17 +34,15 @@ config MPU_SENSORS_KXTF9
 
 endchoice
 
-choice
-    prompt "Compass Type"
-    depends on MPU_SENSORS_MPU6000 || MPU_SENSORS_MPU3050
-    optional
-
 config MPU_SENSORS_AK8975
     bool "AKM ak8975"
     help
       This enables support for the AKM ak8975 compass
 
-endchoice
+config MPU_SENSORS_YAS529
+    bool "Yamaha yas529"
+    help
+      This enables support for the Yamaha yas529 compass
 
 config MPU_SENSORS_TIMERIRQ
     tristate "Timer IRQ"
