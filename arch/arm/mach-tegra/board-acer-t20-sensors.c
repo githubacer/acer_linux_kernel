@@ -59,6 +59,7 @@
 #define CAMERA_CSI_MUX_SEL_GPIO	TEGRA_GPIO_PBB4
 #define CAMERA_FLASH_ACT_GPIO	TEGRA_GPIO_PD2
 #define NCT1008_THERM2_GPIO	TEGRA_GPIO_PN6
+#define AC_PRESENT_GPIO		TEGRA_GPIO_PV3
 
 static int ventana_camera_init(void)
 {
@@ -221,6 +222,13 @@ static void ventana_akm8975_init(void)
 }
 #endif
 
+static void ventana_ecbattery_init(void)
+{
+	tegra_gpio_enable(AC_PRESENT_GPIO);
+	gpio_request(AC_PRESENT_GPIO, "ac_present");
+	gpio_direction_input(AC_PRESENT_GPIO);
+}
+
 static void ventana_nct1008_init(void)
 {
 	tegra_gpio_enable(NCT1008_THERM2_GPIO);
@@ -249,7 +257,8 @@ static const struct i2c_board_info ventana_i2c0_board_info[] = {
 
 static const struct i2c_board_info ventana_i2c2_board_info[] = {
 	{
-		I2C_BOARD_INFO("bq20z75", 0x0B),
+		I2C_BOARD_INFO("EC_Battery", 0x58),
+		.irq = TEGRA_GPIO_TO_IRQ(AC_PRESENT_GPIO),
 	},
 };
 
@@ -440,6 +449,7 @@ int __init ventana_sensors_init(void)
 #endif
 	ventana_camera_init();
 	ventana_nct1008_init();
+	ventana_ecbattery_init();
 
 	i2c_register_board_info(0, ventana_i2c0_board_info,
 		ARRAY_SIZE(ventana_i2c0_board_info));
@@ -450,10 +460,8 @@ int __init ventana_sensors_init(void)
 	 * battery driver is supported on FAB.D boards and above only,
 	 * since they have the necessary hardware rework
 	 */
-	if (BoardInfo.sku > 0) {
-		i2c_register_board_info(2, ventana_i2c2_board_info,
-			ARRAY_SIZE(ventana_i2c2_board_info));
-	}
+	i2c_register_board_info(2, ventana_i2c2_board_info,
+		ARRAY_SIZE(ventana_i2c2_board_info));
 
 	i2c_register_board_info(3, ventana_i2c3_board_info_ssl3250a,
 		ARRAY_SIZE(ventana_i2c3_board_info_ssl3250a));

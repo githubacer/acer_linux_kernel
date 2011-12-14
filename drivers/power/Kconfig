@@ -241,4 +241,10 @@ config CHARGER_GPIO
 	  This driver can be build as a module. If so, the module will be
 	  called gpio-charger.
 
+config BATTERY_ECBAT
+	tristate "EC control and battery gauge"
+	depends on I2C
+	help
+	  Say Y to include support for EC control and battery behind EC.
+
 endif # POWER_SUPPLY

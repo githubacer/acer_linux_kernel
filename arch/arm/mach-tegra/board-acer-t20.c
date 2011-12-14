@@ -196,7 +196,7 @@ static const struct tegra_pingroup_config i2c2_gen2 = {
 static struct tegra_i2c_platform_data ventana_i2c2_platform_data = {
 	.adapter_nr	= 1,
 	.bus_count	= 2,
-	.bus_clk_rate	= { 100000, 10000 },
+	.bus_clk_rate   = { 50000, 100000 },
 	.bus_mux	= { &i2c2_ddc, &i2c2_gen2 },
 	.bus_mux_len	= { 1, 1 },
 	.slave_addr = 0x00FC,
@@ -630,7 +630,6 @@ static void __init acer_t20_init(void)
 	ventana_sdhci_init();
 	ventana_charge_init();
 	ventana_regulator_init();
-	ventana_charger_init();
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_768E
 	touch_init_atmel_mXT768e();
