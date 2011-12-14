@@ -559,7 +559,9 @@ static void ventana_usb_init(void)
 	platform_device_register(&tegra_otg_device);
 
 	platform_device_register(&tegra_udc_device);
+#if !defined(CONFIG_MACH_PICASSO_E)
 	platform_device_register(&tegra_ehci2_device);
+#endif
 
 	tegra_ehci3_device.dev.platform_data=&tegra_ehci_pdata[2];
 	platform_device_register(&tegra_ehci3_device);
