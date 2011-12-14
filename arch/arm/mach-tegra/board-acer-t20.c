@@ -63,6 +63,8 @@
 #include "wakeups-t2.h"
 #include "pm.h"
 
+extern void SysShutdown(void);
+
 static struct tegra_utmip_config utmi_phy_config[] = {
 	[0] = {
 			.hssync_start_delay = 9,
@@ -527,7 +529,7 @@ static void ventana_power_off(void)
 
 static void __init ventana_power_off_init(void)
 {
-	pm_power_off = ventana_power_off;
+	pm_power_off = SysShutdown;
 }
 
 static void ventana_usb_init(void)
@@ -628,8 +630,8 @@ static void __init acer_t20_init(void)
 	platform_add_devices(ventana_devices, ARRAY_SIZE(ventana_devices));
 
 	ventana_sdhci_init();
-	ventana_charge_init();
-	ventana_regulator_init();
+	acer_t20_charge_init();
+	acer_t20_regulator_init();
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_768E
 	touch_init_atmel_mXT768e();

@@ -42,7 +42,7 @@
 
 #define CHARGING_DISABLE	TEGRA_GPIO_PR6
 
-int __init ventana_charge_init(void)
+int __init acer_t20_charge_init(void)
 {
 	gpio_request(CHARGING_DISABLE, "chg_disable");
 	gpio_direction_output(CHARGING_DISABLE, 0);
@@ -204,7 +204,7 @@ static struct tps6586x_platform_data tps_platform = {
 	.gpio_base = TPS6586X_GPIO_BASE,
 };
 
-static struct i2c_board_info __initdata ventana_regulators[] = {
+static struct i2c_board_info __initdata acer_t20_regulators[] = {
 	{
 		I2C_BOARD_INFO("tps6586x", 0x34),
 		.irq		= INT_EXTERNAL_PMU,
@@ -212,19 +212,19 @@ static struct i2c_board_info __initdata ventana_regulators[] = {
 	},
 };
 
-static void ventana_board_suspend(int lp_state, enum suspend_stage stg)
+static void acer_t20_board_suspend(int lp_state, enum suspend_stage stg)
 {
 	if ((lp_state == TEGRA_SUSPEND_LP1) && (stg == TEGRA_SUSPEND_BEFORE_CPU))
 		tegra_console_uart_suspend();
 }
 
-static void ventana_board_resume(int lp_state, enum resume_stage stg)
+static void acer_t20_board_resume(int lp_state, enum resume_stage stg)
 {
 	if ((lp_state == TEGRA_SUSPEND_LP1) && (stg == TEGRA_RESUME_AFTER_CPU))
 		tegra_console_uart_resume();
 }
 
-static struct tegra_suspend_platform_data ventana_suspend_data = {
+static struct tegra_suspend_platform_data acer_t20_suspend_data = {
 	/*
 	 * Check power on time and crystal oscillator start time
 	 * for appropriate settings.
@@ -236,11 +236,11 @@ static struct tegra_suspend_platform_data ventana_suspend_data = {
 	.core_off_timer = 0xf,
 	.corereq_high	= false,
 	.sysclkreq_high	= true,
-	.board_suspend = ventana_board_suspend,
-	.board_resume = ventana_board_resume,
+	.board_suspend = acer_t20_board_suspend,
+	.board_resume = acer_t20_board_resume,
 };
 
-int __init ventana_regulator_init(void)
+int __init acer_t20_regulator_init(void)
 {
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	void __iomem *chip_id = IO_ADDRESS(TEGRA_APB_MISC_BASE) + 0x804;
@@ -250,50 +250,50 @@ int __init ventana_regulator_init(void)
 	minor = (readl(chip_id) >> 16) & 0xf;
 	/* A03 (but not A03p) chips do not support LP0 */
 	if (minor == 3 && !(tegra_spare_fuse(18) || tegra_spare_fuse(19)))
-		ventana_suspend_data.suspend_mode = TEGRA_SUSPEND_LP1;
+		acer_t20_suspend_data.suspend_mode = TEGRA_SUSPEND_LP1;
 
 	/* configure the power management controller to trigger PMU
 	 * interrupts when low */
 	pmc_ctrl = readl(pmc + PMC_CTRL);
 	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
 
-	i2c_register_board_info(4, ventana_regulators, 1);
+	i2c_register_board_info(4, acer_t20_regulators, 1);
 
 //	regulator_has_full_constraints();
 
-	tegra_init_suspend(&ventana_suspend_data);
+	tegra_init_suspend(&acer_t20_suspend_data);
 
 	return 0;
 }
 
-static char *ventana_battery[] = {
+static char *acer_t20_battery[] = {
 	"battery",
 };
 
-static struct gpio_charger_platform_data ventana_charger_pdata = {
+static struct gpio_charger_platform_data acer_t20_charger_pdata = {
 	.name = "ac",
 	.type = POWER_SUPPLY_TYPE_MAINS,
 	.gpio = AC_PRESENT_GPIO,
 	.gpio_active_low = 1,
-	.supplied_to = ventana_battery,
-	.num_supplicants = ARRAY_SIZE(ventana_battery),
+	.supplied_to = acer_t20_battery,
+	.num_supplicants = ARRAY_SIZE(acer_t20_battery),
 };
 
-static struct platform_device ventana_charger_device = {
+static struct platform_device acer_t20_charger_device = {
 	.name = "gpio-charger",
 	.dev = {
-		.platform_data = &ventana_charger_pdata,
+		.platform_data = &acer_t20_charger_pdata,
 	},
 };
 
-int __init ventana_charger_init(void)
+int __init acer_t20_charger_init(void)
 {
 	tegra_gpio_enable(AC_PRESENT_GPIO);
-	platform_device_register(&ventana_charger_device);
+	platform_device_register(&acer_t20_charger_device);
 	return 0;
 }
 
-static int __init ventana_pcie_init(void)
+static int __init acer_t20_pcie_init(void)
 {
 	int ret;
 
@@ -317,4 +317,4 @@ fail:
 	return ret;
 }
 
-late_initcall(ventana_pcie_init);
+late_initcall(acer_t20_pcie_init);
