@@ -852,7 +852,11 @@ static int hdmi_pcm_open(struct hda_pcm_stream *hinfo,
 		unsigned long timeout;
 
 		if (!eld->eld_valid) {
+#if defined(CONFIG_TEGRA_HDMI)
 			err = tegra_hdmi_setup_hda_presence();
+#else
+			err = -ENODEV;
+#endif
 			if (err < 0) {
 				snd_printk(KERN_WARNING
 					   "HDMI: No HDMI device connected\n");
@@ -1074,8 +1078,12 @@ static int generic_hdmi_playback_pcm_prepare(struct hda_pcm_stream *hinfo,
 	if (codec->preset->id == 0x10de0020) {
 		int err = 0;
 		/* Set hdmi:audio freq and source selection*/
+#if defined(CONFIG_TEGRA_HDMI)
 		err = tegra_hdmi_setup_audio_freq_source(
 					substream->runtime->rate, HDA);
+#else
+		err = -ENODEV;
+#endif
 		if ( err < 0 ) {
 			snd_printk(KERN_ERR
 				"Unable to set hdmi audio freq to %d \n",

@@ -1364,6 +1364,7 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		}
 	}
 
+#if defined(CONFIG_TEGRA_HDMI)
 	if (dc->out->type == TEGRA_DC_OUT_HDMI) {
 		unsigned long rate;
 		struct clk *parent_clk =
@@ -1385,6 +1386,7 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		if (clk_get_parent(clk) != parent_clk)
 			clk_set_parent(clk, parent_clk);
 	}
+#endif
 
 	if (dc->out->type == TEGRA_DC_OUT_DSI) {
 		unsigned long rate;
@@ -1868,9 +1870,11 @@ static void tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->out_ops = &tegra_dc_rgb_ops;
 		break;
 
+#if defined(CONFIG_TEGRA_HDMI)
 	case TEGRA_DC_OUT_HDMI:
 		dc->out_ops = &tegra_dc_hdmi_ops;
 		break;
+#endif
 
 	case TEGRA_DC_OUT_DSI:
 		dc->out_ops = &tegra_dc_dsi_ops;
