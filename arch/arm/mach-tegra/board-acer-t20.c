@@ -95,6 +95,8 @@ static struct tegra_ulpi_config ulpi_phy_config = {
 	.clk = "cdev2",
 };
 
+#ifdef CONFIG_BCM4329_RFKILL
+
 static struct resource ventana_bcm4329_rfkill_resources[] = {
 	{
 		.name   = "bcm4329_nshutdown_gpio",
@@ -102,6 +104,20 @@ static struct resource ventana_bcm4329_rfkill_resources[] = {
 		.end    = TEGRA_GPIO_PU0,
 		.flags  = IORESOURCE_IO,
 	},
+#if defined(CONFIG_MACH_PICASSO_E)
+	{
+		.name   = "bcm4329_wifi_reset_gpio",
+		.start  = TEGRA_GPIO_PK6,
+		.end    = TEGRA_GPIO_PK6,
+		.flags  = IORESOURCE_IO,
+	},
+	{
+		.name   = "bcm4329_vdd_gpio",
+		.start  = TEGRA_GPIO_PD1,
+		.end    = TEGRA_GPIO_PD1,
+		.flags  = IORESOURCE_IO,
+	},
+#endif
 };
 
 static struct platform_device ventana_bcm4329_rfkill_device = {
@@ -118,6 +134,9 @@ static void __init ventana_bt_rfkill(void)
 				"blink", NULL);
 	return;
 }
+#else
+static inline void ventana_bt_rfkill(void) { }
+#endif
 
 static struct resource ventana_bluesleep_resources[] = {
 	[0] = {

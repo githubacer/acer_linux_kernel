@@ -288,9 +288,9 @@ static int bluesleep_hci_event(struct notifier_block *this,
 		break;
 	case HCI_DEV_UNREG:
 		bluesleep_hdev = NULL;
-		bsi->uport = NULL;
 		/* if bluetooth stopped, stop bluesleep also */
 		bluesleep_stop();
+		bsi->uport = NULL;
 		break;
 	case HCI_DEV_WRITE:
 		bluesleep_outgoing_data();

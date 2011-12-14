@@ -38,6 +38,10 @@ struct bcm4329_rfkill_data {
 	int gpio_shutdown;
 	int delay;
 	struct clk *bt_32k_clk;
+#if defined(CONFIG_MACH_PICASSO_E)
+	int gpio_wifi_reset;
+	int gpio_bcm_vdd;
+#endif
 };
 
 static struct bcm4329_rfkill_data *bcm4329_rfkill;
@@ -45,29 +49,41 @@ static struct bcm4329_rfkill_data *bcm4329_rfkill;
 static int bcm4329_bt_rfkill_set_power(void *data, bool blocked)
 {
 	if (blocked) {
+		pr_info("%s: BT Power off.\n", __func__);
+
 		if (bcm4329_rfkill->gpio_shutdown)
 			gpio_direction_output(bcm4329_rfkill->gpio_shutdown, 0);
 		if (bcm4329_rfkill->gpio_reset)
 			gpio_direction_output(bcm4329_rfkill->gpio_reset, 0);
 		if (bcm4329_rfkill->bt_32k_clk)
 			clk_disable(bcm4329_rfkill->bt_32k_clk);
+
+#if defined(CONFIG_MACH_PICASSO_E)
+		if (bcm4329_rfkill->gpio_bcm_vdd) {
+			if (!gpio_get_value(bcm4329_rfkill->gpio_wifi_reset)) {
+				gpio_direction_output(bcm4329_rfkill->gpio_bcm_vdd, 0);
+				pr_info("%s: bcm4329_rfkill->gpio_bcm_vdd = 0.\n", __func__);
+			}
+		}
+#endif
 	} else {
+		pr_info("%s: BT Power on.\n", __func__);
+
+#if defined(CONFIG_MACH_PICASSO_E)
+		if (bcm4329_rfkill->gpio_bcm_vdd) {
+			if (!gpio_get_value(bcm4329_rfkill->gpio_wifi_reset)) {
+				pr_info("%s: bcm4329_rfkill->gpio_bcm_vdd = 1.\n", __func__);
+				gpio_direction_output(bcm4329_rfkill->gpio_bcm_vdd, 1);
+				mdelay(50);
+			}
+		}
+#endif
 		if (bcm4329_rfkill->bt_32k_clk)
 			clk_enable(bcm4329_rfkill->bt_32k_clk);
 		if (bcm4329_rfkill->gpio_shutdown)
-		{
-			gpio_direction_output(bcm4329_rfkill->gpio_shutdown, 0);
-			msleep(100);
 			gpio_direction_output(bcm4329_rfkill->gpio_shutdown, 1);
-			msleep(100);
-		}
 		if (bcm4329_rfkill->gpio_reset)
-		{
-			gpio_direction_output(bcm4329_rfkill->gpio_reset, 0);
-			msleep(100);
 			gpio_direction_output(bcm4329_rfkill->gpio_reset, 1);
-			msleep(100);
-		}
 	}
 
 	return 0;
@@ -120,6 +136,31 @@ static int bcm4329_rfkill_probe(struct platform_device *pdev)
 		bcm4329_rfkill->gpio_shutdown = 0;
 	}
 
+#if defined(CONFIG_MACH_PICASSO_E)
+	res = platform_get_resource_byname(pdev, IORESOURCE_IO,
+					"bcm4329_wifi_reset_gpio");
+	if (res) {
+		bcm4329_rfkill->gpio_wifi_reset = res->start;
+				tegra_gpio_enable(bcm4329_rfkill->gpio_wifi_reset);
+		ret = gpio_request(bcm4329_rfkill->gpio_wifi_reset,
+				"bcm4329_wifi_reset_gpio");
+	} else {
+		pr_warn("%s : can't find wifi_reset gpio.\n", __func__);
+		bcm4329_rfkill->gpio_wifi_reset = 0;
+	}
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_IO,
+			"bcm4329_vdd_gpio");
+	if (res) {
+		bcm4329_rfkill->gpio_bcm_vdd = res->start;
+		tegra_gpio_enable(bcm4329_rfkill->gpio_bcm_vdd);
+		ret = gpio_request(bcm4329_rfkill->gpio_bcm_vdd,
+				"bcm4329_vdd_gpio");
+	} else {
+		pr_warn("%s : can't find bcm_vdd gpio.\n", __func__);
+		bcm4329_rfkill->gpio_bcm_vdd = 0;
+	}
+#endif
 	/* make sure at-least one of the GPIO is defined */
 	if (!bcm4329_rfkill->gpio_reset && !bcm4329_rfkill->gpio_shutdown)
 		goto free_bcm_res;
