@@ -207,6 +207,7 @@ static int tegra_camera_power_on(struct tegra_camera_dev *dev)
 	int ret = 0;
 
 	if (dev->power_refcnt++ == 0) {
+#if !defined(CONFIG_ARCH_ACER_T20)
 		/* Enable external power */
 		if (dev->reg) {
 			ret = regulator_enable(dev->reg);
@@ -217,6 +218,7 @@ static int tegra_camera_power_on(struct tegra_camera_dev *dev)
 				return ret;
 			}
 		}
+#endif
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
 		/* Unpowergate VE */
 		ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VENC);
@@ -243,6 +245,7 @@ static int tegra_camera_power_off(struct tegra_camera_dev *dev)
 				"%s: powergate failed.\n",
 				__func__);
 #endif
+#if !defined(CONFIG_ARCH_ACER_T20)
 		/* Disable external power */
 		if (dev->reg) {
 			ret = regulator_disable(dev->reg);
@@ -253,6 +256,7 @@ static int tegra_camera_power_off(struct tegra_camera_dev *dev)
 				return ret;
 			}
 		}
+#endif
 	}
 	return ret;
 }
@@ -361,7 +365,12 @@ static int tegra_camera_open(struct inode *inode, struct file *file)
 
 static int tegra_camera_release(struct inode *inode, struct file *file)
 {
-	int i, err;
+//fix warning: unused variable 'err'
+#if defined(CONFIG_ARCH_TEGRA_2x_SOC)
+	int i;
+#else
+	int i,err;
+#endif
 	struct tegra_camera_dev *dev = file->private_data;
 
 	dev_info(dev->dev, "%s\n", __func__);
@@ -405,6 +414,10 @@ static int tegra_camera_clk_get(struct platform_device *pdev, const char *name,
 	}
 	return 0;
 }
+
+#if defined(CONFIG_ARCH_ACER_T20)
+struct tegra_camera_dev *t20_dev = NULL;
+#endif
 
 static int tegra_camera_probe(struct platform_device *pdev)
 {
@@ -450,6 +463,10 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	dev->misc_dev.name = TEGRA_CAMERA_NAME;
 	dev->misc_dev.fops = &tegra_camera_fops;
 	dev->misc_dev.parent = &pdev->dev;
+
+#if defined(CONFIG_ARCH_ACER_T20)
+	t20_dev = dev;
+#endif
 
 	err = misc_register(&dev->misc_dev);
 	if (err) {
@@ -547,6 +564,48 @@ static void __exit tegra_camera_exit(void)
 {
 	platform_driver_unregister(&tegra_camera_driver);
 }
+
+#if defined(CONFIG_ARCH_ACER_T20)
+void extern_tegra_camera_enable_vi(void)
+{
+	int ret = 0;
+	if(t20_dev) {
+		// When booting device, camera needs to turn on vcsi power once.
+		// After turning on vcsi power, it always remains on with camera standby mode.
+		// So camera don't need to turn on/off vcsi power via tegra_camera_power_on()
+		// and tegra_camera_power_off().
+		if (t20_dev->reg) {
+			ret = regulator_enable(t20_dev->reg);
+			if (ret) {
+				dev_err(t20_dev->dev,
+				"%s: enable csi regulator failed.\n",
+				__func__);
+			}
+		}
+
+		tegra_camera_enable_csi(t20_dev);
+		tegra_camera_enable_isp(t20_dev);
+		tegra_camera_enable_vi(t20_dev);
+	}
+}
+
+void extern_tegra_camera_disable_vi(void)
+{
+	if(t20_dev) {
+		tegra_camera_disable_vi(t20_dev);
+		tegra_camera_disable_isp(t20_dev);
+		tegra_camera_disable_csi(t20_dev);
+	}
+}
+
+void extern_tegra_camera_clk_set_rate(struct tegra_camera_clk_info *clk_info)
+{
+	if (t20_dev) {
+		memcpy(&t20_dev->info, clk_info, sizeof(struct tegra_camera_clk_info));
+		tegra_camera_clk_set_rate(t20_dev);
+	}
+}
+#endif
 
 module_init(tegra_camera_init);
 module_exit(tegra_camera_exit);

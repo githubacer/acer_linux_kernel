@@ -43,6 +43,8 @@
 #include <mach/gpio.h>
 
 #include <media/ov5650.h>
+#include <media/yuv_sensor.h>
+#include <media/yuv5_sensor.h>
 #include <media/ov2710.h>
 #include <media/sh532u.h>
 #include <media/ssl3250a.h>
@@ -61,6 +63,358 @@
 #define NCT1008_THERM2_GPIO	TEGRA_GPIO_PN6
 #define AC_PRESENT_GPIO		TEGRA_GPIO_PV3
 
+
+#if defined(CONFIG_ARCH_ACER_T20)
+
+#ifdef CONFIG_VIDEO_OV5650
+#define OV5650_PWDN_GPIO      TEGRA_GPIO_PL0
+#define OV5650_RST_GPIO       TEGRA_GPIO_PL6
+#endif
+#ifdef CONFIG_VIDEO_YUV
+#define YUV_SENSOR_OE_GPIO    TEGRA_GPIO_PL2
+#define YUV_SENSOR_RST_GPIO   TEGRA_GPIO_PL4
+#endif
+#ifdef CONFIG_VIDEO_YUV5
+#define YUV5_SENSOR_PWDN_GPIO TEGRA_GPIO_PL0
+#define YUV5_SENSOR_RST_GPIO  TEGRA_GPIO_PL6
+#endif
+
+struct camera_gpios {
+	const char *name;
+	int gpio;
+};
+
+#define CAMERA_GPIO(_name, _gpio)  \
+	{                          \
+		.name = _name,     \
+		.gpio = _gpio,     \
+	}
+
+#ifdef CONFIG_VIDEO_OV5650
+static struct camera_gpios ov5650_gpio_keys[] = {
+	[0] = CAMERA_GPIO("cam_power_en", CAMERA_POWER_GPIO),
+	[1] = CAMERA_GPIO("ov5650_pwdn", OV5650_PWDN_GPIO),
+	[2] = CAMERA_GPIO("ov5650_rst", OV5650_RST_GPIO),
+};
+
+static int ov5650_power_on(void)
+{
+	int i, ret;
+
+	for (i = 0; i < ARRAY_SIZE(ov5650_gpio_keys); i++) {
+		tegra_gpio_enable(ov5650_gpio_keys[i].gpio);
+		ret = gpio_request(ov5650_gpio_keys[i].gpio,
+				ov5650_gpio_keys[i].name);
+		if (ret < 0) {
+			pr_err("%s: gpio_request failed for gpio #%d\n",
+				__func__, i);
+			goto fail;
+		}
+	}
+
+	gpio_direction_output(OV5650_PWDN_GPIO, 1);
+	gpio_direction_output(OV5650_RST_GPIO, 1);
+	msleep(1);
+	gpio_direction_output(CAMERA_POWER_GPIO, 1);
+	msleep(5);
+	gpio_direction_output(OV5650_PWDN_GPIO, 0);
+	msleep(20);
+	gpio_direction_output(OV5650_RST_GPIO, 0);
+	msleep(1);
+	gpio_direction_output(OV5650_RST_GPIO, 1);
+	msleep(20);
+
+	return 0;
+
+fail:
+	while (i--)
+		gpio_free(ov5650_gpio_keys[i].gpio);
+	return ret;
+}
+
+static int ov5650_power_off(void)
+{
+	int i;
+
+	gpio_direction_output(OV5650_PWDN_GPIO, 1);
+	gpio_direction_output(CAMERA_POWER_GPIO, 0);
+	gpio_direction_output(OV5650_PWDN_GPIO, 0);
+	gpio_direction_output(OV5650_RST_GPIO, 0);
+
+	i = ARRAY_SIZE(ov5650_gpio_keys);
+	while (i--)
+		gpio_free(ov5650_gpio_keys[i].gpio);
+
+	return 0;
+}
+
+struct ov5650_platform_data ov5650_data = {
+	.power_on = ov5650_power_on,
+	.power_off = ov5650_power_off,
+};
+#endif /* CONFIG_VIDEO_OV5650 */
+
+#ifdef CONFIG_VIDEO_YUV
+static struct camera_gpios yuv_sensor_gpio_keys[] = {
+	[0] = CAMERA_GPIO("cam_power_en", CAMERA_POWER_GPIO),
+	[1] = CAMERA_GPIO("yuv_sensor_oe", YUV_SENSOR_OE_GPIO),
+	[2] = CAMERA_GPIO("yuv_sensor_rst", YUV_SENSOR_RST_GPIO),
+};
+
+static int yuv_sensor_init(void)
+{
+	int i, ret;
+
+	for (i = 0; i < ARRAY_SIZE(yuv_sensor_gpio_keys); i++) {
+		tegra_gpio_enable(yuv_sensor_gpio_keys[i].gpio);
+		ret = gpio_request(yuv_sensor_gpio_keys[i].gpio,
+				yuv_sensor_gpio_keys[i].name);
+		if (ret < 0) {
+			pr_err("%s: gpio_request failed for gpio #%d\n",
+				__func__, i);
+			goto fail;
+		}
+	}
+
+
+	gpio_direction_output(YUV_SENSOR_OE_GPIO, 0);
+	gpio_direction_output(YUV_SENSOR_RST_GPIO, 1);
+	msleep(1);
+	gpio_direction_output(CAMERA_POWER_GPIO, 1);
+	msleep(1);
+	gpio_direction_output(YUV_SENSOR_RST_GPIO, 0);
+	msleep(1);
+	gpio_direction_output(YUV_SENSOR_RST_GPIO, 1);
+	msleep(1);
+	gpio_direction_output(YUV_SENSOR_OE_GPIO, 1);
+
+	return 0;
+
+fail:
+	while (i--)
+		gpio_free(yuv_sensor_gpio_keys[i].gpio);
+	return ret;
+
+}
+static int yuv_sensor_power_on(void)
+{
+	pr_info("yuv_sensor_power_on\n");
+
+	gpio_direction_output(YUV_SENSOR_OE_GPIO, 0);
+	//TODO: fine tune the delay time
+	msleep(20);
+
+	return 0;
+}
+
+static int yuv_sensor_power_off(void)
+{
+	pr_info("yuv_sensor_power_off\n");
+
+	gpio_direction_output(YUV_SENSOR_OE_GPIO, 1);
+	//standby time need 2 frames
+	msleep(150);
+
+	return 0;
+}
+
+struct yuv_sensor_platform_data yuv_sensor_data = {
+	.power_on = yuv_sensor_power_on,
+	.power_off = yuv_sensor_power_off,
+};
+#endif /* CONFIG_VIDEO_YUV */
+
+#ifdef CONFIG_VIDEO_YUV5
+static struct camera_gpios yuv5_sensor_gpio_keys[] = {
+	[0] = CAMERA_GPIO("cam_power_en", CAMERA_POWER_GPIO),
+	[1] = CAMERA_GPIO("yuv5_sensor_pwdn", YUV5_SENSOR_PWDN_GPIO),
+	[2] = CAMERA_GPIO("yuv5_sensor_rst", YUV5_SENSOR_RST_GPIO),
+};
+
+static int yuv5_sensor_power_on(void)
+{
+	int i, ret;
+
+	for (i = 0; i < ARRAY_SIZE(yuv5_sensor_gpio_keys); i++) {
+		tegra_gpio_enable(yuv5_sensor_gpio_keys[i].gpio);
+		ret = gpio_request(yuv5_sensor_gpio_keys[i].gpio,
+				yuv5_sensor_gpio_keys[i].name);
+		if (ret < 0) {
+			pr_err("%s: gpio_request failed for gpio #%d\n",
+				__func__, i);
+			goto fail;
+		}
+	}
+
+	gpio_direction_output(YUV5_SENSOR_PWDN_GPIO, 0);
+	gpio_direction_output(YUV5_SENSOR_RST_GPIO, 0);
+	msleep(1);
+	gpio_direction_output(CAMERA_POWER_GPIO, 1);
+	msleep(1);
+	gpio_direction_output(YUV5_SENSOR_RST_GPIO, 1);
+	msleep(1);
+
+	return 0;
+
+fail:
+	while (i--)
+	gpio_free(yuv5_sensor_gpio_keys[i].gpio);
+	return ret;
+}
+
+static int yuv5_sensor_power_off(void)
+{
+	int i;
+
+	gpio_direction_output(YUV5_SENSOR_RST_GPIO, 0);
+	msleep(1);
+	gpio_direction_output(YUV5_SENSOR_PWDN_GPIO, 1);
+	gpio_direction_output(CAMERA_POWER_GPIO, 0);
+	gpio_direction_output(YUV5_SENSOR_PWDN_GPIO, 0);
+
+	i = ARRAY_SIZE(yuv5_sensor_gpio_keys);
+	while (i--)
+		gpio_free(yuv5_sensor_gpio_keys[i].gpio);
+
+	return 0;
+};
+
+struct yuv5_sensor_platform_data yuv5_sensor_data = {
+	.power_on = yuv5_sensor_power_on,
+	.power_off = yuv5_sensor_power_off,
+};
+#endif /* CONFIG_VIDEO_YUV5 */
+
+static int ventana_camera_init(void)
+{
+	int i, ret;
+
+#ifdef CONFIG_VIDEO_OV5650
+	// initialize OV5650
+	for (i = 0; i < ARRAY_SIZE(ov5650_gpio_keys); i++) {
+		tegra_gpio_enable(ov5650_gpio_keys[i].gpio);
+		ret = gpio_request(ov5650_gpio_keys[i].gpio,
+				ov5650_gpio_keys[i].name);
+		if (ret < 0) {
+			pr_err("%s: gpio_request failed for gpio #%d\n",
+				__func__, i);
+			goto fail1;
+		}
+	}
+
+	gpio_direction_output(CAMERA_POWER_GPIO, 0);
+	gpio_direction_output(OV5650_PWDN_GPIO, 0);
+	gpio_direction_output(OV5650_RST_GPIO, 0);
+
+	for (i = 0; i < ARRAY_SIZE(ov5650_gpio_keys); i++) {
+		gpio_free(ov5650_gpio_keys[i].gpio);
+	}
+#endif
+
+#ifdef CONFIG_VIDEO_YUV
+	// initialize MT9D115
+	for (i = 0; i < ARRAY_SIZE(yuv_sensor_gpio_keys); i++) {
+		tegra_gpio_enable(yuv_sensor_gpio_keys[i].gpio);
+		ret = gpio_request(yuv_sensor_gpio_keys[i].gpio,
+				yuv_sensor_gpio_keys[i].name);
+		if (ret < 0) {
+			pr_err("%s: gpio_request failed for gpio #%d\n",
+				__func__, i);
+			goto fail2;
+		}
+	}
+
+	gpio_direction_output(CAMERA_POWER_GPIO, 0);
+	gpio_direction_output(YUV_SENSOR_OE_GPIO, 0);
+	gpio_direction_output(YUV_SENSOR_RST_GPIO, 0);
+
+	for (i = 0; i < ARRAY_SIZE(yuv_sensor_gpio_keys); i++) {
+		gpio_free(yuv_sensor_gpio_keys[i].gpio);
+	}
+
+	yuv_sensor_init();
+
+#endif
+
+#ifdef CONFIG_VIDEO_YUV5
+	// initialize MT9P111
+	for (i = 0; i < ARRAY_SIZE(yuv5_sensor_gpio_keys); i++) {
+		tegra_gpio_enable(yuv5_sensor_gpio_keys[i].gpio);
+		ret = gpio_request(yuv5_sensor_gpio_keys[i].gpio,
+				yuv5_sensor_gpio_keys[i].name);
+		if (ret < 0) {
+			pr_err("%s: gpio_request failed for gpio #%d\n",
+				__func__, i);
+			goto fail3;
+		}
+	}
+
+	gpio_direction_output(CAMERA_POWER_GPIO, 0);
+	gpio_direction_output(YUV5_SENSOR_PWDN_GPIO, 0);
+	gpio_direction_output(YUV5_SENSOR_RST_GPIO, 0);
+
+	for (i = 0; i < ARRAY_SIZE(yuv5_sensor_gpio_keys); i++) {
+		gpio_free(yuv5_sensor_gpio_keys[i].gpio);
+	}
+#endif
+	return 0;
+
+#ifdef CONFIG_VIDEO_OV5650
+fail1:
+	while (i--)
+		gpio_free(ov5650_gpio_keys[i].gpio);
+	return ret;
+#endif
+
+#ifdef CONFIG_VIDEO_YUV
+fail2:
+        while (i--)
+                gpio_free(yuv_sensor_gpio_keys[i].gpio);
+	return ret;
+#endif
+
+#ifdef CONFIG_VIDEO_YUV5
+fail3:
+	while (i--)
+		gpio_free(yuv5_sensor_gpio_keys[i].gpio);
+	return ret;
+#endif
+}
+
+static struct i2c_board_info ventana_i2c3_board_info[] = {
+#ifdef CONFIG_VIDEO_OV5650
+	{
+		I2C_BOARD_INFO("ov5650", 0x36),
+		.platform_data = &ov5650_data,
+	},
+#endif
+#ifdef CONFIG_VIDEO_YUV
+	{
+		I2C_BOARD_INFO("mt9d115", 0x3C),
+		.platform_data = &yuv_sensor_data,
+	},
+#endif
+#ifdef CONFIG_VIDEO_YUV5
+	{
+		I2C_BOARD_INFO("mt9p111", 0x3D),
+		.platform_data = &yuv5_sensor_data,
+	},
+#endif
+#ifdef CONFIG_VIDEO_AD5820
+	{
+		I2C_BOARD_INFO("ad5820", 0x0C),
+	},
+#endif
+#ifdef CONFIG_VIDEO_LTC3216
+	{
+		I2C_BOARD_INFO("ltc3216", 0x33),
+	},
+#endif
+};
+
+#endif /* CONFIG_ARCH_ACER_T20 */
+
+#if !defined(CONFIG_ARCH_ACER_T20)
 static int ventana_camera_init(void)
 {
 	int err;
@@ -204,7 +558,7 @@ static struct ssl3250a_platform_data ventana_ssl3250a_pdata = {
 	.pinstate	= &ventana_ssl3250a_pinstate,
 	.gpio_act	= CAMERA_FLASH_ACT_GPIO,
 };
-
+#endif /* !CONFIG_ARCH_ACER_T20 */
 
 static void ventana_isl29018_init(void)
 {
@@ -291,13 +645,6 @@ static const struct i2c_board_info ventana_i2c3_board_info_pca9546[] = {
 	},
 };
 
-static const struct i2c_board_info ventana_i2c3_board_info_ssl3250a[] = {
-	{
-		I2C_BOARD_INFO("ssl3250a", 0x30),
-		.platform_data = &ventana_ssl3250a_pdata,
-	},
-};
-
 static struct i2c_board_info ventana_i2c4_board_info[] = {
 	{
 		I2C_BOARD_INFO("nct1008", 0x4C),
@@ -311,6 +658,14 @@ static struct i2c_board_info ventana_i2c4_board_info[] = {
 		.irq = TEGRA_GPIO_TO_IRQ(AKM8975_IRQ_GPIO),
 	},
 #endif
+};
+
+#if !defined(CONFIG_ARCH_ACER_T20)
+static const struct i2c_board_info ventana_i2c3_board_info_ssl3250a[] = {
+	{
+		I2C_BOARD_INFO("ssl3250a", 0x30),
+		.platform_data = &ventana_ssl3250a_pdata,
+	},
 };
 
 static struct i2c_board_info ventana_i2c6_board_info[] = {
@@ -341,6 +696,7 @@ static struct i2c_board_info ventana_i2c8_board_info[] = {
 		.platform_data = &ventana_ov2710_data,
 	},
 };
+#endif
 
 #ifdef CONFIG_MPU_SENSORS_MPU3050
 static struct mpu_platform_data mpu3050_data = {
@@ -463,11 +819,17 @@ int __init ventana_sensors_init(void)
 	i2c_register_board_info(2, ventana_i2c2_board_info,
 		ARRAY_SIZE(ventana_i2c2_board_info));
 
-	i2c_register_board_info(3, ventana_i2c3_board_info_ssl3250a,
-		ARRAY_SIZE(ventana_i2c3_board_info_ssl3250a));
+#if defined(CONFIG_ARCH_ACER_T20)
+	i2c_register_board_info(3, ventana_i2c3_board_info,
+		ARRAY_SIZE(ventana_i2c3_board_info));
+#endif
 
 	i2c_register_board_info(4, ventana_i2c4_board_info,
 		ARRAY_SIZE(ventana_i2c4_board_info));
+
+#if !defined(CONFIG_ARCH_ACER_T20)
+	i2c_register_board_info(3, ventana_i2c3_board_info_ssl3250a,
+		ARRAY_SIZE(ventana_i2c3_board_info_ssl3250a));
 
 	i2c_register_board_info(6, ventana_i2c6_board_info,
 		ARRAY_SIZE(ventana_i2c6_board_info));
@@ -477,10 +839,12 @@ int __init ventana_sensors_init(void)
 
 	i2c_register_board_info(8, ventana_i2c8_board_info,
 		ARRAY_SIZE(ventana_i2c8_board_info));
+#endif
 
 	return 0;
 }
 
+#if !defined(CONFIG_ARCH_ACER_T20)
 #ifdef CONFIG_TEGRA_CAMERA
 
 struct tegra_camera_gpios {
@@ -579,3 +943,4 @@ fail_put_regulator:
 late_initcall(ventana_camera_late_init);
 
 #endif /* CONFIG_TEGRA_CAMERA */
+#endif /* !CONFIG_ARCH_ACER_T20 */
