@@ -80,21 +80,57 @@ static void tegra_ehci_power_up(struct usb_hcd *hcd, bool is_dpd)
 {
 	struct tegra_ehci_hcd *tegra = dev_get_drvdata(hcd->self.controller);
 
+#ifdef CONFIG_ARCH_ACER_T20
+	if(tegra->power_down_on_bus_suspend) {
+		clk_enable(tegra->emc_clk);
+		clk_enable(tegra->sclk_clk);
+		clk_enable(tegra->clk);
+		tegra_usb_phy_power_on(tegra->phy, is_dpd);
+	} else if(!tegra->bus_suspended) {
+		clk_enable(tegra->emc_clk);
+		clk_enable(tegra->sclk_clk);
+		clk_set_rate(tegra->clk, 480000000);
+	} else {
+		clk_set_rate(tegra->clk, 480000000);
+		clk_enable(tegra->clk);
+		tegra_usb_phy_power_on(tegra->phy, is_dpd);
+	}
+	tegra->host_resumed = 1;
+#else
 #ifndef CONFIG_USB_HOTPLUG
 	clk_enable(tegra->clk);
 #endif
 	tegra_usb_phy_power_on(tegra->phy, is_dpd);
 	tegra->host_resumed = 1;
+#endif
 }
 
 static void tegra_ehci_power_down(struct usb_hcd *hcd, bool is_dpd)
 {
 	struct tegra_ehci_hcd *tegra = dev_get_drvdata(hcd->self.controller);
 
+#ifdef CONFIG_ARCH_ACER_T20
+	tegra->host_resumed = 0;
+	if(tegra->power_down_on_bus_suspend) {
+		tegra_usb_phy_power_off(tegra->phy, is_dpd);
+		clk_disable(tegra->clk);
+		clk_disable(tegra->emc_clk);
+		clk_disable(tegra->sclk_clk);
+	} else if(!tegra->bus_suspended) {
+		clk_set_rate(tegra->clk, 400000000);
+		clk_disable(tegra->emc_clk);
+		clk_disable(tegra->sclk_clk);
+	} else {
+		tegra_usb_phy_power_off(tegra->phy, is_dpd);
+		clk_set_rate(tegra->clk, 480000000);
+		clk_disable(tegra->clk);
+	}
+#else
 	tegra->host_resumed = 0;
 	tegra_usb_phy_power_off(tegra->phy, is_dpd);
 #ifndef CONFIG_USB_HOTPLUG
 	clk_disable(tegra->clk);
+#endif
 #endif
 }
 
@@ -693,6 +729,14 @@ static int tegra_ehci_bus_suspend(struct usb_hcd *hcd)
 		tegra_usb_suspend(hcd, false);
 		tegra->bus_suspended = 1;
 	}
+#ifdef CONFIG_ARCH_ACER_T20
+	else if(!error_status && ! tegra->power_down_on_bus_suspend) {
+		if(tegra->phy->instance ==2) {
+			tegra_ehci_power_down(hcd , false);
+			tegra->bus_suspended = 1;
+		}
+	}
+#endif
 	tegra_usb_phy_postsuspend(tegra->phy, false);
 	mutex_unlock(&tegra->tegra_ehci_hcd_mutex);
 
@@ -709,7 +753,14 @@ static int tegra_ehci_bus_resume(struct usb_hcd *hcd)
 		tegra_usb_resume(hcd, false);
 		tegra->bus_suspended = 0;
 	}
-
+#ifdef CONFIG_ARCH_ACER_T20
+	else if(tegra->bus_suspended && ! tegra->power_down_on_bus_suspend) {
+		if(tegra->phy->instance == 2) {
+			tegra->bus_suspended = 0;
+			tegra_ehci_power_up(hcd, false);
+		}
+	}
+#endif
 	ehci_bus_resumed = ehci_bus_resume(hcd);
 	mutex_unlock(&tegra->tegra_ehci_hcd_mutex);
 	return ehci_bus_resumed;
