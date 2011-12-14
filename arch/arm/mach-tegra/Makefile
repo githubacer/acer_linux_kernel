@@ -174,7 +174,11 @@ obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-sdhci.o
 obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-power.o
 obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-panel.o
 obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-sensors.o
-obj-${CONFIG_MACH_PICASSO}              += board-acer-t20-memory.o
+ifeq ($(CONFIG_MACH_PICASSO_E),y)
+obj-y                                   += board-picasso-e-memory.o
+else
+obj-${CONFIG_MACH_PICASSO}              += board-picasso-memory.o
+endif
 
 obj-${CONFIG_ARCH_ACER_T30}             += board-acer-t30.o
 obj-${CONFIG_ARCH_ACER_T30}             += board-acer-t30-kbc.o

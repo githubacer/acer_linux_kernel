@@ -24,8 +24,8 @@ int ventana_pinmux_init(void);
 int ventana_panel_init(void);
 int ventana_sensors_init(void);
 int ventana_kbc_init(void);
-int ventana_emc_init(void);
-int ventana_charger_init(void);
+int acer_t20_emc_init(void);
+int acer_t20_charger_init(void);
 int get_sku_id(void);
 
 /* external gpios */

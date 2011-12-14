@@ -645,7 +645,7 @@ static void __init acer_t20_init(void)
 	ventana_sensors_init();
 	ventana_bt_rfkill();
 	ventana_power_off_init();
-	ventana_emc_init();
+	acer_t20_emc_init();
 
 	ventana_setup_bluesleep();
 	tegra_release_bootloader_fb();
