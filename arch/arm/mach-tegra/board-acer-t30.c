@@ -64,6 +64,11 @@
 #include "pm.h"
 #include "baseband-xmm-power.h"
 
+#if defined(CONFIG_ACER_VIBRATOR)
+#include <../../../drivers/staging/android/timed_output.h>
+#include <../../../drivers/staging/android/timed_gpio.h>
+#endif
+
 /* All units are in millicelsius */
 static struct tegra_thermal_data thermal_data = {
 	.temp_throttle = 85000,
@@ -450,6 +455,35 @@ static void __init cardhu_uart_init(void)
 				ARRAY_SIZE(cardhu_uart_devices));
 }
 
+#if defined(CONFIG_ACER_VIBRATOR)
+static struct timed_gpio vib_timed_gpios[] = {
+	{
+		.name = "vibrator",
+		.gpio = TEGRA_GPIO_PJ7,
+		.max_timeout = 10000,
+		.active_low = 0,
+	},
+};
+
+static struct timed_gpio_platform_data vib_timed_gpio_platform_data = {
+	.num_gpios      = ARRAY_SIZE(vib_timed_gpios),
+	.gpios          = vib_timed_gpios,
+};
+
+static struct platform_device vib_timed_gpio_device = {
+	.name   = TIMED_GPIO_NAME,
+	.id     = 0,
+	.dev    = {
+		.platform_data  = &vib_timed_gpio_platform_data,
+	},
+};
+
+static void vib_init(void)
+{
+	tegra_gpio_enable(TEGRA_GPIO_PJ7);
+}
+#endif
+
 static struct platform_device tegra_camera = {
 	.name = "tegra_camera",
 	.id = -1,
@@ -561,6 +595,9 @@ static struct platform_device *cardhu_devices[] __initdata = {
 	&tegra_udc_device,
 #if defined(CONFIG_TEGRA_IOVMM_SMMU)
 	&tegra_smmu_device,
+#endif
+#if defined(CONFIG_ACER_VIBRATOR)
+	&vib_timed_gpio_device,
 #endif
 	&tegra_wdt_device,
 #if defined(CONFIG_TEGRA_AVP)
@@ -997,6 +1034,9 @@ static void __init tegra_cardhu_init(void)
 	//audio_wired_jack_init();
 	cardhu_pins_state_init();
 	cardhu_emc_init();
+#if defined(CONFIG_ACER_VIBRATOR)
+	vib_init();
+#endif
 	tegra_release_bootloader_fb();
 	cardhu_nfc_init();
 	acer_board_info();

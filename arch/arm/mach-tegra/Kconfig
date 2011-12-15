@@ -420,6 +420,11 @@ config TEGRA_DYNAMIC_PWRDET
 	  only during power transitions, otherwise, the cells are active
 	  always
 
+config ACER_VIBRATOR
+	bool "Acer Vibrator"
+	default n
+	select ANDROID_TIMED_GPIO
+
 config TEGRA_EDP_EXACT_FREQ
 	bool "Use maximum possible cpu frequency when EDP capping"
 	depends on TEGRA_EDP_LIMITS

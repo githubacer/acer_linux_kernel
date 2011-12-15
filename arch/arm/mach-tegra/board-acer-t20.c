@@ -63,6 +63,11 @@
 #include "wakeups-t2.h"
 #include "pm.h"
 
+#if defined(CONFIG_ACER_VIBRATOR)
+#include <../../../drivers/staging/android/timed_output.h>
+#include <../../../drivers/staging/android/timed_gpio.h>
+#endif
+
 extern void SysShutdown(void);
 
 static struct tegra_utmip_config utmi_phy_config[] = {
@@ -409,6 +414,35 @@ static void picasso_keys_init(void)
 }
 #endif
 
+#if defined(CONFIG_ACER_VIBRATOR)
+static struct timed_gpio vib_timed_gpios[] = {
+	{
+		.name = "vibrator",
+		.gpio = TEGRA_GPIO_PV5,
+		.max_timeout = 10000,
+		.active_low = 0,
+	},
+};
+
+static struct timed_gpio_platform_data vib_timed_gpio_platform_data = {
+	.num_gpios      = ARRAY_SIZE(vib_timed_gpios),
+	.gpios          = vib_timed_gpios,
+};
+
+static struct platform_device vib_timed_gpio_device = {
+	.name   = TIMED_GPIO_NAME,
+	.id     = 0,
+	.dev    = {
+		.platform_data  = &vib_timed_gpio_platform_data,
+	},
+};
+
+static void vib_init(void)
+{
+	tegra_gpio_enable(TEGRA_GPIO_PV5);
+}
+#endif
+
 static struct platform_device tegra_camera = {
 	.name = "tegra_camera",
 	.id = -1,
@@ -436,6 +470,9 @@ static struct platform_device *ventana_devices[] __initdata = {
 	&tegra_aes_device,
 #ifdef CONFIG_KEYBOARD_GPIO
 	&picasso_keys_device,
+#endif
+#if defined(CONFIG_ACER_VIBRATOR)
+	&vib_timed_gpio_device,
 #endif
 	&tegra_wdt_device,
 	&tegra_avp_device,
@@ -678,6 +715,9 @@ static void __init acer_t20_init(void)
 	acer_t20_emc_init();
 
 	ventana_setup_bluesleep();
+#if defined(CONFIG_ACER_VIBRATOR)
+	vib_init();
+#endif
 	tegra_release_bootloader_fb();
 }
 
