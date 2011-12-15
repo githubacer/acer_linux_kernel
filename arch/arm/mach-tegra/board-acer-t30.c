@@ -75,6 +75,10 @@
 #include <../../../drivers/staging/android/timed_gpio.h>
 #endif
 
+#if defined(CONFIG_ACER_LEDS)
+#include <linux/leds-gpio-p2.h>
+#endif
+
 /* All units are in millicelsius */
 static struct tegra_thermal_data thermal_data = {
 	.temp_throttle = 85000,
@@ -894,6 +898,25 @@ static void cardhu_nfc_init(void)
 	tegra_gpio_enable(TEGRA_GPIO_PO7);
 }
 
+#ifdef CONFIG_ACER_LEDS
+static struct gpio_led_data led_pdata = {
+	.gpio = TEGRA_GPIO_PR0,
+};
+
+static struct platform_device gpio_led_device = {
+	.name   = "gpio-leds",
+	.id     = -1,
+	.dev    = {
+		.platform_data  = &led_pdata,
+	},
+};
+
+static void picasso2_led_init(void)
+{
+	platform_device_register(&gpio_led_device);
+}
+#endif
+
 static struct baseband_power_platform_data tegra_baseband_power_data = {
 	.baseband_type = BASEBAND_XMM,
 	.modem = {
@@ -1079,6 +1102,9 @@ static void __init tegra_cardhu_init(void)
 	cardhu_emc_init();
 #if defined(CONFIG_ACER_VIBRATOR)
 	vib_init();
+#endif
+#ifdef CONFIG_ACER_LEDS
+	picasso2_led_init();
 #endif
 	tegra_release_bootloader_fb();
 	cardhu_nfc_init();
