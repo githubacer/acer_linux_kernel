@@ -417,6 +417,8 @@ static int tegra_camera_clk_get(struct platform_device *pdev, const char *name,
 
 #if defined(CONFIG_ARCH_ACER_T20)
 struct tegra_camera_dev *t20_dev = NULL;
+#elif defined(CONFIG_ARCH_ACER_T30)
+struct tegra_camera_dev *t30_dev = NULL;
 #endif
 
 static int tegra_camera_probe(struct platform_device *pdev)
@@ -433,6 +435,12 @@ static int tegra_camera_probe(struct platform_device *pdev)
 			__func__);
 		goto alloc_err;
 	}
+
+#if defined(CONFIG_ARCH_ACER_T20)
+	t20_dev = dev;
+#elif defined(CONFIG_ARCH_ACER_T30)
+	t30_dev = dev;
+#endif
 
 	mutex_init(&dev->tegra_camera_lock);
 
@@ -463,10 +471,6 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	dev->misc_dev.name = TEGRA_CAMERA_NAME;
 	dev->misc_dev.fops = &tegra_camera_fops;
 	dev->misc_dev.parent = &pdev->dev;
-
-#if defined(CONFIG_ARCH_ACER_T20)
-	t20_dev = dev;
-#endif
 
 	err = misc_register(&dev->misc_dev);
 	if (err) {
@@ -603,6 +607,27 @@ void extern_tegra_camera_clk_set_rate(struct tegra_camera_clk_info *clk_info)
 	if (t20_dev) {
 		memcpy(&t20_dev->info, clk_info, sizeof(struct tegra_camera_clk_info));
 		tegra_camera_clk_set_rate(t20_dev);
+	}
+}
+#elif defined(CONFIG_ARCH_ACER_T30)
+// these functions should be used after tegra_camera.c finishes probing
+void extern_tegra_camera_enable_vi(void)
+{
+	if (t30_dev)
+		tegra_camera_enable_vi(t30_dev);
+}
+
+void extern_tegra_camera_disable_vi(void)
+{
+	if (t30_dev)
+		tegra_camera_disable_vi(t30_dev);
+}
+
+void extern_tegra_camera_clk_set_rate(struct tegra_camera_clk_info *clk_info)
+{
+	if (t30_dev) {
+		memcpy(&t30_dev->info, clk_info, sizeof(struct tegra_camera_clk_info));
+		tegra_camera_clk_set_rate(t30_dev);
 	}
 }
 #endif
