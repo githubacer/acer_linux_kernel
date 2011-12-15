@@ -873,100 +873,169 @@ static int __init cam_tca6416_init(void)
 #endif
 
 #ifdef CONFIG_MPU_SENSORS_MPU3050
-static struct mpu_platform_data mpu3050_data = {
+#define SENSOR_MPU_NAME "mpu3050"
+static struct mpu_platform_data mpu_data = {
 	.int_config	= 0x10,
-	.level_shifter	= 0,
-	.orientation	= MPU_GYRO_ORIENTATION,	/* Located in board_[platformname].h	*/
-};
-
-static struct ext_slave_platform_data mpu3050_accel_data = {
-	.address	= MPU_ACCEL_ADDR,
-	.irq		= 0,
-	.adapt_num	= MPU_ACCEL_BUS_NUM,
+	.orientation = {
+		 0, -1,  0,
+		-1,  0,  0,
+		 0,  0, -1
+	},
+	/* accel */
+	.accel = {
+#ifdef CONFIG_INV_SENSORS_MODULE
+	.get_slave_descr = NULL,
+#else
+	.get_slave_descr = get_accel_slave_descr,
+#endif
+	.irq         = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PS5),
+	.adapt_num   = 0,
 	.bus		= EXT_SLAVE_BUS_SECONDARY,
-	.orientation	= MPU_ACCEL_ORIENTATION,	/* Located in board_[platformname].h	*/
-};
-
-static struct ext_slave_platform_data mpu_compass_data = {
-	.address	= MPU_COMPASS_ADDR,
-	.irq		= 0,
-	.adapt_num	= MPU_COMPASS_BUS_NUM,
+	.address     = 0x0F,
+	.orientation = {
+		 0, -1,  0,
+		-1,  0,  0,
+		 0,  0, -1
+	},
+	},
+	/* compass */
+	.compass = {
+#ifdef CONFIG_INV_SENSORS_MODULE
+	.get_slave_descr = NULL,
+#else
+	.get_slave_descr = get_compass_slave_descr,
+#endif
+	.irq         = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PX7),
+	.adapt_num   = 0,
 	.bus		= EXT_SLAVE_BUS_PRIMARY,
-	.orientation	= MPU_COMPASS_ORIENTATION,	/* Located in board_[platformname].h	*/
-};
-
-static struct i2c_board_info __initdata inv_mpu_i2c2_board_info[] = {
-	{
-		I2C_BOARD_INFO(MPU_GYRO_NAME, MPU_GYRO_ADDR),
-		.irq = TEGRA_GPIO_TO_IRQ(MPU_GYRO_IRQ_GPIO),
-		.platform_data = &mpu3050_data,
+	.address     = 0x0C,
+	.orientation = {
+		1,  0,  0,
+		0, -1,  0,
+		0,  0, -1
 	},
-	{
-		I2C_BOARD_INFO(MPU_ACCEL_NAME, MPU_ACCEL_ADDR),
-#if	MPU_ACCEL_IRQ_GPIO
-		.irq = TEGRA_GPIO_TO_IRQ(MPU_ACCEL_IRQ_GPIO),
-#endif
-		.platform_data = &mpu3050_accel_data,
-	},
-	{
-		I2C_BOARD_INFO(MPU_COMPASS_NAME, MPU_COMPASS_ADDR),
-#if	MPU_COMPASS_IRQ_GPIO
-		.irq = TEGRA_GPIO_TO_IRQ(MPU_COMPASS_IRQ_GPIO),
-#endif
-		.platform_data = &mpu_compass_data,
 	},
 };
 
-static void mpuirq_init(void)
+static struct i2c_board_info __initdata mpu3050_i2c0_boardinfo[] = {
+	{
+		I2C_BOARD_INFO(SENSOR_MPU_NAME, 0x68),
+		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PX1),
+		.platform_data = &mpu_data,
+	},
+};
+
+static void cardhu_mpu_power_on(void)
+	{
+	extern int acer_board_id;
+	extern int acer_board_type;
+	int ret;
+	int en_sensor_vdd;
+
+#if defined(CONFIG_MACH_PICASSO2)
+	if (acer_board_type == BOARD_PICASSO_2 && (acer_board_id == BOARD_DVT1 || acer_board_id == BOARD_EVT))
+		en_sensor_vdd = SENSOR_3V3;
+	else
+		en_sensor_vdd = SENSOR_3V3_2;
+#else
+	en_sensor_vdd = SENSOR_3V3;
+#endif
+	tegra_gpio_enable(en_sensor_vdd);//3.3
+	ret = gpio_request(en_sensor_vdd, "sensor_vdd_power_en");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "EN_SENSOR_VDD_GPIO");
+	ret = gpio_direction_output(en_sensor_vdd, 1);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_output failed for gpio %s\n",
+		__func__, "EN_SENSOR_VDD");
+	mdelay(5);
+	tegra_gpio_enable(EN_SENSOR_VLOGIC);//1.8
+	ret = gpio_request(EN_SENSOR_VLOGIC, "sensor_vlogic_power_en");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "EN_SENSOR_VLOGIC_GPIO");
+	ret = gpio_direction_output(EN_SENSOR_VLOGIC, 0);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_output failed for gpio %s\n",
+		__func__, "EN_SENSOR_VLOGIC");
+
+}
+
+static void cardhu_mpuirq_init(void)
+	{
+	int ret;
+
+	pr_info("*** MPU START *** cardhu_mpuirq_init...\n");
+
+	tegra_gpio_enable(TEGRA_GPIO_PX1);
+	ret = gpio_request(TEGRA_GPIO_PX1, SENSOR_MPU_NAME);
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PX1");
+	ret = gpio_direction_input(TEGRA_GPIO_PX1);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_input failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PX1");
+
+	tegra_gpio_enable(TEGRA_GPIO_PS5);
+	ret = gpio_request(TEGRA_GPIO_PS5, "MPU_KXTF9");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PS5");
+	ret = gpio_direction_input(TEGRA_GPIO_PS5);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_input failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PS5");
+
+	tegra_gpio_enable(TEGRA_GPIO_PX7);
+	ret = gpio_request(TEGRA_GPIO_PX7, "MPU_AKM8975");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PX7");
+	ret = gpio_direction_input(TEGRA_GPIO_PX7);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_input failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PX7");
+
+	pr_info("*** MPU END *** cardhu_mpuirq_init...\n");
+
+	cardhu_mpu_power_on();
+
+	i2c_register_board_info(0, mpu3050_i2c0_boardinfo,
+		ARRAY_SIZE(mpu3050_i2c0_boardinfo));
+	}
+#endif
+
+#ifdef CONFIG_STK2203_LIGHT_SENSOR
+static const struct i2c_board_info cardhu_i2c0_stk2203_board_info[] = {
+	{
+		I2C_BOARD_INFO("stk_als", 0x10),
+		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PX3),
+	},
+};
+
+static void cardhu_stk2203_init(void)
 {
-	int ret = 0;
+	int ret;
 
-	pr_info("*** MPU START *** mpuirq_init...\n");
+	tegra_gpio_enable(TEGRA_GPIO_PX3);
+	ret = gpio_request(TEGRA_GPIO_PX3, "stk_als");
+	if (ret < 0)
+		pr_err("%s: gpio_request failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PX3");
 
-#if	MPU_ACCEL_IRQ_GPIO
-	/* ACCEL-IRQ assignment */
-	tegra_gpio_enable(MPU_ACCEL_IRQ_GPIO);
-	ret = gpio_request(MPU_ACCEL_IRQ_GPIO, MPU_ACCEL_NAME);
-	if (ret < 0) {
-		pr_err("%s: gpio_request failed %d\n", __func__, ret);
-		return;
-	}
+	ret = gpio_direction_input(TEGRA_GPIO_PX3);
+	if (ret < 0)
+		pr_err("%s: gpio_direction_input failed for gpio %s\n",
+		__func__, "TEGRA_GPIO_PX3");
 
-	ret = gpio_direction_input(MPU_ACCEL_IRQ_GPIO);
-	if (ret < 0) {
-		pr_err("%s: gpio_direction_input failed %d\n", __func__, ret);
-		gpio_free(MPU_ACCEL_IRQ_GPIO);
-		return;
-	}
-#endif
-
-	/* MPU-IRQ assignment */
-	tegra_gpio_enable(MPU_GYRO_IRQ_GPIO);
-	ret = gpio_request(MPU_GYRO_IRQ_GPIO, MPU_GYRO_NAME);
-	if (ret < 0) {
-		pr_err("%s: gpio_request failed %d\n", __func__, ret);
-		return;
-	}
-
-	ret = gpio_direction_input(MPU_GYRO_IRQ_GPIO);
-	if (ret < 0) {
-		pr_err("%s: gpio_direction_input failed %d\n", __func__, ret);
-		gpio_free(MPU_GYRO_IRQ_GPIO);
-		return;
-	}
-	pr_info("*** MPU END *** mpuirq_init...\n");
-
-	i2c_register_board_info(MPU_GYRO_BUS_NUM, inv_mpu_i2c2_board_info,
-		ARRAY_SIZE(inv_mpu_i2c2_board_info));
+	i2c_register_board_info(0, cardhu_i2c0_stk2203_board_info,
+		ARRAY_SIZE(cardhu_i2c0_stk2203_board_info));
 }
 #endif
 
 
-static struct i2c_board_info cardhu_i2c2_isl_board_info[] = {
-	{
-		I2C_BOARD_INFO("isl29028", 0x44),
-	}
-};
 
 int __init cardhu_sensors_init(void)
 {
@@ -1012,9 +1081,6 @@ int __init cardhu_sensors_init(void)
 
 	pmu_tca6416_init();
 
-	i2c_register_board_info(2, cardhu_i2c2_isl_board_info,
-		ARRAY_SIZE(cardhu_i2c2_isl_board_info));
-
 	err = cardhu_nct1008_init();
 	if (err)
 		return err;
@@ -1023,7 +1089,10 @@ int __init cardhu_sensors_init(void)
 		ARRAY_SIZE(cardhu_i2c4_nct1008_board_info));
 
 #ifdef CONFIG_MPU_SENSORS_MPU3050
-	mpuirq_init();
+	cardhu_mpuirq_init();
+#endif
+#ifdef CONFIG_STK2203_LIGHT_SENSOR
+	cardhu_stk2203_init();
 #endif
 	return 0;
 }
