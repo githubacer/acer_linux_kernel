@@ -38,6 +38,11 @@
 #include <mach/clk.h>
 #include <mach/pinmux.h>
 
+#if defined(CONFIG_ARCH_ACER_T20)
+#include <linux/gpio.h>
+#include "../../../arch/arm/mach-tegra/gpio-names.h"
+#endif
+
 #ifdef CONFIG_I2C_ACER_ENABLE
 atomic_t during_suspend = ATOMIC_INIT(0);
 atomic_t finished = ATOMIC_INIT(1);
@@ -117,6 +122,16 @@ atomic_t finished = ATOMIC_INIT(1);
 #define SL_ADDR2(addr) ((addr >> 8) & 0xff)
 
 
+#if defined(CONFIG_ARCH_ACER_T20)
+#define GEN1_SCL_GPIO    TEGRA_GPIO_PC4
+#define GEN1_SDA_GPIO    TEGRA_GPIO_PC5
+#define GEN2_SCL_GPIO    TEGRA_GPIO_PT5
+#define GEN2_SDA_GPIO    TEGRA_GPIO_PT6
+#define CAM_SCL_GPIO     TEGRA_GPIO_PB2
+#define CAM_SDA_GPIO     TEGRA_GPIO_PB3
+#define PWR_SCL_GPIO     TEGRA_GPIO_PZ6
+#define PWR_SDA_GPIO     TEGRA_GPIO_PZ7
+#endif
 
 struct tegra_i2c_dev;
 
@@ -126,8 +141,10 @@ struct tegra_i2c_bus {
 	int mux_len;
 	unsigned long bus_clk_rate;
 	struct i2c_adapter adapter;
+#if !defined(CONFIG_ARCH_ACER_T20)
 	int scl_gpio;
 	int sda_gpio;
+#endif
 };
 
 /**
@@ -180,7 +197,9 @@ struct tegra_i2c_dev {
 	u16 slave_addr;
 	bool is_clkon_always;
 	struct tegra_i2c_bus busses[1];
+#if !defined(CONFIG_ARCH_ACER_T20)
 	int (*arb_recovery)(int scl_gpio, int sda_gpio);
+#endif
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val, unsigned long reg)
@@ -385,6 +404,95 @@ static void tegra_dvc_init(struct tegra_i2c_dev *i2c_dev)
 	dvc_writel(i2c_dev, val, DVC_CTRL_REG1);
 }
 
+#if defined(CONFIG_ARCH_ACER_T20)
+static int tegra_i2c_recover_bus_busy(struct tegra_i2c_dev *dev)
+{
+	int i;
+	int gpio_clk = 0;
+	int gpio_dat = 0;
+	bool gpio_clk_status = false;
+
+	disable_irq(dev->irq);
+
+	switch (dev->cont_id) {
+		case 0:
+			gpio_clk = GEN1_SCL_GPIO;
+			gpio_dat = GEN1_SDA_GPIO;
+			break;
+		case 1:
+			gpio_clk = GEN2_SCL_GPIO;
+			gpio_dat = GEN2_SDA_GPIO;
+			break;
+		case 2:
+			gpio_clk = CAM_SCL_GPIO;
+			gpio_dat = CAM_SDA_GPIO;
+			break;
+		case 3:
+			gpio_clk = PWR_SCL_GPIO;
+			gpio_dat = PWR_SDA_GPIO;
+			break;
+	}
+
+	if (gpio_clk && gpio_dat) {
+
+		dev_err(dev->dev,"I2C Recovery Start\n");
+		tegra_gpio_enable(gpio_clk);
+		tegra_gpio_enable(gpio_dat);
+		gpio_request(gpio_clk,"i2c_scl_gpio");
+		gpio_request(gpio_dat,"i2c_sda_gpio");
+
+		gpio_direction_input(gpio_clk);
+		udelay(5);
+		gpio_direction_input(gpio_dat);
+		udelay(5);
+		if (gpio_get_value(gpio_clk)){
+			if(gpio_get_value(gpio_dat)){
+				dev_err(dev->dev,"I2C undo Recovery\n");
+				goto rv_quit;
+			}
+			else {
+				gpio_direction_output(gpio_dat, 1);
+				udelay(50);
+				gpio_direction_input(gpio_dat);
+			}
+		}
+		for (i = 0; i < 9; i++) {
+			if (gpio_get_value(gpio_dat) && gpio_clk_status){
+				dev_err(dev->dev, "(0x%x) Bus busy cleared after %d clock cycles\n"
+					,dev->msgs[0].addr, i);
+				break;
+			}
+			gpio_direction_output(gpio_clk, 0);
+			udelay(5);
+			gpio_direction_output(gpio_dat, 0);
+			udelay(5);
+			gpio_direction_input(gpio_clk);
+			udelay(5);
+			if (!gpio_get_value(gpio_clk))
+				udelay(20);
+			if (!gpio_get_value(gpio_clk))
+				msleep(10);
+			gpio_clk_status = gpio_get_value(gpio_clk);
+			gpio_direction_input(gpio_dat);
+			udelay(5);
+		}
+		if (!(gpio_get_value(gpio_dat) & gpio_get_value(gpio_clk))){
+			dev_err(dev->dev, "(0x%x) Bus still busy, SCLK %d, SDA %d\n",
+				dev->msgs[0].addr, gpio_get_value(gpio_clk), gpio_get_value(gpio_dat));
+		}
+rv_quit:
+		tegra_gpio_disable(gpio_clk);
+		tegra_gpio_disable(gpio_dat);
+		gpio_free(gpio_clk);
+		gpio_free(gpio_dat);
+	}
+	udelay(10);
+	enable_irq(dev->irq);
+	return 0;
+
+}
+#endif
+
 static void tegra_i2c_slave_init(struct tegra_i2c_dev *i2c_dev)
 {
 	u32 val = I2C_SL_CNFG_NEWSL | I2C_SL_CNFG_NACK;
@@ -452,6 +560,13 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 	unsigned long flags;
 
 	status = i2c_readl(i2c_dev, I2C_INT_STATUS);
+
+#if defined(CONFIG_ARCH_ACER_T20)
+	if (status == 0x82 || status == 0xc2) {
+		complete(&i2c_dev->msg_complete);
+		goto transaction_completed;
+	}
+#endif
 
 	if (status == 0) {
 		dev_warn(i2c_dev->dev, "unknown interrupt Add 0x%02x\n",
@@ -523,6 +638,9 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 			tegra_i2c_mask_irq(i2c_dev, I2C_INT_TX_FIFO_DATA_REQ);
 	}
 
+#if defined(CONFIG_ARCH_ACER_T20)
+transaction_completed:
+#endif
 	i2c_writel(i2c_dev, status, I2C_INT_STATUS);
 
 	if (i2c_dev->is_dvc)
@@ -580,7 +698,9 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_bus *i2c_bus,
 	u32 int_mask;
 	int ret;
 	unsigned long flags;
+#if !defined(CONFIG_ARCH_ACER_T20)
 	int arb_stat;
+#endif
 
 	tegra_i2c_flush_fifos(i2c_dev);
 
@@ -648,6 +768,17 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_bus *i2c_bus,
 			"i2c transfer timed out, addr 0x%04x, data 0x%02x\n",
 			msg->addr, msg->buf[0]);
 
+#if defined(CONFIG_ARCH_ACER_T20)
+		dev_err(i2c_dev->dev, "reg: 0x%08x 0x%08x 0x%08x 0x%08x\n",
+			i2c_readl(i2c_dev, I2C_CNFG), i2c_readl(i2c_dev, I2C_STATUS),
+			i2c_readl(i2c_dev, I2C_INT_STATUS),
+			i2c_readl(i2c_dev, I2C_PACKET_TRANSFER_STATUS));
+		dev_err(i2c_dev->dev, "packet: 0x%08x %u 0x%08x\n",
+			i2c_dev->packet_header, i2c_dev->payload_size,
+			i2c_dev->io_header);
+
+		tegra_i2c_recover_bus_busy(i2c_dev);
+#endif
 		tegra_i2c_init(i2c_dev);
 		return -ETIMEDOUT;
 	}
@@ -658,6 +789,7 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_bus *i2c_bus,
 	if (likely(i2c_dev->msg_err == I2C_ERR_NONE))
 		return 0;
 
+#if !defined(CONFIG_ARCH_ACER_T20)
 	/* Arbitration Lost occurs, Start recovery */
 	if (i2c_dev->msg_err == I2C_ERR_ARBITRATION_LOST) {
 		if (i2c_dev->arb_recovery) {
@@ -666,6 +798,12 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_bus *i2c_bus,
 				return -EAGAIN;
 		}
 	}
+#else
+	if (i2c_dev->msg_err & I2C_ERR_ARBITRATION_LOST) {
+		dev_err(i2c_dev->dev,"Arbitration Lost Recovery\n");
+		tegra_i2c_recover_bus_busy(i2c_dev);
+	}
+#endif
 
 	tegra_i2c_init(i2c_dev);
 
@@ -846,7 +984,9 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 
 	i2c_dev->slave_addr = plat->slave_addr;
 	i2c_dev->is_dvc = plat->is_dvc;
+#if !defined(CONFIG_ARCH_ACER_T20)
 	i2c_dev->arb_recovery = plat->arb_recovery;
+#endif
 	init_completion(&i2c_dev->msg_complete);
 
 	if (irq == INT_I2C || irq == INT_I2C2 || irq == INT_I2C3)
@@ -878,8 +1018,10 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 		i2c_bus->mux_len = plat->bus_mux_len[i];
 		i2c_bus->bus_clk_rate = plat->bus_clk_rate[i] ?: 100000;
 
+#if !defined(CONFIG_ARCH_ACER_T20)
 		i2c_bus->scl_gpio = plat->scl_gpio[i];
 		i2c_bus->sda_gpio = plat->sda_gpio[i];
+#endif
 
 		i2c_bus->adapter.algo = &tegra_i2c_algo;
 		i2c_set_adapdata(&i2c_bus->adapter, i2c_bus);

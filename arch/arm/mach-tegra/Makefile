@@ -32,7 +32,9 @@ obj-y                                   += fuse.o
 obj-y                                   += kfuse.o
 obj-y                                   += csi.o
 obj-$(CONFIG_TEGRA_SILICON_PLATFORM)    += tegra_odm_fuses.o
+ifneq ($(CONFIG_ARCH_ACER_T20),y)
 obj-y                                   += i2c_error_recovery.o
+endif
 obj-$(CONFIG_TEGRA_LEGACY_AUDIO)        += tegra_i2s_audio.o
 obj-$(CONFIG_TEGRA_LEGACY_AUDIO)        += tegra_spdif_audio.o
 obj-y                                   += mc.o
