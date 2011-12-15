@@ -153,7 +153,11 @@ static struct usb_configuration android_config_driver = {
 	.unbind		= android_unbind_config,
 	.bConfigurationValue = 1,
 	.bmAttributes	= USB_CONFIG_ATT_ONE | USB_CONFIG_ATT_SELFPOWER,
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	.bMaxPower	= 0x32, /* 100ma */
+#else
 	.bMaxPower	= 0xFA, /* 500ma */
+#endif
 };
 
 static void android_work(struct work_struct *data)
