@@ -150,6 +150,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 	.cd_gpio = TEGRA_GPIO_PI5,
 	.wp_gpio = -1,
 	.power_gpio = TEGRA_GPIO_PI6,
+	.cd_gpio_polarity = 0,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {

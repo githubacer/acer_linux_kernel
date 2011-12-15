@@ -148,6 +148,9 @@ struct sdhci_host {
 	unsigned int            ocr_avail_sd;
 	unsigned int            ocr_avail_mmc;
 
+#if defined(CONFIG_ARCH_ACER_T20)
+	int card_present;
+#endif
 	unsigned long private[0] ____cacheline_aligned;
 };
 #endif /* __SDHCI_H */

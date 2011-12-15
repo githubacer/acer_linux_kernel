@@ -259,6 +259,17 @@ static irqreturn_t carddetect_irq(int irq, void *data)
 {
 	struct sdhci_host *sdhost = (struct sdhci_host *)data;
 
+#if defined(CONFIG_ARCH_ACER_T20)
+	struct platform_device *pdev = to_platform_device(mmc_dev(sdhost->mmc));
+	struct tegra_sdhci_platform_data *plat = pdev->dev.platform_data;
+
+	sdhost->card_present = (gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity);
+	if (sdhost->card_present == 1) {
+		gpio_set_value(plat->power_gpio, 1);
+	} else {
+		gpio_set_value(plat->power_gpio, 0);
+	}
+#endif
 	tasklet_schedule(&sdhost->card_tasklet);
 	return IRQ_HANDLED;
 };
@@ -569,6 +580,14 @@ static int tegra_sdhci_pltfm_init(struct sdhci_host *host,
 				"SD card wake-up event registration"
 					"failed with eroor: %d\n", rc);
 
+#if defined(CONFIG_ARCH_ACER_T20)
+		host->card_present = (gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity);
+		if (host->card_present == 1) {
+			gpio_set_value(plat->power_gpio, 1);
+		} else {
+			gpio_set_value(plat->power_gpio, 0);
+		}
+#endif
 	} else if (plat->mmc_data.register_status_notify) {
 		plat->mmc_data.register_status_notify(sdhci_status_notify_cb, host);
 	}
@@ -748,6 +767,10 @@ static int tegra_sdhci_suspend(struct sdhci_host *sdhci, pm_message_t state)
 {
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct tegra_sdhci_host *tegra_host = pltfm_host->priv;
+#if defined(CONFIG_ARCH_ACER_T20)
+	struct platform_device *pdev = to_platform_device(mmc_dev(sdhci->mmc));
+	struct tegra_sdhci_platform_data *plat = pdev->dev.platform_data;
+#endif
 
 	tegra_sdhci_set_clock(sdhci, 0);
 
@@ -756,6 +779,12 @@ static int tegra_sdhci_suspend(struct sdhci_host *sdhci, pm_message_t state)
 		regulator_disable(tegra_host->vdd_slot_reg);
 	if (tegra_host->vdd_io_reg)
 		regulator_disable(tegra_host->vdd_io_reg);
+
+#if defined(CONFIG_ARCH_ACER_T20)
+	if (plat->cd_gpio != -1 && sdhci->card_present == 1) {
+		gpio_set_value(plat->power_gpio, 0);
+	}
+#endif
 	return 0;
 }
 
@@ -764,6 +793,13 @@ static int tegra_sdhci_resume(struct sdhci_host *sdhci)
 	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(sdhci);
 	struct tegra_sdhci_host *tegra_host = pltfm_host->priv;
 	unsigned long timeout;
+#if defined(CONFIG_ARCH_ACER_T20)
+	struct platform_device *pdev = to_platform_device(mmc_dev(sdhci->mmc));
+	struct tegra_sdhci_platform_data *plat= pdev->dev.platform_data;
+	if ((sdhci->card_present == 1) && (gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity)) {
+		gpio_set_value(plat->power_gpio, 1);
+	}
+#endif
 
 	/* Enable the power rails if any */
 	if (tegra_host->vdd_io_reg)

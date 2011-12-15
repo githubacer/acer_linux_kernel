@@ -25,6 +25,9 @@ struct tegra_sdhci_platform_data {
 	int wp_gpio;
 	int power_gpio;
 	int is_8bit;
+#if defined(CONFIG_ARCH_ACER_T20)
+	int cd_gpio_polarity;
+#endif
 	unsigned int max_clk_limit;
 	struct mmc_platform_data mmc_data;
 };
