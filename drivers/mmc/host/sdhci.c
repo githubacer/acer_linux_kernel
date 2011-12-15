@@ -1412,6 +1412,12 @@ int sdhci_enable(struct mmc_host *mmc)
 	if (!mmc->card || mmc->card->type == MMC_TYPE_SDIO)
 		return 0;
 
+#if defined(CONFIG_ARCH_ACER_T20)
+	if (mmc->index == 0) {
+		if (host->ops->set_mmc_clk_pin)
+			host->ops->set_mmc_clk_pin(1);
+	}
+#endif
 	if (mmc->ios.clock) {
 		if (host->ops->set_clock)
 			host->ops->set_clock(host, mmc->ios.clock);
@@ -1432,6 +1438,12 @@ int sdhci_disable(struct mmc_host *mmc, int lazy)
 	if (host->ops->set_clock)
 		host->ops->set_clock(host, 0);
 
+#if defined(CONFIG_ARCH_ACER_T20)
+	if (mmc->index == 0) {
+		if (host->ops->set_mmc_clk_pin)
+			host->ops->set_mmc_clk_pin(0);
+	}
+#endif
 	return 0;
 }
 

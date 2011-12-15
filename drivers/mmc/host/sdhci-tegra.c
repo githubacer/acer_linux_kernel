@@ -54,6 +54,10 @@
 #define TEGRA2_SDHOST_STD_FREQ	50000000
 #define TEGRA3_SDHOST_STD_FREQ	104000000
 
+#if defined(CONFIG_ARCH_ACER_T20)
+#define	EMMC_CLK_GPIO	66
+#endif
+
 static unsigned int tegra_sdhost_min_freq;
 static unsigned int tegra_sdhost_std_freq;
 static void tegra_3x_sdhci_set_card_clock(struct sdhci_host *sdhci, unsigned int clock);
@@ -795,6 +799,20 @@ static int tegra_sdhci_resume(struct sdhci_host *sdhci)
 	return 0;
 }
 
+#if defined(CONFIG_ARCH_ACER_T20)
+static void tegra_sdhci_set_mmc_clk_pin(bool enable)
+{
+	if (enable == 1) {
+		tegra_gpio_disable(EMMC_CLK_GPIO);
+		gpio_free(EMMC_CLK_GPIO);
+	} else {
+		gpio_request(EMMC_CLK_GPIO, "emmc clk");
+		tegra_gpio_enable(EMMC_CLK_GPIO);
+		gpio_direction_output(EMMC_CLK_GPIO, 0);
+	}
+}
+#endif
+
 static struct sdhci_ops tegra_sdhci_ops = {
 	.get_ro     = tegra_sdhci_get_ro,
 	.read_l     = tegra_sdhci_readl,
@@ -807,6 +825,9 @@ static struct sdhci_ops tegra_sdhci_ops = {
 	.platform_reset_exit = tegra_sdhci_reset_exit,
 	.set_uhs_signaling = tegra_sdhci_set_uhs_signaling,
 	.switch_signal_voltage = tegra_sdhci_signal_voltage_switch,
+#if defined(CONFIG_ARCH_ACER_T20)
+	.set_mmc_clk_pin = tegra_sdhci_set_mmc_clk_pin,
+#endif
 };
 
 struct sdhci_pltfm_data sdhci_tegra_pdata = {
