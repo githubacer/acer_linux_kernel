@@ -82,6 +82,11 @@ static struct tegra_thermal_data thermal_data = {
 #endif
 };
 
+extern int acer_board_type;
+extern int acer_board_id;
+extern int acer_sku;
+extern int acer_wifi_module;
+
 /* !!!TODO: Change for cardhu (Taken from Ventana) */
 static struct tegra_utmip_config utmi_phy_config[] = {
 	[0] = {
@@ -786,24 +791,8 @@ static void cardhu_usb_init(void)
 
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
 	platform_device_register(&tegra_otg_device);
-	if (bi.board_id == BOARD_PM267) {
-		uhsic_phy_config.reset_gpio =
-			PM267_SMSC4640_HSIC_HUB_RESET_GPIO;
-		tegra_ehci2_device.dev.platform_data = &tegra_ehci_uhsic_pdata;
-		platform_device_register(&tegra_ehci2_device);
-	} else if (bi.board_id == BOARD_E1256) {
-		tegra_ehci2_device.dev.platform_data = &tegra_ehci_uhsic_pdata;
-		platform_device_register(&tegra_ehci2_device);
-	} else if (bi.board_id == BOARD_E1186) {
-		/* for baseband devices do not switch off phy during suspend */
-		tegra_ehci_uhsic_pdata.power_down_on_bus_suspend = 0;
-		uhsic_phy_config.postsuspend = cardu_usb_hsic_postsupend;
-		uhsic_phy_config.preresume = cardu_usb_hsic_preresume;
-		uhsic_phy_config.usb_phy_ready = cardu_usb_hsic_phy_ready;
-		uhsic_phy_config.post_phy_off = cardu_usb_hsic_phy_off;
-		tegra_ehci2_device.dev.platform_data = &tegra_ehci_uhsic_pdata;
-		/* baseband registration happens in baseband-xmm-power  */
-	} else {
+
+	if ( acer_sku != BOARD_SKU_WIFI ) {
 		tegra_ehci2_device.dev.platform_data = &tegra_ehci_pdata[1];
 		platform_device_register(&tegra_ehci2_device);
 	}
@@ -929,11 +918,6 @@ static void cardhu_sata_init(void)
 #else
 static void cardhu_sata_init(void) { }
 #endif
-
-extern int acer_board_type;
-extern int acer_board_id;
-extern int acer_sku;
-extern int acer_wifi_module;
 
 static void acer_board_info(void) {
 	if (acer_board_type == BOARD_PICASSO_2)
