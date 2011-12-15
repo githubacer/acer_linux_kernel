@@ -43,7 +43,11 @@ static int tegra_wake_event_irq[] = {
 	INT_RTC,				/* wake16 */
 	INT_KBC,				/* wake17 */
 	INT_EXTERNAL_PMU,			/* wake18 */
+#if defined(CONFIG_ARCH_ACER_T30)
+	INT_USB, /* TEGRA_USB1_VBUS, */		/* wake19 */
+#else
 	-EINVAL, /* TEGRA_USB1_VBUS, */		/* wake19 */
+#endif
 	-EINVAL, /* TEGRA_USB2_VBUS, */		/* wake20 */
 	-EINVAL, /* TEGRA_USB1_ID, */		/* wake21 */
 	-EINVAL, /* TEGRA_USB2_ID, */		/* wake22 */
