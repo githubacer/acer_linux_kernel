@@ -171,7 +171,7 @@ static int tegra_wm8903_hw_params(struct snd_pcm_substream *substream,
 #endif
 
 #ifdef CONFIG_ARCH_ACER_T20
-	acer_volume_setting(codec);
+	acer_volume_setting(codec, substream);
 #endif
 	return 0;
 }

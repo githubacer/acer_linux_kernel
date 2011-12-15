@@ -15,8 +15,11 @@
 #define R24_DAC_BOOST_6dB 0x01
 #define R41_DRC_MAXGAIN_38dB 0x03
 #define R42_COMPRESSOR_SLOP_R0 0x05
+#define R42_COMPRESSOR_SLOP_DEFAULT_R0 0x04
 #define R43_COMPRESSOR_THRESSHOLD_T 0x14
+#define R43_COMPRESSOR_THRESSHOLD_DEFAULT_T 0
 #define R43_COMPRESSOR_THRESSHOLD_YT 0x01
+#define R43_COMPRESSOR_THRESSHOLD_DEFAULT_YT 0
 #if defined(CONFIG_MACH_PICASSO_E)
 #define HPOUT_VOL 0xB0
 #define LINEOUT_VOL 0xB7
@@ -56,7 +59,7 @@ extern void setAudioCABC(int enable);
 #endif
 #endif
 extern int switch_audio_table(int control_mode, bool fromAP);
-extern void acer_volume_setting(struct snd_soc_codec *codec);
+extern void acer_volume_setting(struct snd_soc_codec *codec, struct snd_pcm_substream *substream);
 extern bool handset_mic_detect(struct snd_soc_codec *codec);
 extern struct snd_soc_jack_gpio tegra_wm8903_hp_jack_gpio;
 int tune_codec_setting(int control_mode);

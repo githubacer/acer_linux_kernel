@@ -422,21 +422,36 @@ int switch_audio_table(int control_mode, bool fromAP)
 #endif
 }
 
-void acer_volume_setting(struct snd_soc_codec *codec)
+void acer_volume_setting(struct snd_soc_codec *codec, struct snd_pcm_substream *substream)
 {
-	snd_soc_write(codec, WM8903_ANALOGUE_OUT1_LEFT, HPOUT_VOL);
-	snd_soc_write(codec, WM8903_ANALOGUE_OUT1_RIGHT, HPOUT_VOL);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		snd_soc_write(codec, WM8903_ANALOGUE_OUT1_LEFT, HPOUT_VOL);
+		snd_soc_write(codec, WM8903_ANALOGUE_OUT1_RIGHT, HPOUT_VOL);
 
-	snd_soc_write(codec, WM8903_ANALOGUE_OUT2_LEFT, LINEOUT_VOL);
-	snd_soc_write(codec, WM8903_ANALOGUE_OUT2_RIGHT, LINEOUT_VOL);
-
-	snd_soc_update_bits(codec, WM8903_DRC_1,
-					WM8903_DRC_MAXGAIN_MASK, R41_DRC_MAXGAIN_38dB << WM8903_DRC_MAXGAIN_SHIFT);
+		snd_soc_write(codec, WM8903_ANALOGUE_OUT2_LEFT, LINEOUT_VOL);
+		snd_soc_write(codec, WM8903_ANALOGUE_OUT2_RIGHT, LINEOUT_VOL);
 
 #ifdef CONFIG_ACER_FM_SINGLE_MIC
-	snd_soc_update_bits(codec, WM8903_AUDIO_INTERFACE_0,
-					WM8903_DAC_BOOST_MASK, R24_DAC_BOOST_0dB << WM8903_DAC_BOOST_SHIFT);
+		snd_soc_update_bits(codec, WM8903_AUDIO_INTERFACE_0,
+						WM8903_DAC_BOOST_MASK, R24_DAC_BOOST_0dB << WM8903_DAC_BOOST_SHIFT);
 #endif
+	}
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		snd_soc_update_bits(codec, WM8903_DRC_1,
+						WM8903_DRC_MAXGAIN_MASK, R41_DRC_MAXGAIN_38dB << WM8903_DRC_MAXGAIN_SHIFT);
+
+		snd_soc_update_bits(audio_data.codec, WM8903_DRC_2,
+						WM8903_DRC_R0_SLOPE_COMP_MASK,
+						R42_COMPRESSOR_SLOP_DEFAULT_R0 << WM8903_DRC_R0_SLOPE_COMP_SHIFT);
+
+		snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
+						WM8903_DRC_THRESH_COMP_MASK,
+						R43_COMPRESSOR_THRESSHOLD_DEFAULT_T << WM8903_DRC_THRESH_COMP_SHIFT);
+		snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
+						WM8903_DRC_AMP_COMP_MASK,
+						R43_COMPRESSOR_THRESSHOLD_DEFAULT_YT << WM8903_DRC_AMP_COMP_SHIFT);
+	}
 }
 
 bool handset_mic_detect(struct snd_soc_codec *codec)
