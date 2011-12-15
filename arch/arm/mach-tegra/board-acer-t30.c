@@ -54,6 +54,9 @@
 #include <mach/usb_phy.h>
 #include <linux/nfc/pn544.h>
 #include <mach/thermal.h>
+#ifdef CONFIG_ROTATELOCK
+#include <linux/switch.h>
+#endif
 
 #include "board.h"
 #include "clock.h"
@@ -484,6 +487,25 @@ static void vib_init(void)
 }
 #endif
 
+#ifdef CONFIG_ROTATELOCK
+static struct gpio_switch_platform_data rotationlock_switch_platform_data = {
+	.gpio = TEGRA_GPIO_PQ0,
+};
+
+static struct platform_device rotationlock_switch = {
+	.name   = "rotationlock",
+	.id     = -1,
+	.dev    = {
+		.platform_data = &rotationlock_switch_platform_data,
+	},
+};
+
+static void rotationlock_init(void)
+{
+	tegra_gpio_enable(TEGRA_GPIO_PQ0);
+}
+#endif
+
 static struct platform_device tegra_camera = {
 	.name = "tegra_camera",
 	.id = -1,
@@ -604,6 +626,9 @@ static struct platform_device *cardhu_devices[] __initdata = {
 	&tegra_avp_device,
 #endif
 	&tegra_camera,
+#ifdef CONFIG_ROTATELOCK
+	&rotationlock_switch,
+#endif
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
 	&tegra_se_device,
 #endif
@@ -1033,6 +1058,9 @@ static void __init tegra_cardhu_init(void)
 	cardhu_sata_init();
 	//audio_wired_jack_init();
 	cardhu_pins_state_init();
+#ifdef CONFIG_ROTATELOCK
+	rotationlock_init();
+#endif
 	cardhu_emc_init();
 #if defined(CONFIG_ACER_VIBRATOR)
 	vib_init();

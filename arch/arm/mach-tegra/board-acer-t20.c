@@ -53,6 +53,9 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
+#ifdef CONFIG_ROTATELOCK
+#include <linux/switch.h>
+#endif
 
 #include "board.h"
 #include "clock.h"
@@ -357,6 +360,25 @@ static void __init ventana_uart_init(void)
 				ARRAY_SIZE(ventana_uart_devices));
 }
 
+#ifdef CONFIG_ROTATELOCK
+static struct gpio_switch_platform_data rotationlock_switch_platform_data = {
+	.gpio = TEGRA_GPIO_PQ2,
+};
+
+static struct platform_device rotationlock_switch = {
+	.name	= "rotationlock",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &rotationlock_switch_platform_data,
+	},
+};
+
+static void rotationlock_init(void)
+{
+	tegra_gpio_enable(TEGRA_GPIO_PQ2);
+}
+#endif
+
 #ifdef CONFIG_KEYBOARD_GPIO
 #define GPIO_KEY(_id, _gpio, _isactivelow, _iswake)            \
 	{                                       \
@@ -476,6 +498,9 @@ static struct platform_device *ventana_devices[] __initdata = {
 #endif
 	&tegra_wdt_device,
 	&tegra_avp_device,
+#ifdef CONFIG_ROTATELOCK
+	&rotationlock_switch,
+#endif
 	&tegra_camera,
 	&tegra_i2s_device1,
 	&tegra_i2s_device2,
@@ -703,6 +728,9 @@ static void __init acer_t20_init(void)
 #endif
 #ifdef CONFIG_KEYBOARD_GPIO
 	picasso_keys_init();
+#endif
+#ifdef CONFIG_ROTATELOCK
+        rotationlock_init();
 #endif
 	acer_board_info();
 
