@@ -46,7 +46,7 @@
 #include <asm/mach-types.h>
 #include <asm/hardware/scoop.h>
 
-#include "acer_audio_control.h"
+#include "acer_audio_control_t20.h"
 #include "../codecs/wm8903.h"
 
 #define AUDIO_CONTROL_DRIVER_NAME "acer-audio-control"

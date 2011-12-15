@@ -674,7 +674,7 @@ SOC_SINGLE("Right Input PGA Volume", WM8903_ANALOGUE_RIGHT_INPUT_0,
 SOC_SINGLE("Right Input PGA Common Mode Switch", WM8903_ANALOGUE_RIGHT_INPUT_1,
 	   6, 1, 0),
 
-#ifdef CONFIG_ARCH_ACER_T20
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 SOC_SINGLE("Mic Bias Switch", WM8903_MIC_BIAS_CONTROL_0,
 	   0, 3, 0),
 #endif
