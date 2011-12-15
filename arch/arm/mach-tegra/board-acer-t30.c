@@ -57,6 +57,9 @@
 #ifdef CONFIG_ROTATELOCK
 #include <linux/switch.h>
 #endif
+#ifdef CONFIG_EEPROM_AT24C02C
+#include <linux/i2c/at24.h>
+#endif
 
 #include "board.h"
 #include "clock.h"
@@ -220,6 +223,20 @@ static struct i2c_board_info __initdata cardhu_i2c_bus3_board_info[] = {
 		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PX0),
 	},
 };
+
+#ifdef CONFIG_EEPROM_AT24C02C
+static struct at24_platform_data at24c02c = {
+	.byte_len = SZ_2K/8,
+	.page_size = 8,
+};
+static struct i2c_board_info __initdata cardhu_i2c_eeprom_board_info[] = {
+	{
+		I2C_BOARD_INFO("at24",0x50),
+		.platform_data = &at24c02c,
+	},
+};
+#endif
+
 static struct tegra_i2c_platform_data cardhu_i2c1_platform_data = {
 	.adapter_nr	= 0,
 	.bus_count	= 1,
@@ -312,6 +329,9 @@ static void cardhu_i2c_init(void)
 
 	i2c_register_board_info(4, &wm8903_board_info, 1);
 	i2c_register_board_info(2, cardhu_i2c_bus3_board_info, 1);
+#ifdef CONFIG_EEPROM_AT24C02C
+	i2c_register_board_info(4, cardhu_i2c_eeprom_board_info, 1);
+#endif
 }
 
 static struct platform_device *cardhu_uart_devices[] __initdata = {
