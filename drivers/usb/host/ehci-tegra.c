@@ -1123,6 +1123,9 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 	}
 
 	clk_set_rate(tegra->sclk_clk, 80000000);
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	clk_enable(tegra->sclk_clk);
+#endif
 
 	tegra->emc_clk = clk_get(&pdev->dev, "emc");
 	if (IS_ERR(tegra->emc_clk)) {
@@ -1141,7 +1144,9 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 	/* Set DDR busy hints to 150MHz. For Tegra 3x SOC DDR rate equals to EMC rate */
 	clk_set_rate(tegra->emc_clk, 150000000);
 #endif
-
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	clk_enable(tegra->emc_clk);
+#endif
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "Failed to get I/O memory\n");
