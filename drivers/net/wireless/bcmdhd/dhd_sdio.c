@@ -6048,7 +6048,9 @@ static int
 _dhdsdio_download_firmware(struct dhd_bus *bus)
 {
 	int bcmerror = -1;
+#if defined(CONFIG_BCMDHD_FW_DIR)
 	char *p;
+#endif
 
 	bool embed = FALSE;	/* download embedded firmware */
 	bool dlok = FALSE;	/* download firmware succeeded */
@@ -6070,7 +6072,7 @@ _dhdsdio_download_firmware(struct dhd_bus *bus)
 
 	/* External image takes precedence if specified */
 	if ((bus->fw_path != NULL) && (bus->fw_path[0] != '\0')) {
-
+#if defined(CONFIG_BCMDHD_FW_DIR)
 		/* replace bcm43xx with bcm4330 or bcm4329 */
 		if ((p = strstr(bus->fw_path, "bcm43xx"))) {
 			if (bus->cl_devid == 0x4329) {
@@ -6082,7 +6084,7 @@ _dhdsdio_download_firmware(struct dhd_bus *bus)
 				*(p + 6)='0';
 			}
 		}
-
+#endif
 		if (dhdsdio_download_code_file(bus, bus->fw_path)) {
 			DHD_ERROR(("%s: dongle image file download failed\n", __FUNCTION__));
 #ifdef BCMEMBEDIMAGE
