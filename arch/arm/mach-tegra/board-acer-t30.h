@@ -194,7 +194,7 @@ int cardhu_regulator_init(void);
 int cardhu_suspend_init(void);
 int cardhu_sdhci_init(void);
 int acer_t30_pinmux_init(void);
-int cardhu_panel_init(void);
+int acer_panel_init(void);
 int cardhu_sensors_init(void);
 int cardhu_scroll_init(void);
 int cardhu_keys_init(void);

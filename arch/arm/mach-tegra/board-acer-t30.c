@@ -1164,7 +1164,7 @@ static void __init tegra_cardhu_init(void)
 	acer_dock_init();
 #endif
 	acer_keys_init();
-	cardhu_panel_init();
+	acer_panel_init();
 	cardhu_sensors_init();
 	cardhu_setup_bluesleep();
 	cardhu_sata_init();
