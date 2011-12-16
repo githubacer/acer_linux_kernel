@@ -26,6 +26,11 @@
 
 #include "edid.h"
 
+#if !defined(CONFIG_ARCH_ACER_T30) && !defined(CONFIG_ARCH_ACER_T20)
+/*
+ *  Move the struct "tegra_edid_pvt" to file "edid.h".
+ *  Because lcd_edid needs it when implement checking function of CABC.
+ */
 struct tegra_edid_pvt {
 	struct kref			refcnt;
 	struct tegra_edid_hdmi_eld	eld;
@@ -34,6 +39,11 @@ struct tegra_edid_pvt {
 	struct tegra_dc_edid		dc_edid;
 };
 
+/*
+ *  Move the struct "tegra_edid" to file "edid.h".
+ *  And add a new memver variable "vsdb".
+ *  Because hdmi needs it to check the state of overscan.
+ */
 struct tegra_edid {
 	struct i2c_client	*client;
 	struct i2c_board_info	info;
@@ -43,6 +53,7 @@ struct tegra_edid {
 
 	struct mutex		lock;
 };
+#endif
 
 #if defined(DEBUG) || defined(CONFIG_DEBUG_FS)
 static int tegra_edid_show(struct seq_file *s, void *unused)
@@ -183,9 +194,13 @@ int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data)
 
 	return 0;
 }
-
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+int tegra_edid_parse_ext_block(const u8 *raw, int idx,
+			       struct tegra_edid_pvt *edid, u8 *vsdb)
+#else
 int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 			       struct tegra_edid_pvt *edid)
+#endif
 {
 	const u8 *ptr;
 	u8 tmp;
@@ -254,7 +269,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 				(ptr[2] == 0x0c) &&
 				(ptr[3] == 0)) {
 #if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
-				edid->eld.vsdb = 1;
+				*vsdb = 1;
 #endif
 				j = 8;
 				tmp = ptr[j++];
@@ -317,10 +332,8 @@ int tegra_edid_mode_support_stereo(struct fb_videomode *mode)
 		((mode->refresh == 60) || (mode->refresh == 50)))
 		return 1;
 
-	/* Disabling 1080p stereo mode due to bug 869099. */
-	/* Must re-enable this to 1 once it is fixed. */
 	if (mode->xres == 1920 && mode->yres == 1080 && mode->refresh == 24)
-		return 0;
+		return 1;
 
 	return 0;
 }
@@ -339,7 +352,9 @@ int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
 	int extension_blocks;
 	struct tegra_edid_pvt *new_data, *old_data;
 	u8 *data;
-
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+	u8 vsdb = 0;
+#endif
 	new_data = vmalloc(SZ_32K + sizeof(struct tegra_edid_pvt));
 	if (!new_data)
 		return -ENOMEM;
@@ -376,7 +391,11 @@ int tegra_edid_get_monspecs_test(struct tegra_edid *edid,
 			fb_edid_add_monspecs(data + i * 128, specs);
 
 			tegra_edid_parse_ext_block(data + i * 128,
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+					data[i * 128 + 2], new_data, &vsdb);
+#else
 					data[i * 128 + 2], new_data);
+#endif
 
 			if (new_data->support_stereo) {
 				for (j = 0; j < specs->modedb_len; j++) {
@@ -414,6 +433,9 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	int extension_blocks;
 	struct tegra_edid_pvt *new_data, *old_data;
 	u8 *data;
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+	u8 vsdb = 0;
+#endif
 
 	new_data = vmalloc(SZ_32K + sizeof(struct tegra_edid_pvt));
 	if (!new_data)
@@ -454,7 +476,11 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 			fb_edid_add_monspecs(data + i * 128, specs);
 
 			tegra_edid_parse_ext_block(data + i * 128,
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+					data[i * 128 + 2], new_data, &vsdb);
+#else
 					data[i * 128 + 2], new_data);
+#endif
 
 			if (new_data->support_stereo) {
 				for (j = 0; j < specs->modedb_len; j++) {
@@ -472,6 +498,9 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	mutex_lock(&edid->lock);
 	old_data = edid->data;
 	edid->data = new_data;
+#if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+	edid->vsdb = vsdb;
+#endif
 	mutex_unlock(&edid->lock);
 
 	if (old_data)

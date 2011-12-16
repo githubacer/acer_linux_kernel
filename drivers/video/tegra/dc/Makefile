@@ -9,3 +9,4 @@ obj-y += dsi.o
 obj-y += dc_sysfs.o
 obj-$(CONFIG_TEGRA_OVERLAY) += overlay.o
 obj-$(CONFIG_TEGRA_DC_EXTENSIONS) += ext/
+obj-$(CONFIG_ARCH_ACER_T20) += lcd_edid.o
