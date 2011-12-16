@@ -279,6 +279,11 @@ static __initdata struct tegra_pingroup_config cardhu_pinmux_common[] = {
 	DEFAULT_PINMUX(CLK3_REQ,        DEV3,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(GMI_WP_N,        GMI,             NORMAL,    NORMAL,     INPUT),
 
+#if defined(CONFIG_TOUCHSCREEN_ATMEL_MXT1386E)
+	DEFAULT_PINMUX(GMI_CS0_N,       RSVD1,           PULL_UP,   NORMAL,     INPUT),
+	DEFAULT_PINMUX(GMI_DQS,         RSVD1,           NORMAL,    NORMAL,     OUTPUT),
+#endif
+
 	DEFAULT_PINMUX(KB_ROW5,         OWR,             NORMAL,    NORMAL,     OUTPUT),
 	DEFAULT_PINMUX(KB_ROW12,        KBC,             NORMAL,    NORMAL,     OUTPUT),
 	DEFAULT_PINMUX(KB_ROW14,        KBC,             NORMAL,    NORMAL,     OUTPUT),

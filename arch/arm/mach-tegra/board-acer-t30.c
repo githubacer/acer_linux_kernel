@@ -719,52 +719,47 @@ static const u8 config_sku2000[] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static struct mxt_platform_data atmel_mxt_info = {
-	.x_line         = 27,
-	.y_line         = 42,
-	.x_size         = 768,
-	.y_size         = 1366,
-	.blen           = 0x20,
-	.threshold      = 0x3C,
-	.voltage        = 3300000,              /* 3.3V */
-	.orient         = 5,
-	.config         = config,
-	.config_length  = 157,
-	.config_crc     = MXT_CONFIG_CRC,
-	.irqflags       = IRQF_TRIGGER_FALLING,
-/*	.read_chg       = &read_chg, */
-	.read_chg       = NULL,
-};
-
 static struct i2c_board_info __initdata atmel_i2c_info[] = {
 	{
-		I2C_BOARD_INFO("atmel_mxt_ts", 0x5A),
-		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PH4),
-		.platform_data = &atmel_mxt_info,
-	}
+		I2C_BOARD_INFO("maXTouch", 0X4C),
+		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PJ0),
+	},
 };
 
 static int __init cardhu_touch_init(void)
 {
-	struct board_info BoardInfo;
+	int ret;
 
-	tegra_gpio_enable(TEGRA_GPIO_PH4);
-	tegra_gpio_enable(TEGRA_GPIO_PH6);
+	tegra_gpio_enable(TEGRA_GPIO_PB0); /* LDO_ENABLE */
+	tegra_gpio_enable(TEGRA_GPIO_PJ0); /* INTERRUPT */
+	tegra_gpio_enable(TEGRA_GPIO_PI2); /* RESET */
 
-	gpio_request(TEGRA_GPIO_PH4, "atmel-irq");
-	gpio_direction_input(TEGRA_GPIO_PH4);
+	ret = gpio_request(TEGRA_GPIO_PB0, "Atmel_mXT1386_ENABLE");
+	if (ret < 0)
+		pr_err("[Touch] gpio_request: TEGRA_GPIO_PB0 fail\n");
 
-	gpio_request(TEGRA_GPIO_PH6, "atmel-reset");
-	gpio_direction_output(TEGRA_GPIO_PH6, 0);
-	msleep(1);
-	gpio_set_value(TEGRA_GPIO_PH6, 1);
-	msleep(100);
+	ret = gpio_request(TEGRA_GPIO_PJ0, "Atmel_mXT1386_INT");
+	if (ret < 0)
+		pr_err("[Touch] gpio_request: TEGRA_GPIO_PJ0 fail\n");
 
-	tegra_get_board_info(&BoardInfo);
-	if ((BoardInfo.sku & SKU_TOUCH_MASK) == SKU_TOUCH_2000) {
-		atmel_mxt_info.config = config_sku2000;
-		atmel_mxt_info.config_crc = MXT_CONFIG_CRC_SKU2000;
-	}
+	ret = gpio_request(TEGRA_GPIO_PI2, "Atmel_mXT1386_RESET");
+	if (ret < 0)
+		pr_err("[Touch] gpio_request: TEGRA_GPIO_PI2 fail\n");
+
+	ret = gpio_direction_output(TEGRA_GPIO_PB0, 1);
+	if (ret < 0)
+		pr_err("[Touch] gpio_direction_output: TEGRA_GPIO_PB0 fail\n");
+
+	ret = gpio_direction_input(TEGRA_GPIO_PJ0);
+	if (ret < 0)
+		pr_err("[Touch] gpio_direction_input: TEGRA_GPIO_PJ0 fail\n");
+
+	ret = gpio_direction_output(TEGRA_GPIO_PI2, 0);
+	if (ret < 0)
+		pr_err("[Touch] gpio_direction_output: TEGRA_GPIO_PI2 fail\n");
+	gpio_set_value(TEGRA_GPIO_PI2, 0);
+	msleep(2);
+	gpio_set_value(TEGRA_GPIO_PI2, 1);
 
 	i2c_register_board_info(1, atmel_i2c_info, 1);
 
