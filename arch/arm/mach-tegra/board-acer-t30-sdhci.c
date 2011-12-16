@@ -33,9 +33,10 @@
 #include "board.h"
 #include "board-acer-t30.h"
 
-#define CARDHU_WLAN_PWR	TEGRA_GPIO_PD4
-#define CARDHU_WLAN_RST	TEGRA_GPIO_PD3
-#define CARDHU_WLAN_WOW	TEGRA_GPIO_PO4
+#define CARDHU_WLAN_VDD        TEGRA_GPIO_PK7
+#define CARDHU_WLAN_RST        TEGRA_GPIO_PP2
+#define CARDHU_WLAN_WOW        TEGRA_GPIO_PS2
+#define CARDHU_BT_RST        TEGRA_GPIO_PU0
 #define CARDHU_SD_CD TEGRA_GPIO_PS4
 #define PM269_SD_WP -1
 
@@ -55,15 +56,15 @@ static struct wifi_platform_data cardhu_wifi_control = {
 
 static struct resource wifi_resource[] = {
 	[0] = {
-		.name	= "bcm4329_wlan_irq",
-		.start	= TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PO4),
-		.end	= TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PO4),
+		.name	= "bcmdhd_wlan_irq",
+		.start	= TEGRA_GPIO_TO_IRQ(CARDHU_WLAN_WOW),
+		.end	= TEGRA_GPIO_TO_IRQ(CARDHU_WLAN_WOW),
 		.flags	= IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
 	},
 };
 
 static struct platform_device cardhu_wifi_device = {
-	.name		= "bcm4329_wlan",
+	.name		= "bcmdhd_wlan",
 	.id		= 1,
 	.num_resources	= 1,
 	.resource	= wifi_resource,
@@ -227,14 +228,81 @@ static int cardhu_wifi_set_carddetect(int val)
 	return 0;
 }
 
+static int wifi_sdio_gpio[] = {
+	TEGRA_GPIO_PA6,
+	TEGRA_GPIO_PA7,
+	TEGRA_GPIO_PB7,
+	TEGRA_GPIO_PB6,
+	TEGRA_GPIO_PB5,
+	TEGRA_GPIO_PB4,
+};
+
+static int enable_wifi_sdio_func(void)
+{
+	int i = 0;
+
+	for (i = 0; i < ARRAY_SIZE(wifi_sdio_gpio); i++) {
+		tegra_gpio_disable(wifi_sdio_gpio[i]);
+		gpio_free(wifi_sdio_gpio[i]);
+	}
+	return 0;
+}
+
+static int disable_wifi_sdio_func(void)
+{
+	unsigned int rc = 0;
+	int i = 0;
+
+	for (i = 0; i < ARRAY_SIZE(wifi_sdio_gpio); i++) {
+		rc = gpio_request(wifi_sdio_gpio[i], NULL);
+		if (rc) {
+			printk(KERN_INFO "%s, request gpio %d failed !!!\n", __func__, wifi_sdio_gpio[i]);
+			return rc;
+		}
+
+		tegra_gpio_enable(wifi_sdio_gpio[i]);
+
+		rc = gpio_direction_output(wifi_sdio_gpio[i], 0);
+		if (rc) {
+			printk(KERN_INFO "%s, direction gpio %d failed !!!\n", __func__, wifi_sdio_gpio[i]);
+			return rc;
+		}
+	}
+	return 0;
+}
+
 static int cardhu_wifi_power(int on)
 {
 	pr_debug("%s: %d\n", __func__, on);
-	gpio_set_value(CARDHU_WLAN_PWR, on);
+
+	if (on)
+	    gpio_direction_input(CARDHU_WLAN_WOW);
+	else
+	    gpio_direction_output(CARDHU_WLAN_WOW, 0);
+
+	/* Set VDD high at first before turning on*/
+	if (on) {
+		enable_wifi_sdio_func();
+		if (!gpio_get_value(CARDHU_WLAN_VDD)) {
+			gpio_set_value(CARDHU_WLAN_VDD, 1);
+			pr_err("%s: VDD=1\n", __func__);
+		}
+	}
 	mdelay(100);
 	gpio_set_value(CARDHU_WLAN_RST, on);
 	mdelay(200);
 
+	/*
+	 * When BT and Wi-Fi turn off at the same time, the last one must do the VDD off action.
+	 * So BT/WI-FI must check the other's status in order to set VDD low at last.
+	 */
+	if (!on) {
+		if (!gpio_get_value(CARDHU_BT_RST)) {
+			gpio_set_value(CARDHU_WLAN_VDD, 0);
+			pr_err("%s: VDD=0\n", __func__);
+		}
+		disable_wifi_sdio_func();
+	}
 	return 0;
 }
 
@@ -247,10 +315,9 @@ static int cardhu_wifi_reset(int on)
 static int __init cardhu_wifi_init(void)
 {
 	int rc;
-
-	rc = gpio_request(CARDHU_WLAN_PWR, "wlan_power");
+	rc = gpio_request(CARDHU_WLAN_VDD, "wlan_vdd");
 	if (rc)
-		pr_err("WLAN_PWR gpio request failed:%d\n", rc);
+		pr_err("WLAN_VDD gpio request failed:%d\n", rc);
 	rc = gpio_request(CARDHU_WLAN_RST, "wlan_rst");
 	if (rc)
 		pr_err("WLAN_RST gpio request failed:%d\n", rc);
@@ -258,14 +325,14 @@ static int __init cardhu_wifi_init(void)
 	if (rc)
 		pr_err("WLAN_WOW gpio request failed:%d\n", rc);
 
-	tegra_gpio_enable(CARDHU_WLAN_PWR);
+	tegra_gpio_enable(CARDHU_WLAN_VDD);
 	tegra_gpio_enable(CARDHU_WLAN_RST);
 	tegra_gpio_enable(CARDHU_WLAN_WOW);
 
-	rc = gpio_direction_output(CARDHU_WLAN_PWR, 0);
+	rc = gpio_direction_output(CARDHU_WLAN_VDD, 0);
 	if (rc)
-		pr_err("WLAN_PWR gpio direction configuration failed:%d\n", rc);
-	gpio_direction_output(CARDHU_WLAN_RST, 0);
+		pr_err("WLAN_VDD gpio direction configuration failed:%d\n", rc);
+	rc = gpio_direction_output(CARDHU_WLAN_RST, 0);
 	if (rc)
 		pr_err("WLAN_RST gpio direction configuration failed:%d\n", rc);
 	rc = gpio_direction_input(CARDHU_WLAN_WOW);
@@ -273,6 +340,8 @@ static int __init cardhu_wifi_init(void)
 		pr_err("WLAN_WOW gpio direction configuration failed:%d\n", rc);
 
 	platform_device_register(&cardhu_wifi_device);
+
+	disable_wifi_sdio_func();
 	return 0;
 }
 
