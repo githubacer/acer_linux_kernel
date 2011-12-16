@@ -893,10 +893,26 @@ static void cardhu_usb_init(void)
 static void cardhu_usb_init(void) { }
 #endif
 
+static void cardhu_gps_uart_init(void)
+{
+            tegra_gpio_disable(TEGRA_GPIO_PC3);//RX
+            tegra_gpio_disable(TEGRA_GPIO_PC2);//TX
+            tegra_gpio_disable(TEGRA_GPIO_PJ5);//CTS
+            tegra_gpio_disable(TEGRA_GPIO_PJ6);//RTS
+}
+
 static void cardhu_gps_init(void)
 {
+	int rc;
+	rc = gpio_request(TEGRA_GPIO_PY2, "EN_VDD_GPS");
+	if (rc)
+		pr_err("EN_VDD_GPS request failed:%d\n", rc);
 	tegra_gpio_enable(TEGRA_GPIO_PU2);
 	tegra_gpio_enable(TEGRA_GPIO_PU3);
+	tegra_gpio_enable(TEGRA_GPIO_PY2);
+	rc = gpio_direction_output(TEGRA_GPIO_PY2, 1);
+	if (rc)
+		pr_err("EN_VDD_GPS direction configuration failed:%d\n", rc);
 }
 
 static void cardhu_nfc_init(void)
@@ -1093,6 +1109,7 @@ static void __init tegra_cardhu_init(void)
 	cardhu_suspend_init();
 	cardhu_power_off_init();
 	cardhu_touch_init();
+	cardhu_gps_uart_init();
 	cardhu_gps_init();
 	cardhu_modem_init();
 	cardhu_kbc_init();
