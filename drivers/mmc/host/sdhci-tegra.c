@@ -574,11 +574,13 @@ static int tegra_sdhci_pltfm_init(struct sdhci_host *host,
 			dev_err(mmc_dev(host->mmc), "request irq error\n");
 			goto out_cd;
 		}
+#if !(defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30))
 		rc = enable_irq_wake(gpio_to_irq(plat->cd_gpio));
 		if (rc < 0)
 			dev_err(mmc_dev(host->mmc),
 				"SD card wake-up event registration"
 					"failed with eroor: %d\n", rc);
+#endif
 
 #if defined(CONFIG_ARCH_ACER_T20)
 		host->card_present = (gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity);
