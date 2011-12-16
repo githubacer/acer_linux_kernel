@@ -322,14 +322,27 @@ void kernel_restart_prepare(char *cmd)
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 #define MSC_PATH "/dev/block/mmcblk0p5"
 
+#if defined(CONFIG_ARCH_ACER_T20)
+#define USE_OLD_MISC_CMD 1
+#endif
+
+#ifdef USE_OLD_MISC_CMD
 typedef struct{
-	    char command[32];
-	    char status[32];
-	    unsigned debug_switch;
+	unsigned char command[12];
+	unsigned char debug_switch;
+	unsigned char display_debug;
+	unsigned char size;
 } BootloaderMessage;
+#else
+typedef struct{
+	char command[32];
+	char status[32];
+	unsigned debug_switch;
+} BootloaderMessage;
+#endif
 
 /**
- *	misc_mcd - write data to misc partition
+ *	misc_cmd - write data to misc partition
  *	@cmd: pointer to buffer containing the data need to be wrote to misc partition
  */
 void misc_cmd(char *cmd)
@@ -343,12 +356,22 @@ void misc_cmd(char *cmd)
 
 	oldfs = get_fs();
 	set_fs(get_ds());
-
 	if(fp != NULL) {
 		pr_emerg("%s: write cmd [%s] to misc\n", __func__, cmd);
 		fp->f_op->read(fp, (char*) &BLMsg, sizeof(BootloaderMessage), &fp->f_pos);
 		vfs_llseek(fp, 0, 0);
 
+#ifdef USE_OLD_MISC_CMD
+		if (!strncmp(cmd, "recovery", 8)) {
+			strcpy(BLMsg.command, "FOTA");
+		}else if (!strncmp(cmd, "bootloader", 10)) {
+			strcpy(BLMsg.command, "FastbootMode");
+		}else if (!strncmp(cmd, "debug_on", 8)) {
+			BLMsg.debug_switch = 1;
+		} else if (!strncmp(cmd, "debug_off", 9)) {
+			BLMsg.debug_switch = 0;
+		}
+#else
 		if (!strncmp(cmd, "recovery", 8)) {
 			strcpy(BLMsg.command, "boot-recovery");
 		}else if (!strncmp(cmd, "bootloader", 10)) {
@@ -358,8 +381,9 @@ void misc_cmd(char *cmd)
 		} else if (!strncmp(cmd, "debug_off", 9)) {
 			BLMsg.debug_switch = 0;
 		}
+#endif
 		fp->f_op->write(fp, (char*) &BLMsg, sizeof(BootloaderMessage), &fp->f_pos);
-	}else{
+	} else {
 		pr_emerg("fp is NULL!\n");
 	}
 	filp_close(fp, 0);
