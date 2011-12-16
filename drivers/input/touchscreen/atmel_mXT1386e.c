@@ -511,7 +511,7 @@ static void touch_worker(struct work_struct *work)
 			mxt->PointBuf[ContactID].Status = 0;
 			mxt_debug(DEBUG_DETAIL, "Finger Release!!\n");
 		} else if (buffer[1] & 0x80) {
-			mxt->PointBuf[ContactID].Status = buffer[5];
+			mxt->PointBuf[ContactID].Status = (buffer[5] << 4);
 			mxt_debug(DEBUG_DETAIL, "Finger Touch!!\n");
 		} else if (buffer[1] & 0x02) {
 			mxt_debug(DEBUG_ERROR, "Palm Release!!\n");
