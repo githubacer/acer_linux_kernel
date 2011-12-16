@@ -39,6 +39,10 @@
 #include <mach/edp.h>
 #include <mach/tsensor.h>
 
+#ifdef CONFIG_BATTERY_BQ27541
+#include <linux/bq27541.h>
+#endif
+
 #include "gpio-names.h"
 #include "board.h"
 #include "board-acer-t30.h"
@@ -331,6 +335,29 @@ static struct i2c_board_info __initdata tps6236x_boardinfo[] = {
 	},
 };
 
+#ifdef CONFIG_BATTERY_BQ27541
+#define AC_DETECT_GPIO TEGRA_GPIO_PO4
+
+static void bq27541_gpio_init(void)
+{
+	tegra_gpio_enable(AC_DETECT_GPIO);
+	gpio_request(AC_DETECT_GPIO, "ac_present");
+	gpio_direction_input(AC_DETECT_GPIO);
+}
+
+static struct bq27541_platform_data bq27541_pdata = {
+	.ac_present_gpio = AC_DETECT_GPIO,
+};
+
+static struct i2c_board_info __initdata bq27541_boardinfo[] = {
+	{
+		I2C_BOARD_INFO("bq27541-battery", 0x55),
+		.irq = TEGRA_GPIO_TO_IRQ(AC_DETECT_GPIO),
+		.platform_data = &bq27541_pdata,
+	},
+};
+#endif
+
 int __init cardhu_regulator_init(void)
 {
 	struct board_info board_info;
@@ -387,6 +414,12 @@ int __init cardhu_regulator_init(void)
 		pr_info("Registering the device TPS62361B\n");
 		i2c_register_board_info(4, tps6236x_boardinfo, 1);
 	}
+
+#ifdef CONFIG_BATTERY_BQ27541
+	bq27541_gpio_init();
+	i2c_register_board_info(4, bq27541_boardinfo, 1);
+#endif
+
 	return 0;
 }
 

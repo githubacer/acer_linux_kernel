@@ -38,3 +38,4 @@ obj-$(CONFIG_CHARGER_TWL4030)	+= twl4030_charger.o
 obj-$(CONFIG_CHARGER_GPIO)	+= gpio-charger.o
 obj-$(CONFIG_MAX8907C_CHARGER)	+= max8907c-charger.o
 obj-$(CONFIG_BATTERY_ECBAT)	+= EC_battery.o
+obj-$(CONFIG_BATTERY_BQ27541)	+= bq27541_battery.o
