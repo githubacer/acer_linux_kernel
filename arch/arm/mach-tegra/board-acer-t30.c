@@ -1112,9 +1112,8 @@ static void __init tegra_cardhu_init(void)
 	cardhu_gps_uart_init();
 	cardhu_gps_init();
 	cardhu_modem_init();
-	cardhu_kbc_init();
 	cardhu_scroll_init();
-	cardhu_keys_init();
+	acer_keys_init();
 	cardhu_panel_init();
 	cardhu_sensors_init();
 	cardhu_setup_bluesleep();

@@ -196,7 +196,6 @@ int cardhu_sdhci_init(void);
 int acer_t30_pinmux_init(void);
 int cardhu_panel_init(void);
 int cardhu_sensors_init(void);
-int cardhu_kbc_init(void);
 int cardhu_scroll_init(void);
 int cardhu_keys_init(void);
 int cardhu_gpio_switch_regulator_init(void);
@@ -205,6 +204,7 @@ int cardhu_emc_init(void);
 int cardhu_power_off_init(void);
 int cardhu_edp_init(void);
 void __init cardhu_tsensor_init(void);
+int acer_keys_init(void);
 
 /* Invensense MPU Definitions */
 #define MPU_GYRO_NAME		"mpu3050"
