@@ -515,6 +515,21 @@ static int tegra_wm8903_event_hp(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+#ifdef CONFIG_ARCH_ACER_T30
+static int tegra_wm8903_event_dock_hp(struct snd_soc_dapm_widget *w,
+					struct snd_kcontrol *k, int event)
+{
+	struct snd_soc_dapm_context *dapm = w->dapm;
+	struct snd_soc_card *card = dapm->card;
+	struct tegra_wm8903 *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_wm8903_platform_data *pdata = machine->pdata;
+
+	wm8903_event_printf(__func__, event);
+
+	return 0;
+}
+#endif
+
 static int tegra_wm8903_event_int_mic(struct snd_soc_dapm_widget *w,
 					struct snd_kcontrol *k, int event)
 {
@@ -581,7 +596,11 @@ static int tegra_wm8903_event_ext_mic(struct snd_soc_dapm_widget *w,
 static const struct snd_soc_dapm_widget cardhu_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Int Spk", tegra_wm8903_event_int_spk),
 	SND_SOC_DAPM_HP("Headphone Jack", tegra_wm8903_event_hp),
+#ifdef CONFIG_ARCH_ACER_T30
+	SND_SOC_DAPM_LINE("Line Out", tegra_wm8903_event_dock_hp),
+#else
 	SND_SOC_DAPM_LINE("Line Out", NULL),
+#endif
 	SND_SOC_DAPM_MIC("Mic Jack", tegra_wm8903_event_ext_mic),
 	SND_SOC_DAPM_MIC("Int Mic", tegra_wm8903_event_int_mic),
 	SND_SOC_DAPM_LINE("Line In", NULL),
@@ -636,6 +655,7 @@ static const struct snd_soc_dapm_route cardhu_audio_map[] = {
 	{"Int Spk", NULL, "RON"},
 	{"Int Spk", NULL, "LOP"},
 	{"Int Spk", NULL, "LON"},
+	{"LineOut", NULL, "Line Out"},
 	{"Line Out", NULL, "LINEOUTL"},
 	{"Line Out", NULL, "LINEOUTR"},
 	{"Mic Bias", NULL, "Mic Jack"},
