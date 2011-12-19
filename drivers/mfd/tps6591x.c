@@ -60,6 +60,10 @@
 /* GPIO register base address */
 #define TPS6591X_GPIO_BASE_ADDR	0x60
 
+#if defined(CONFIG_ARCH_ACER_T30)
+#define TPS6591X_VMBCH_REG	0x6A
+#endif
+
 /* silicon version number */
 #define TPS6591X_VERNUM		0x80
 
@@ -287,6 +291,8 @@ int tps6591x_power_off(void)
 {
 	struct device *dev = NULL;
 	int ret;
+
+	printk("%s\n", __func__);
 
 	if (!tps6591x_i2c_client)
 		return -EINVAL;
@@ -808,6 +814,11 @@ static int __devinit tps6591x_i2c_probe(struct i2c_client *client,
 	}
 
 	dev_info(&client->dev, "VERNUM is %02x\n", ret);
+
+#if defined(CONFIG_ARCH_ACER_T30)
+	/* Diasble the auto device on threshold */
+	i2c_smbus_write_byte_data(client, TPS6591X_VMBCH_REG, 0x00);
+#endif
 
 	tps6591x = kzalloc(sizeof(struct tps6591x), GFP_KERNEL);
 	if (tps6591x == NULL)
