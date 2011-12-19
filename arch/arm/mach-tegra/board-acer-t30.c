@@ -647,6 +647,38 @@ static struct platform_device ram_console_device = {
 	.resource	= ram_console_resources,
 };
 
+#ifdef CONFIG_PSENSOR3G
+static struct gpio_switch_platform_data psensor_3g_switch_platform_data[] = {
+	{
+		.name = "p-sensor_3g",
+		.gpio = TEGRA_GPIO_PI5,
+	},
+	{
+		.name = "p-sensor_3g_1",
+		.gpio = TEGRA_GPIO_PK2,
+	},
+};
+
+static struct psensor_switch_platform_data psensor_switch_platform_data = {
+	.psormap =  psensor_3g_switch_platform_data,
+	.psormap_size = ARRAY_SIZE(psensor_3g_switch_platform_data),
+};
+
+static struct platform_device psensor_switch_3g = {
+	.name   = "psensor",
+	.id     = -1,
+	.dev    = {
+		.platform_data  = &psensor_switch_platform_data,
+	},
+};
+
+static void picasso2_psensor_3g_init(void)
+{
+	tegra_gpio_enable(TEGRA_GPIO_PI5);
+	tegra_gpio_enable(TEGRA_GPIO_PK2);
+}
+#endif
+
 static struct platform_device *cardhu_devices[] __initdata = {
 	&tegra_pmu_device,
 	&tegra_rtc_device,
@@ -685,6 +717,9 @@ static struct platform_device *cardhu_devices[] __initdata = {
 	&tegra_aes_device,
 #endif
 	&ram_console_device,
+#ifdef CONFIG_PSENSOR3G
+	&psensor_switch_3g,
+#endif
 };
 
 #define MXT_CONFIG_CRC  0xD62DE8
@@ -1183,6 +1218,9 @@ static void __init tegra_cardhu_init(void)
 	tegra_release_bootloader_fb();
 	cardhu_nfc_init();
 	acer_board_info();
+#ifdef CONFIG_PSENSOR3G
+	picasso2_psensor_3g_init();
+#endif
 }
 
 static void __init cardhu_ramconsole_reserve(unsigned long size)

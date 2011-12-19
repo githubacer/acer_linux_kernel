@@ -21,3 +21,7 @@ config ROTATELOCK
 config DOCK_V2
 	tristate "Acer Dock 2 support"
 	default n
+
+config PSENSOR3G
+	tristate "P-Sensor Switch support for 3G"
+	default n
