@@ -169,7 +169,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.mmc_data = {
 		.built_in = 1,
 	},
-	.tap_delay = 6,
+	.tap_delay = 0x0F,
 	.is_voltage_switch_supported = false,
 	.vdd_rail_name = NULL,
 	.slot_rail_name = NULL,
