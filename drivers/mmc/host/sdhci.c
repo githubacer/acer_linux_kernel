@@ -33,6 +33,9 @@
 #include <linux/gpio.h>
 #include <mach/sdhci.h>
 #include <linux/platform_device.h>
+#include <linux/seq_file.h>
+#include <linux/fs.h>
+#include <linux/debugfs.h>
 #endif
 
 #define DRIVER_NAME "sdhci"
@@ -2090,6 +2093,37 @@ struct sdhci_host *sdhci_alloc_host(struct device *dev,
 
 EXPORT_SYMBOL_GPL(sdhci_alloc_host);
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+static int sd_cd_show(struct seq_file *s, void *data)
+{
+	struct sdhci_host *host = s->private;
+	struct platform_device *pdev = to_platform_device(mmc_dev(host->mmc));
+	struct tegra_sdhci_platform_data *plat = pdev->dev.platform_data;
+	int value = gpio_get_value(plat->cd_gpio);
+	const char *str;
+
+	if (value == 0) {
+		str = "inserted";
+	} else {
+		str = "removed";
+	}
+	seq_printf(s, "micro sd card detect GPIO value : %d (%s)\n", value, str);
+	return 0;
+}
+
+static int sd_cd_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, sd_cd_show, inode->i_private);
+}
+
+static const struct file_operations sd_ios_fops = {
+	.open	= sd_cd_open,
+	.read	= seq_read,
+	.llseek	= seq_lseek,
+	.release	= single_release,
+};
+#endif
+
 int sdhci_add_host(struct sdhci_host *host)
 {
 	struct mmc_host *mmc;
@@ -2097,10 +2131,19 @@ int sdhci_add_host(struct sdhci_host *host)
 	u32 max_current_caps;
 	unsigned int ocr_avail;
 	int ret;
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	struct platform_device *pdev;
+	struct tegra_sdhci_platform_data *plat;
+#endif
 
 	WARN_ON(host == NULL);
 	if (host == NULL)
 		return -EINVAL;
+
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	pdev = to_platform_device(mmc_dev(host->mmc));
+	plat = pdev->dev.platform_data;
+#endif
 
 	mmc = host->mmc;
 
@@ -2451,6 +2494,12 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	sdhci_enable_card_detection(host);
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if (plat->cd_gpio != -1) {
+		if (!debugfs_create_file("SD_CD", 0444, host->mmc->debugfs_root, host, &sd_ios_fops))
+			printk(KERN_ERR "create debugfs_create_file SD_CD fail\n");
+	}
+#endif
 	return 0;
 
 #ifdef SDHCI_USE_LEDS_CLASS
