@@ -872,8 +872,32 @@ static void vbus_enable(struct tegra_usb_phy *phy)
 	}
 	gpio_set_value_cansleep(gpio, 1);
 #else
+#if defined(CONFIG_ARCH_ACER_T30)
+	int gpio_status;
+	int gpio = usb_phy_data[phy->instance].vbus_gpio;
+
+	if (gpio == -1)
+		return;
+
+	gpio_status = gpio_request(gpio,"VBUS_USB");
+	if (gpio_status < 0) {
+		printk("VBUS_USB request GPIO FAILED\n");
+		WARN_ON(1);
+		return;
+	}
+	if (gpio < TEGRA_NR_GPIOS) tegra_gpio_enable(gpio);
+	gpio_status = gpio_direction_output(gpio, 1);
+	if (gpio_status < 0) {
+		printk("VBUS_USB request GPIO DIRECTION FAILED \n");
+		WARN_ON(1);
+		return;
+	}
+	gpio_set_value(gpio, 1);
+	printk(KERN_INFO "set vbus high, instance = %d\n", phy->instance);
+#else
 	if (phy->reg_vbus)
 		regulator_enable(phy->reg_vbus);
+#endif
 #endif
 }
 
@@ -888,8 +912,19 @@ static void vbus_disable(struct tegra_usb_phy *phy)
 	gpio_set_value_cansleep(gpio, 0);
 	gpio_free(gpio);
 #else
+#if defined(CONFIG_ARCH_ACER_T30)
+	int gpio = usb_phy_data[phy->instance].vbus_gpio;
+
+	if (gpio == -1)
+		return;
+
+	gpio_set_value(gpio, 0);
+	gpio_free(gpio);
+	printk(KERN_INFO "set vbus low, instance = %d\n", phy->instance);
+#else
 	if (phy->reg_vbus)
 		regulator_disable(phy->reg_vbus);
+#endif
 #endif
 }
 
@@ -2379,6 +2414,7 @@ struct tegra_usb_phy *tegra_usb_phy_open(int instance, void __iomem *regs,
 			~(TEGRA_PMC_USB_AO_VBUS_WAKEUP_PD_P0 | TEGRA_PMC_USB_AO_ID_PD_P0),
 			(IO_ADDRESS(TEGRA_PMC_BASE) + TEGRA_PMC_USB_AO));
 
+#if !defined(CONFIG_ARCH_ACER_T30)
 		if (usb_phy_data[phy->instance].vbus_reg_supply) {
 			phy->reg_vbus = regulator_get(NULL, usb_phy_data[phy->instance].vbus_reg_supply);
 			if (WARN_ON(IS_ERR_OR_NULL(phy->reg_vbus))) {
@@ -2388,6 +2424,7 @@ struct tegra_usb_phy *tegra_usb_phy_open(int instance, void __iomem *regs,
 				goto err1;
 			}
 		}
+#endif
 	}
 	if (instance == 2) {
 		writel(readl((IO_ADDRESS(TEGRA_PMC_BASE) + TEGRA_PMC_USB_AO)) &
@@ -2395,7 +2432,11 @@ struct tegra_usb_phy *tegra_usb_phy_open(int instance, void __iomem *regs,
 			(IO_ADDRESS(TEGRA_PMC_BASE) + TEGRA_PMC_USB_AO));
 	}
 #endif
+#if defined(CONFIG_ARCH_ACER_T30)
+	if ((instance == 0) &&
+#else
 	if (((instance == 2) || (instance == 0)) &&
+#endif
 		(phy->mode == TEGRA_USB_PHY_MODE_HOST)) {
 			vbus_enable(phy);
 	}

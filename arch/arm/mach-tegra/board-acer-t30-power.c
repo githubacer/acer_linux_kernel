@@ -608,7 +608,6 @@ GREG_INIT(15, en_usb1_vbus_oc,		en_usb1_vbus_oc,	"vdd_5v0_sys",
 	ADD_GPIO_REG(en_ddr),			\
 	ADD_GPIO_REG(en_3v3_sys),		\
 	ADD_GPIO_REG(en_vdd_pnl1),		\
-	ADD_GPIO_REG(en_usb1_vbus_oc),		\
 	ADD_GPIO_REG(en_vdd_bl),
 
 /* Gpio switch regulator platform data  for ACER T30*/

@@ -862,8 +862,8 @@ static struct tegra_otg_platform_data tegra_otg_pdata = {
 static struct usb_phy_plat_data tegra_usb_phy_pdata[] = {
 	[0] = {
 			.instance = 0,
-			.vbus_gpio = -1,
-			.vbus_reg_supply = "vdd_vbus_micro_usb",
+			.vbus_gpio = TEGRA_GPIO_PN1,
+			.vbus_reg_supply = NULL,
 	},
 	[1] = {
 			.instance = 1,
@@ -871,8 +871,8 @@ static struct usb_phy_plat_data tegra_usb_phy_pdata[] = {
 	},
 	[2] = {
 			.instance = 2,
-			.vbus_gpio = -1,
-			.vbus_reg_supply = "vdd_vbus_typea_usb",
+			.vbus_gpio = TEGRA_GPIO_PN1,
+			.vbus_reg_supply = NULL,
 	},
 };
 
