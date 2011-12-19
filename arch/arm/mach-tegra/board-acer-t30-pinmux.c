@@ -21,6 +21,9 @@
 #include "board-acer-t30.h"
 #include "gpio-names.h"
 
+extern int acer_board_id;
+extern int acer_board_type;
+
 #define DEFAULT_DRIVE(_name)					\
 	{							\
 		.pingroup = TEGRA_DRIVE_PINGROUP_##_name,	\
@@ -286,7 +289,7 @@ static __initdata struct tegra_pingroup_config cardhu_pinmux_common[] = {
 
 	DEFAULT_PINMUX(KB_ROW5,         OWR,             NORMAL,    NORMAL,     OUTPUT),
 	DEFAULT_PINMUX(KB_ROW12,        KBC,             NORMAL,    NORMAL,     OUTPUT),
-	DEFAULT_PINMUX(KB_ROW14,        KBC,             NORMAL,    NORMAL,     OUTPUT),
+	DEFAULT_PINMUX(KB_ROW14,        KBC,             NORMAL,    TRISTATE,   INPUT),
 	DEFAULT_PINMUX(KB_ROW15,        KBC,             NORMAL,    NORMAL,     OUTPUT),
 
 	DEFAULT_PINMUX(GMI_AD8,         PWM0,            NORMAL,    NORMAL,     OUTPUT), /* LCD1_BL_PWM */
@@ -296,10 +299,8 @@ static __initdata struct tegra_pingroup_config cardhu_pinmux_common[] = {
 	DEFAULT_PINMUX(GMI_A19,         SPI4,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(CAM_MCLK,        VI_ALT2,         PULL_UP,   NORMAL,     INPUT),
 	DEFAULT_PINMUX(GPIO_PCC1,       RSVD1,           NORMAL,    NORMAL,     INPUT),
-	DEFAULT_PINMUX(GPIO_PBB0,       RSVD1,           NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(GPIO_PBB3,       VGP3,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(GPIO_PBB5,       VGP5,            NORMAL,    NORMAL,     INPUT),
-	DEFAULT_PINMUX(GPIO_PBB6,       VGP6,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(GPIO_PBB7,       I2S4,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(GPIO_PCC2,       I2S4,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(JTAG_RTCK,       RTCK,            NORMAL,    NORMAL,     OUTPUT),
@@ -319,7 +320,7 @@ static __initdata struct tegra_pingroup_config cardhu_pinmux_common[] = {
 	DEFAULT_PINMUX(SYS_CLK_REQ,     SYSCLK,          NORMAL,    NORMAL,     OUTPUT),
 	DEFAULT_PINMUX(OWR,             OWR,             NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(DAP1_FS,         I2S0,            NORMAL,    NORMAL,     INPUT),
-	DEFAULT_PINMUX(DAP1_DIN,        I2S0,            NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(DAP1_DIN,        I2S0,            PULL_DOWN, NORMAL,     OUTPUT),
 	DEFAULT_PINMUX(DAP1_DOUT,       I2S0,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(DAP1_SCLK,       I2S0,            NORMAL,    NORMAL,     INPUT),
 	DEFAULT_PINMUX(CLK1_REQ,        DAP,             NORMAL,    NORMAL,     INPUT),
@@ -376,6 +377,15 @@ static __initdata struct tegra_pingroup_config cardhu_pinmux_common[] = {
 	VI_PINMUX(VI_VSYNC,        RSVD1,           NORMAL,    NORMAL,     INPUT,  DISABLE, DISABLE),
 };
 
+static __initdata struct tegra_pingroup_config cardhu_pinmux_dock_external_pull_up[] = {
+	DEFAULT_PINMUX(GPIO_PBB0,       RSVD1,           NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(GPIO_PBB6,       VGP6,            NORMAL,    NORMAL,     INPUT),
+};
+static __initdata struct tegra_pingroup_config cardhu_pinmux_dock_internal_pull_up[] = {
+	DEFAULT_PINMUX(GPIO_PBB0,       RSVD1,           NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(GPIO_PBB6,       VGP6,            PULL_UP,   NORMAL,     INPUT),
+};
+
 /* Clone from cardhu_pinmux_e1291_a04 */
 static __initdata struct tegra_pingroup_config acer_t30_pinmux[] = {
 	DEFAULT_PINMUX(GMI_AD15,        NAND,            PULL_DOWN,   NORMAL,   OUTPUT),
@@ -428,6 +438,29 @@ int __init acer_t30_pinmux_init(void)
 	acer_t30_gpio_init_configure();
 
 	tegra_pinmux_config_table(cardhu_pinmux_common, ARRAY_SIZE(cardhu_pinmux_common));
+	switch (acer_board_type) {
+	case BOARD_PICASSO_2:
+		switch(acer_board_id) {
+		case BOARD_EVT:
+		case BOARD_DVT1:
+			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up,
+						ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
+			break;
+		case BOARD_DVT2:
+			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up,
+						ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
+			break;
+		default:
+			tegra_pinmux_config_table(cardhu_pinmux_dock_internal_pull_up,
+						ARRAY_SIZE(cardhu_pinmux_dock_internal_pull_up));
+			break;
+		}
+		break;
+	case BOARD_PICASSO_M:
+		tegra_pinmux_config_table(cardhu_pinmux_dock_internal_pull_up,
+					ARRAY_SIZE(cardhu_pinmux_dock_internal_pull_up));
+		break;
+	}
 	tegra_drive_pinmux_config_table(cardhu_drive_pinmux,
 					ARRAY_SIZE(cardhu_drive_pinmux));
 

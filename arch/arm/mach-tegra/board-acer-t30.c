@@ -70,6 +70,10 @@
 #include "pm.h"
 #include "baseband-xmm-power.h"
 
+#if defined(CONFIG_DOCK_V2)
+#include <linux/switch.h>
+#endif
+
 #if defined(CONFIG_ACER_VIBRATOR)
 #include <../../../drivers/staging/android/timed_output.h>
 #include <../../../drivers/staging/android/timed_gpio.h>
@@ -1089,6 +1093,49 @@ static void acer_board_info(void) {
 
 }
 
+#ifdef CONFIG_DOCK_V2
+static struct gpio_switch_platform_data dock_switch_platform_dvt1_data = {
+	.gpio = TEGRA_GPIO_PBB0,
+};
+
+static struct platform_device dock_switch_dvt1 = {
+	.name   = "acer-dock",
+	.id     = -1,
+	.dev    = {
+		.platform_data  = &dock_switch_platform_dvt1_data,
+	},
+};
+
+static struct gpio_switch_platform_data dock_switch_platform_dvt2_data = {
+	.gpio = TEGRA_GPIO_PBB6,
+};
+
+static struct platform_device dock_switch_dvt2 = {
+	.name   = "acer-dock",
+	.id     = -1,
+	.dev    = {
+		.platform_data  = &dock_switch_platform_dvt2_data,
+	},
+};
+
+static void acer_dock_init(void)
+{
+	if (is_tegra_debug_uartport_hs()) {
+		if (acer_board_type == BOARD_PICASSO_2 && (acer_board_id == BOARD_EVT || acer_board_id == BOARD_DVT1)) {
+			tegra_gpio_enable(TEGRA_GPIO_PBB0);
+			tegra_gpio_enable(TEGRA_GPIO_PS6);
+			platform_device_register(&dock_switch_dvt1);
+		} else {
+			tegra_gpio_enable(TEGRA_GPIO_PBB6);
+			tegra_gpio_enable(TEGRA_GPIO_PS6);
+			platform_device_register(&dock_switch_dvt2);
+		}
+	} else {
+		pr_info("[ACER-DOCK] Enable the debug message, close the dock!\n");
+	}
+}
+#endif
+
 static void __init tegra_cardhu_init(void)
 {
 	tegra_thermal_init(&thermal_data);
@@ -1113,6 +1160,9 @@ static void __init tegra_cardhu_init(void)
 	cardhu_gps_init();
 	cardhu_modem_init();
 	cardhu_scroll_init();
+#ifdef CONFIG_DOCK_V2
+	acer_dock_init();
+#endif
 	acer_keys_init();
 	cardhu_panel_init();
 	cardhu_sensors_init();
