@@ -52,16 +52,8 @@
 #define PMC_CTRL		0x0
 #define PMC_CTRL_INTR_LOW	(1 << 17)
 
-static struct regulator_consumer_supply tps6591x_vdd1_supply_skubit0_0[] = {
-	REGULATOR_SUPPLY("vdd_core", NULL),
-	REGULATOR_SUPPLY("en_vddio_ddr_1v2", NULL),
-};
-
-static struct regulator_consumer_supply tps6591x_vdd1_supply_skubit0_1[] = {
-	REGULATOR_SUPPLY("en_vddio_ddr_1v2", NULL),
-};
-
 static struct regulator_consumer_supply tps6591x_vdd2_supply_0[] = {
+	REGULATOR_SUPPLY("en_vddio_ddr_1v2", NULL),
 	REGULATOR_SUPPLY("vdd_gen1v5", NULL),
 	REGULATOR_SUPPLY("vcore_lcd", NULL),
 	REGULATOR_SUPPLY("track_ldo1", NULL),
@@ -124,20 +116,20 @@ static struct regulator_consumer_supply tps6591x_ldo2_supply_0[] = {
 	REGULATOR_SUPPLY("vdd_sata", NULL),
 	REGULATOR_SUPPLY("avdd_sata_pll", NULL),
 	REGULATOR_SUPPLY("avdd_plle", NULL),
+	REGULATOR_SUPPLY("vddio_sd_slot", NULL),
 };
 
-static struct regulator_consumer_supply tps6591x_ldo3_supply_e1198[] = {
-	REGULATOR_SUPPLY("unused_rail_ldo3", NULL),
+static struct regulator_consumer_supply tps6591x_ldo3_supply_0[] = {
+	REGULATOR_SUPPLY("vddio_sdmmc1", NULL),
+	REGULATOR_SUPPLY("pwrdet_sdmmc1", NULL),
 };
 
 static struct regulator_consumer_supply tps6591x_ldo4_supply_0[] = {
 	REGULATOR_SUPPLY("vdd_rtc", NULL),
 };
 
-static struct regulator_consumer_supply tps6591x_ldo5_supply_e1198[] = {
+static struct regulator_consumer_supply tps6591x_ldo5_supply_0[] = {
 	REGULATOR_SUPPLY("avdd_vdac", NULL),
-	REGULATOR_SUPPLY("vddio_sdmmc", "sdhci-tegra.0"),
-	REGULATOR_SUPPLY("pwrdet_sdmmc1", NULL),
 };
 
 static struct regulator_consumer_supply tps6591x_ldo6_supply_0[] = {
@@ -185,22 +177,20 @@ static struct regulator_consumer_supply tps6591x_ldo8_supply_0[] = {
 		.flags = _flags,					\
 	}
 
-TPS_PDATA_INIT(vdd1, skubit0_0, 600,  1500, 0, 1, 1, 0, -1, 0, 0, EXT_CTRL_SLEEP_OFF, 0);
-TPS_PDATA_INIT(vdd1, skubit0_1, 600,  1500, 0, 1, 1, 0, -1, 0, 0, EXT_CTRL_SLEEP_OFF, 0);
 TPS_PDATA_INIT(vdd2, 0,         600,  1500, 0, 1, 1, 0, -1, 0, 0, 0, 0);
-TPS_PDATA_INIT(vddctrl, 0,      600,  1400, 0, 1, 1, 0, -1, 0, 0, EXT_CTRL_EN1, 0);
+TPS_PDATA_INIT(vddctrl, 0,      600,  1400, 0, 1, 1, 0, 1000, 0, 1, EXT_CTRL_EN1, 0);
 TPS_PDATA_INIT(vio,  0,         1500, 3300, 0, 1, 1, 0, -1, 0, 0, 0, 0);
 
-TPS_PDATA_INIT(ldo1, 0,         1000, 3300, tps6591x_rails(VDD_2), 0, 0, 0, -1, 1, 1, 0, 0);
-TPS_PDATA_INIT(ldo2, 0,         1050, 1050, tps6591x_rails(VDD_2), 0, 0, 1, -1, 0, 1, 0, 0);
+TPS_PDATA_INIT(ldo1, 0,         1000, 3300, 0, 1, 0, 0, 3100, 1, 1, 0, 0);
+TPS_PDATA_INIT(ldo2, 0,         1000, 3300, 0, 0, 0, 1, 3300, 0, 1, 0, 0);
 
-TPS_PDATA_INIT(ldo3, e1198,     1000, 3300, 0, 0, 0, 0, -1, 0, 0, 0, 0);
-TPS_PDATA_INIT(ldo4, 0,         1000, 3300, 0, 1, 0, 0, -1, 0, 0, 0, 0);
-TPS_PDATA_INIT(ldo5, e1198,     1000, 3300, 0, 0, 0, 0, -1, 0, 0, 0, 0);
+TPS_PDATA_INIT(ldo3, 0,         1000, 3300, 0, 0, 0, 1, 3300, 0, 1, 0, 0);
+TPS_PDATA_INIT(ldo4, 0,         1000, 3300, 0, 1, 0, 0, -1, 0, 0, 0, LDO_LOW_POWER_ON_SUSPEND);
+TPS_PDATA_INIT(ldo5, 0,         1000, 3300, 0, 1, 0, 0, 2800, 0, 1, 0, 0);
 
-TPS_PDATA_INIT(ldo6, 0,         1200, 1200, tps6591x_rails(VIO), 0, 0, 1, -1, 0, 0, 0, 0);
-TPS_PDATA_INIT(ldo7, 0,         1200, 1200, tps6591x_rails(VIO), 1, 1, 1, -1, 0, 0, EXT_CTRL_SLEEP_OFF, LDO_LOW_POWER_ON_SUSPEND);
-TPS_PDATA_INIT(ldo8, 0,         1000, 3300, tps6591x_rails(VIO), 1, 0, 0, -1, 0, 0, EXT_CTRL_SLEEP_OFF, LDO_LOW_POWER_ON_SUSPEND);
+TPS_PDATA_INIT(ldo6, 0,         1000, 3300, tps6591x_rails(VIO), 0, 0, 0, 1200, 0, 1, 0, 0);
+TPS_PDATA_INIT(ldo7, 0,         1200, 1200, tps6591x_rails(VIO), 1, 1, 1, -1, 0, 0, 0, LDO_LOW_POWER_ON_SUSPEND);
+TPS_PDATA_INIT(ldo8, 0,         1000, 3300, tps6591x_rails(VIO), 1, 0, 0, -1, 0, 0, 0, LDO_LOW_POWER_ON_SUSPEND);
 
 #if defined(CONFIG_RTC_DRV_TPS6591x)
 static struct tps6591x_rtc_platform_data rtc_data = {
@@ -230,31 +220,18 @@ static struct tps6591x_rtc_platform_data rtc_data = {
 		.platform_data	= &pdata_##_name##_##_sname,	\
 	}
 
-#define TPS6591X_DEV_COMMON_CARDHU		\
-	TPS_REG(VDD_2, vdd2, 0),		\
-	TPS_REG(VDDCTRL, vddctrl, 0),		\
-	TPS_REG(LDO_1, ldo1, 0),		\
-	TPS_REG(LDO_2, ldo2, 0),		\
-	TPS_REG(LDO_3, ldo3, e1198),		\
-	TPS_REG(LDO_4, ldo4, 0),		\
-	TPS_REG(LDO_5, ldo5, e1198),		\
-	TPS_REG(LDO_6, ldo6, 0),		\
-	TPS_REG(LDO_7, ldo7, 0),		\
-	TPS_REG(LDO_8, ldo8, 0)
-
-static struct tps6591x_subdev_info tps_devs_e1198_skubit0_0[] = {
+static struct tps6591x_subdev_info tps_devs_picasso2[] = {
 	TPS_REG(VIO, vio, 0),
-	TPS_REG(VDD_1, vdd1, skubit0_0),
-	TPS6591X_DEV_COMMON_CARDHU,
-#if defined(CONFIG_RTC_DRV_TPS6591x)
-	TPS_RTC_REG(),
-#endif
-};
-
-static struct tps6591x_subdev_info tps_devs_e1198_skubit0_1[] = {
-	TPS_REG(VIO, vio, 0),
-	TPS_REG(VDD_1, vdd1, skubit0_1),
-	TPS6591X_DEV_COMMON_CARDHU,
+	TPS_REG(VDD_2, vdd2, 0),
+	TPS_REG(VDDCTRL, vddctrl, 0),
+	TPS_REG(LDO_1, ldo1, 0),
+	TPS_REG(LDO_2, ldo2, 0),
+	TPS_REG(LDO_3, ldo3, 0),
+	TPS_REG(LDO_4, ldo4, 0),
+	TPS_REG(LDO_5, ldo5, 0),
+	TPS_REG(LDO_6, ldo6, 0),
+	TPS_REG(LDO_7, ldo7, 0),
+	TPS_REG(LDO_8, ldo8, 0),
 #if defined(CONFIG_RTC_DRV_TPS6591x)
 	TPS_RTC_REG(),
 #endif
@@ -324,8 +301,8 @@ static struct tps6236x_regulator_platform_data tps6236x_pdata = {
 	.internal_pd_enable = 0,					\
 	.enable_discharge = true,					\
 	.vsel = 3,							\
-	.init_uV = -1,							\
-	.init_apply = 0,						\
+	.init_uV = 1200 * 1000,							\
+	.init_apply = 1,						\
 };
 
 static struct i2c_board_info __initdata tps6236x_boardinfo[] = {
@@ -377,43 +354,17 @@ int __init cardhu_regulator_init(void)
 	/* The regulator details have complete constraints */
 	regulator_has_full_constraints();
 
-	/* PMU-E1208, the ldo2 should be set to 1200mV */
-	if (pmu_board_info.board_id == BOARD_E1208) {
-		pdata_ldo2_0.regulator.constraints.min_uV = 1200000;
-		pdata_ldo2_0.regulator.constraints.max_uV = 1200000;
-	}
-
-	if ((board_info.board_id == BOARD_E1198) ||
-		(board_info.board_id == BOARD_E1291)) {
-		if (board_info.sku & SKU_DCDC_TPS62361_SUPPORT) {
-			tps_platform.num_subdevs =
-					ARRAY_SIZE(tps_devs_e1198_skubit0_1);
-			tps_platform.subdevs = tps_devs_e1198_skubit0_1;
-		} else {
-			tps_platform.num_subdevs =
-					ARRAY_SIZE(tps_devs_e1198_skubit0_0);
-			tps_platform.subdevs = tps_devs_e1198_skubit0_0;
-		}
-	}
-
-	/* E1291-A04/A05: Enable DEV_SLP and enable sleep on GPIO2 */
-	if ((board_info.board_id == BOARD_E1291) &&
-			((board_info.fab == BOARD_FAB_A04) ||
-			 (board_info.fab == BOARD_FAB_A05))) {
-		tps_platform.dev_slp_en = true;
-		tps_platform.gpio_init_data = tps_gpio_pdata_e1291_a04;
-		tps_platform.num_gpioinit_data =
-					ARRAY_SIZE(tps_gpio_pdata_e1291_a04);
-	}
+	tps_platform.num_subdevs = ARRAY_SIZE(tps_devs_picasso2);
+	tps_platform.subdevs = tps_devs_picasso2;
 
 	i2c_register_board_info(4, cardhu_regulators, 1);
 
-	/* Resgister the TPS6236x for all boards whose sku bit 0 is set. */
-	if ((board_info.sku & SKU_DCDC_TPS62361_SUPPORT) ||
-			(pmu_board_info.sku & SKU_DCDC_TPS62361_SUPPORT)) {
 		pr_info("Registering the device TPS62361B\n");
 		i2c_register_board_info(4, tps6236x_boardinfo, 1);
-	}
+
+        tps_platform.dev_slp_en = true;
+	tps_platform.gpio_init_data = tps_gpio_pdata_e1291_a04;
+	tps_platform.num_gpioinit_data = ARRAY_SIZE(tps_gpio_pdata_e1291_a04);
 
 #ifdef CONFIG_BATTERY_BQ27541
 	bq27541_gpio_init();
@@ -490,9 +441,16 @@ static struct regulator_consumer_supply gpio_switch_en_3v3_sys_supply[] = {
 	REGULATOR_SUPPLY("vdd_3v3_cam", NULL),
 	REGULATOR_SUPPLY("vdd_3v3_als", NULL),
 	REGULATOR_SUPPLY("debug_cons", NULL),
+        REGULATOR_SUPPLY("vdd_nct1008", NULL),
 	REGULATOR_SUPPLY("vdd", "4-004c"),
 };
 static int gpio_switch_en_3v3_sys_voltages[] = { 3300};
+
+/* EN_VDD_PNL1 from AP GPIO VI_D6 L04*/
+static struct regulator_consumer_supply gpio_switch_en_vdd_pnl1_supply[] = {
+	REGULATOR_SUPPLY("vdd_lcd_panel", NULL),
+};
+static int gpio_switch_en_vdd_pnl1_voltages[] = { 3300};
 
 /* EN_VDD_BL */
 static struct regulator_consumer_supply gpio_switch_en_vdd_bl_supply[] = {
@@ -501,108 +459,64 @@ static struct regulator_consumer_supply gpio_switch_en_vdd_bl_supply[] = {
 };
 static int gpio_switch_en_vdd_bl_voltages[] = { 5000};
 
-/* EN_VDD_BL2 (E1291-A03) from AP PEX_L0_PRSNT_N DD.00 */
-static struct regulator_consumer_supply gpio_switch_en_vdd_bl2_supply[] = {
-	REGULATOR_SUPPLY("vdd_backlight2", NULL),
+/* EN_VDD_GPS */
+static struct regulator_consumer_supply gpio_switch_en_vdd_gps_supply[] = {
+	REGULATOR_SUPPLY("vdd_gps", NULL),
 };
-static int gpio_switch_en_vdd_bl2_voltages[] = { 5000};
+static int gpio_switch_en_vdd_gps_voltages[] = { 3000};
 
-/* EN_3V3_MODEM from AP GPIO VI_VSYNCH D06*/
+/* EN_3V3_MODEM */
 static struct regulator_consumer_supply gpio_switch_en_3v3_modem_supply[] = {
 	REGULATOR_SUPPLY("vdd_3v3_mini_card", NULL),
 	REGULATOR_SUPPLY("vdd_mini_card", NULL),
 };
 static int gpio_switch_en_3v3_modem_voltages[] = { 3300};
 
-/* EN_USB1_VBUS_OC*/
-static struct regulator_consumer_supply gpio_switch_en_usb1_vbus_oc_supply[] = {
-	REGULATOR_SUPPLY("vdd_vbus_micro_usb", NULL),
+/* EN_SENSOR_1V8 */
+static struct regulator_consumer_supply gpio_switch_en_sensor_1v8_supply[] = {
+	REGULATOR_SUPPLY("sensor_1v8", NULL),
 };
-static int gpio_switch_en_usb1_vbus_oc_voltages[] = { 5000};
+static int gpio_switch_en_sensor_1v8_voltages[] = { 1800};
 
-/*EN_USB3_VBUS_OC*/
-static struct regulator_consumer_supply gpio_switch_en_usb3_vbus_oc_supply[] = {
-	REGULATOR_SUPPLY("vdd_vbus_typea_usb", NULL),
+/* EN_VDD_WIFI */
+static struct regulator_consumer_supply gpio_switch_en_wifi_vdd_supply[] = {
+	REGULATOR_SUPPLY("wifi_vdd", NULL),
 };
-static int gpio_switch_en_usb3_vbus_oc_voltages[] = { 5000};
+static int gpio_switch_en_wifi_vdd_voltages[] = { 3300};
 
-/* EN_VDDIO_VID_OC from AP GPIO VI_PCLK T00*/
-static struct regulator_consumer_supply gpio_switch_en_vddio_vid_oc_supply[] = {
-	REGULATOR_SUPPLY("vdd_hdmi_con", NULL),
+/* EN_SENSOR_3V3 */
+static struct regulator_consumer_supply gpio_switch_en_sensor_3v3_supply[] = {
+	REGULATOR_SUPPLY("sensor_3v3", NULL),
 };
-static int gpio_switch_en_vddio_vid_oc_voltages[] = { 5000};
+static int gpio_switch_en_sensor_3v3_voltages[] = { 3300};
 
-/* EN_VDD_PNL1 from AP GPIO VI_D6 L04*/
-static struct regulator_consumer_supply gpio_switch_en_vdd_pnl1_supply[] = {
-	REGULATOR_SUPPLY("vdd_lcd_panel", NULL),
-};
-static int gpio_switch_en_vdd_pnl1_voltages[] = { 3300};
-
-/* CAM1_LDO_EN from AP GPIO KB_ROW6 R06*/
-static struct regulator_consumer_supply gpio_switch_cam1_ldo_en_supply[] = {
-	REGULATOR_SUPPLY("vdd_2v8_cam1", NULL),
-	REGULATOR_SUPPLY("vdd", "6-0072"),
-};
-static int gpio_switch_cam1_ldo_en_voltages[] = { 2800};
-
-/* CAM2_LDO_EN from AP GPIO KB_ROW7 R07*/
-static struct regulator_consumer_supply gpio_switch_cam2_ldo_en_supply[] = {
-	REGULATOR_SUPPLY("vdd_2v8_cam2", NULL),
-	REGULATOR_SUPPLY("vdd", "7-0072"),
-};
-static int gpio_switch_cam2_ldo_en_voltages[] = { 2800};
-
-/* CAM3_LDO_EN from AP GPIO KB_ROW8 S00*/
-static struct regulator_consumer_supply gpio_switch_cam3_ldo_en_supply[] = {
-	REGULATOR_SUPPLY("vdd_cam3", NULL),
-};
-static int gpio_switch_cam3_ldo_en_voltages[] = { 3300};
-
-/* EN_VDD_COM from AP GPIO SDMMC3_DAT5 D00*/
-static struct regulator_consumer_supply gpio_switch_en_vdd_com_supply[] = {
-	REGULATOR_SUPPLY("vdd_com_bd", NULL),
-};
-static int gpio_switch_en_vdd_com_voltages[] = { 3300};
-
-/* EN_VDD_SDMMC1 from AP GPIO VI_HSYNC D07*/
-static struct regulator_consumer_supply gpio_switch_en_vdd_sdmmc1_supply[] = {
-	REGULATOR_SUPPLY("vddio_sd_slot", "sdhci-tegra.0"),
-};
-static int gpio_switch_en_vdd_sdmmc1_voltages[] = { 3300};
-
-/* EN_3V3_EMMC from AP GPIO SDMMC3_DAT4 D01*/
-static struct regulator_consumer_supply gpio_switch_en_3v3_emmc_supply[] = {
-	REGULATOR_SUPPLY("vdd_emmc_core", NULL),
-};
-static int gpio_switch_en_3v3_emmc_voltages[] = { 3300};
-
-/* EN_3V3_PEX_HVDD from AP GPIO VI_D09 L07*/
-static struct regulator_consumer_supply gpio_switch_en_3v3_pex_hvdd_supply[] = {
-	REGULATOR_SUPPLY("hvdd_pex", NULL),
-};
-static int gpio_switch_en_3v3_pex_hvdd_voltages[] = { 3300};
-
-/* EN_3v3_FUSE from AP GPIO VI_D08 L06*/
+/* EN_3v3_FUSE */
 static struct regulator_consumer_supply gpio_switch_en_3v3_fuse_supply[] = {
 	REGULATOR_SUPPLY("vdd_fuse", NULL),
 };
 static int gpio_switch_en_3v3_fuse_voltages[] = { 3300};
 
-/* EN_1V8_CAM from AP GPIO GPIO_PBB4 PBB04*/
-static struct regulator_consumer_supply gpio_switch_en_1v8_cam_supply[] = {
-	REGULATOR_SUPPLY("vdd_1v8_cam1", NULL),
-	REGULATOR_SUPPLY("vdd_1v8_cam2", NULL),
-	REGULATOR_SUPPLY("vdd_1v8_cam3", NULL),
-	REGULATOR_SUPPLY("vdd_i2c", "6-0072"),
-	REGULATOR_SUPPLY("vdd_i2c", "7-0072"),
-	REGULATOR_SUPPLY("vdd_i2c", "2-0033"),
+/* EN_HDMI_5V0 */
+static struct regulator_consumer_supply gpio_switch_en_hdmi_5v0_supply[] = {
+	REGULATOR_SUPPLY("hdmi_5v0", NULL),
 };
-static int gpio_switch_en_1v8_cam_voltages[] = { 1800};
+static int gpio_switch_en_hdmi_5v0_voltages[] = { 5000};
 
-static struct regulator_consumer_supply gpio_switch_en_vbrtr_supply[] = {
-	REGULATOR_SUPPLY("vdd_vbrtr", NULL),
+static struct regulator_consumer_supply gpio_switch_en_cam_1v8_supply[] = {
+	REGULATOR_SUPPLY("cam_1v8", NULL),
 };
-static int gpio_switch_en_vbrtr_voltages[] = { 3300};
+static int gpio_switch_en_cam_1v8_voltages[] = { 1800};
+
+static struct regulator_consumer_supply gpio_switch_en_cam_2v8_supply[] = {
+	REGULATOR_SUPPLY("cam_2v8", NULL),
+};
+static int gpio_switch_en_cam_2v8_voltages[] = { 2800};
+
+/* EN_USB1_VBUS_OC*/
+static struct regulator_consumer_supply gpio_switch_en_usb1_vbus_oc_supply[] = {
+	REGULATOR_SUPPLY("vdd_vbus_micro_usb", NULL),
+};
+static int gpio_switch_en_usb1_vbus_oc_voltages[] = { 5000};
 
 static int enable_load_switch_rail(
 		struct gpio_switch_regulator_subdev_data *psubdev_data)
@@ -667,150 +581,40 @@ static int disable_load_switch_rail(
 		.disable_rail = _disable,				\
 	}
 
-/* common to most of boards*/
 GREG_INIT(0, en_5v_cp,		en_5v_cp,	NULL,			1,	0,	TPS6591X_GPIO_0,	false,	1,	0,	0,	0);
-GREG_INIT(1, en_5v0,		en_5v0,		NULL,			0,      0,      TPS6591X_GPIO_2,	false,	0,	0,	0,	0);
-GREG_INIT(2, en_ddr,		en_ddr,		NULL,			0,      0,      TPS6591X_GPIO_6,	false,	0,	0,	0,	0);
-GREG_INIT(3, en_3v3_sys,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_7,	false,	0,	0,	0,	0);
-GREG_INIT(4, en_vdd_bl,		en_vdd_bl,	NULL,			0,      0,      TEGRA_GPIO_PK3,		false,	1,	0,	0,	0);
-GREG_INIT(5, en_3v3_modem,	en_3v3_modem,	NULL,			1,      0,      TEGRA_GPIO_PD6,		false,	1,	0,	0,	0);
-GREG_INIT(6, en_vdd_pnl1,	en_vdd_pnl1,	"vdd_3v3_devices",	0,      0,      TEGRA_GPIO_PL4,		false,	1,	0,	0,	0);
-GREG_INIT(7, cam3_ldo_en,	cam3_ldo_en,	"vdd_3v3_devices",	0,      0,      TEGRA_GPIO_PS0,		false,	0,	0,	0,	0);
-GREG_INIT(8, en_vdd_com,	en_vdd_com,	"vdd_3v3_devices",	1,      0,      TEGRA_GPIO_PD0,		false,	1,	0,	0,	0);
-GREG_INIT(9, en_3v3_fuse,	en_3v3_fuse,	"vdd_3v3_devices",	0,      0,      TEGRA_GPIO_PL6,		false,	0,	0,	0,	0);
-GREG_INIT(10, en_3v3_emmc,	en_3v3_emmc,	"vdd_3v3_devices",	1,      0,      TEGRA_GPIO_PD1,		false,	1,	0,	0,	0);
-GREG_INIT(11, en_vdd_sdmmc1,	en_vdd_sdmmc1,	"vdd_3v3_devices",	0,      0,      TEGRA_GPIO_PD7,		false,	1,	0,	0,	0);
-GREG_INIT(12, en_3v3_pex_hvdd,	en_3v3_pex_hvdd, "hvdd_pex_pmu",	0,      0,      TEGRA_GPIO_PL7,		false,	0,	0,	0,	0);
-GREG_INIT(13, en_1v8_cam,	en_1v8_cam,	"vdd_gen1v8",		0,      0,      TEGRA_GPIO_PBB4,	false,	0,	0,	0,	0);
-
-/* E1291-A04/A05 specific */
-GREG_INIT(1, en_5v0_a04,	en_5v0,		NULL,			0,      0,      TPS6591X_GPIO_8,	false,	0,	0,	0,	0);
-GREG_INIT(2, en_ddr_a04,	en_ddr,		NULL,			0,      0,      TPS6591X_GPIO_7,	false,	0,	0,	0,	0);
-GREG_INIT(3, en_3v3_sys_a04,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_6,	false,	0,	0,	0,	0);
-
-/* E1198/E1291 specific  fab < A03 */
+GREG_INIT(1, en_5v0,		en_5v0,		NULL,			0,      0,      TPS6591X_GPIO_8,	false,	1,	0,	0,	0);
+GREG_INIT(2, en_ddr,		en_ddr,		NULL,			0,      0,      TPS6591X_GPIO_7,	false,	1,	0,	0,	0);
+GREG_INIT(3, en_3v3_sys,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_6,	false,	1,	0,	0,	0);
+GREG_INIT(4, en_vdd_gps,	en_vdd_gps,	NULL,			0,      0,      TEGRA_GPIO_PY2,		false,	0,	0,	0,	0);
+GREG_INIT(5, en_3v3_modem,	en_3v3_modem,	NULL,			1,      0,      TEGRA_GPIO_PR7,		false,	1,	0,	0,	0);
+GREG_INIT(6, en_sensor_1v8,	en_sensor_1v8,	NULL,	0,      0,      TEGRA_GPIO_PY3,		false,	1,	0,	0,	0);
+GREG_INIT(7, en_vdd_pnl1,	en_vdd_pnl1,	"vdd_3v3_devices",	0,      0,      TEGRA_GPIO_PB1,		false,	1,	0,	0,	0);
+GREG_INIT(8, en_wifi_vdd,	en_wifi_vdd, NULL,	0,      0,      TEGRA_GPIO_PK7,		false,	0,	0,	0,	0);
+GREG_INIT(9, en_sensor_3v3,	en_sensor_3v3,	"vdd_3v3_devices",	1,      0,      TEGRA_GPIO_PH7,		false,	1,	0,	0,	0);
+GREG_INIT(10, en_3v3_fuse,	en_3v3_fuse,	"vdd_3v3_devices",	0,      0,      TEGRA_GPIO_PH2,		false,	0,	0,	0,	0);
+GREG_INIT(11, en_hdmi_5v0,	en_hdmi_5v0, NULL,		0,      0,      TEGRA_GPIO_PI4,	false,	0,	0,	0,	0);
+GREG_INIT(12, en_cam_1v8,	en_cam_1v8,	NULL,	0,      0,      TEGRA_GPIO_PQ3,		false,	1,	0,	0,	0);
+GREG_INIT(13, en_cam_2v8,	en_cam_2v8,	NULL,	0,      0,      TEGRA_GPIO_PR2,		false,	1,	0,	0,	0);
+GREG_INIT(14, en_vdd_bl,	en_vdd_bl,	"vdd_5v0_sys",			0,      0,      TEGRA_GPIO_PH1,		false,	1,	0,	0,	0);
 GREG_INIT(15, en_usb1_vbus_oc,		en_usb1_vbus_oc,	"vdd_5v0_sys",
-		0,      0,      TEGRA_GPIO_PI4,		false,	0,	TEGRA_PINGROUP_GMI_RST_N,
+		0,      0,      TEGRA_GPIO_PN1,		false,	0,	TEGRA_PINGROUP_PEX_L1_CLKREQ_N,
 		enable_load_switch_rail, disable_load_switch_rail);
-GREG_INIT(16, en_usb3_vbus_oc,		en_usb3_vbus_oc,	"vdd_5v0_sys",
-		0,      0,      TEGRA_GPIO_PH7,		false,	0,	TEGRA_PINGROUP_GMI_AD15,
-		enable_load_switch_rail, disable_load_switch_rail);
-
-/* E1198/E1291 specific  fab >= A03 */
-GREG_INIT(15, en_usb1_vbus_oc_a03,	en_usb1_vbus_oc,	"vdd_5v0_sys",
-		0,      0,      TEGRA_GPIO_PDD6,		false,	0,	TEGRA_PINGROUP_PEX_L1_CLKREQ_N,
-		enable_load_switch_rail, disable_load_switch_rail);
-GREG_INIT(16, en_usb3_vbus_oc_a03,		en_usb3_vbus_oc,	"vdd_5v0_sys",
-		0,      0,      TEGRA_GPIO_PDD4,		false,	0,	TEGRA_PINGROUP_PEX_L1_PRSNT_N,
-		enable_load_switch_rail, disable_load_switch_rail);
-
-/* E1198/E1291 specific */
-GREG_INIT(17, en_vddio_vid_oc,		en_vddio_vid_oc,	"vdd_5v0_sys",
-		0,      0,      TEGRA_GPIO_PT0,		false,	0,	TEGRA_PINGROUP_VI_PCLK,
-		enable_load_switch_rail, disable_load_switch_rail);
-
-/* E1198/E1291 specific*/
-GREG_INIT(18, cam1_ldo_en,	cam1_ldo_en,	"vdd_3v3_cam",	0,      0,      TEGRA_GPIO_PR6,		false,	0,	0,	0,	0);
-GREG_INIT(19, cam2_ldo_en,	cam2_ldo_en,	"vdd_3v3_cam",	0,      0,      TEGRA_GPIO_PR7,		false,	0,	0,	0,	0);
-
-/* E1291 A03 specific */
-GREG_INIT(20, en_vdd_bl1_a03,	en_vdd_bl,	NULL,		0,      0,      TEGRA_GPIO_PDD2,	false,	1,	0,	0,	0);
-GREG_INIT(21, en_vdd_bl2_a03,	en_vdd_bl2,	NULL,		0,      0,      TEGRA_GPIO_PDD0,	false,	1,	0,	0,	0);
-
-GREG_INIT(22, en_vbrtr,		en_vbrtr,	"vdd_3v3_devices",	0,      0,      PMU_TCA6416_GPIO_PORT12,	false,	0,	0,	0,	0);
 
 #define ADD_GPIO_REG(_name) &gpio_pdata_##_name
 
-#define COMMON_GPIO_REG \
+#define ACER_T30_GPIO_REG	\
 	ADD_GPIO_REG(en_5v_cp),			\
 	ADD_GPIO_REG(en_5v0),			\
 	ADD_GPIO_REG(en_ddr),			\
 	ADD_GPIO_REG(en_3v3_sys),		\
-	ADD_GPIO_REG(en_3v3_modem),		\
 	ADD_GPIO_REG(en_vdd_pnl1),		\
-	ADD_GPIO_REG(cam3_ldo_en),		\
-	ADD_GPIO_REG(en_vdd_com),		\
-	ADD_GPIO_REG(en_3v3_fuse),		\
-	ADD_GPIO_REG(en_3v3_emmc),		\
-	ADD_GPIO_REG(en_vdd_sdmmc1),		\
-	ADD_GPIO_REG(en_3v3_pex_hvdd),		\
-	ADD_GPIO_REG(en_1v8_cam),
-
-#define COMMON_GPIO_REG_E1291_A04 \
-	ADD_GPIO_REG(en_5v_cp),			\
-	ADD_GPIO_REG(en_5v0_a04),		\
-	ADD_GPIO_REG(en_ddr_a04),		\
-	ADD_GPIO_REG(en_3v3_sys_a04),		\
-	ADD_GPIO_REG(en_3v3_modem),		\
-	ADD_GPIO_REG(en_vdd_pnl1),		\
-	ADD_GPIO_REG(cam3_ldo_en),		\
-	ADD_GPIO_REG(en_vdd_com),		\
-	ADD_GPIO_REG(en_3v3_fuse),		\
-	ADD_GPIO_REG(en_3v3_emmc),		\
-	ADD_GPIO_REG(en_vdd_sdmmc1),		\
-	ADD_GPIO_REG(en_3v3_pex_hvdd),		\
-	ADD_GPIO_REG(en_1v8_cam),
-
-#define E1198_GPIO_REG			\
-	ADD_GPIO_REG(en_vddio_vid_oc),	\
-	ADD_GPIO_REG(cam1_ldo_en),	\
-	ADD_GPIO_REG(cam2_ldo_en),
-
-#define E1291_1198_A00_GPIO_REG	\
 	ADD_GPIO_REG(en_usb1_vbus_oc),		\
-	ADD_GPIO_REG(en_usb3_vbus_oc),		\
 	ADD_GPIO_REG(en_vdd_bl),
 
-#define E1291_A03_GPIO_REG	\
-	ADD_GPIO_REG(en_usb1_vbus_oc_a03),		\
-	ADD_GPIO_REG(en_usb3_vbus_oc_a03),		\
-	ADD_GPIO_REG(en_vdd_bl1_a03), \
-	ADD_GPIO_REG(en_vdd_bl2_a03),
-
-/* Gpio switch regulator platform data for E1198 and E1291*/
-static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_e1198_base[] = {
-	COMMON_GPIO_REG
-	E1291_1198_A00_GPIO_REG
-	E1198_GPIO_REG
+/* Gpio switch regulator platform data  for ACER T30*/
+static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_acer_t30[] = {
+	ACER_T30_GPIO_REG
 };
-
-static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_e1198_a02[] = {
-	ADD_GPIO_REG(en_5v_cp),
-	ADD_GPIO_REG(en_5v0),
-	ADD_GPIO_REG(en_ddr_a04),
-	ADD_GPIO_REG(en_3v3_sys_a04),
-	ADD_GPIO_REG(en_3v3_modem),
-	ADD_GPIO_REG(en_vdd_pnl1),
-	ADD_GPIO_REG(cam3_ldo_en),
-	ADD_GPIO_REG(en_vdd_com),
-	ADD_GPIO_REG(en_3v3_fuse),
-	ADD_GPIO_REG(en_3v3_emmc),
-	ADD_GPIO_REG(en_vdd_sdmmc1),
-	ADD_GPIO_REG(en_3v3_pex_hvdd),
-	ADD_GPIO_REG(en_1v8_cam),
-	ADD_GPIO_REG(en_usb1_vbus_oc_a03),
-	ADD_GPIO_REG(en_usb3_vbus_oc_a03),
-	ADD_GPIO_REG(en_vdd_bl1_a03),
-	ADD_GPIO_REG(en_vdd_bl2_a03),
-	ADD_GPIO_REG(en_vddio_vid_oc),
-	ADD_GPIO_REG(cam1_ldo_en),
-	ADD_GPIO_REG(cam2_ldo_en),
-};
-
-/* Gpio switch regulator platform data for E1291 A03*/
-static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_e1291_a03[] = {
-	COMMON_GPIO_REG
-	E1291_A03_GPIO_REG
-	E1198_GPIO_REG
-};
-
-/* Gpio switch regulator platform data for E1291 A04/A05*/
-static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_e1291_a04[] = {
-	COMMON_GPIO_REG_E1291_A04
-	E1291_A03_GPIO_REG
-	E1198_GPIO_REG
-};
-
 
 static struct gpio_switch_regulator_platform_data  gswitch_pdata;
 static struct platform_device gswitch_regulator_pdata = {
@@ -824,45 +628,9 @@ static struct platform_device gswitch_regulator_pdata = {
 int __init cardhu_gpio_switch_regulator_init(void)
 {
 	int i;
-	struct board_info board_info;
-	struct board_info pmu_board_info;
-	struct board_info display_board_info;
 
-	tegra_get_board_info(&board_info);
-	tegra_get_pmu_board_info(&pmu_board_info);
-	tegra_get_display_board_info(&display_board_info);
-
-	switch (board_info.board_id) {
-	case BOARD_E1198:
-		if (board_info.fab <= BOARD_FAB_A01) {
-			gswitch_pdata.num_subdevs = ARRAY_SIZE(gswitch_subdevs_e1198_base);
-			gswitch_pdata.subdevs = gswitch_subdevs_e1198_base;
-		} else {
-			gswitch_pdata.num_subdevs = ARRAY_SIZE(gswitch_subdevs_e1198_a02);
-			gswitch_pdata.subdevs = gswitch_subdevs_e1198_a02;
-		}
-		break;
-
-	case BOARD_E1291:
-		if (board_info.fab == BOARD_FAB_A03) {
-			gswitch_pdata.num_subdevs =
-					ARRAY_SIZE(gswitch_subdevs_e1291_a03);
-			gswitch_pdata.subdevs = gswitch_subdevs_e1291_a03;
-		} else if ((board_info.fab == BOARD_FAB_A04) ||
-				(board_info.fab == BOARD_FAB_A05)) {
-			gswitch_pdata.num_subdevs =
-					ARRAY_SIZE(gswitch_subdevs_e1291_a04);
-			gswitch_pdata.subdevs = gswitch_subdevs_e1291_a04;
-		} else {
-			gswitch_pdata.num_subdevs =
-					ARRAY_SIZE(gswitch_subdevs_e1198_base);
-			gswitch_pdata.subdevs = gswitch_subdevs_e1198_base;
-		}
-		break;
-
-	default:
-		break;
-	}
+	gswitch_pdata.num_subdevs = ARRAY_SIZE(gswitch_subdevs_acer_t30);
+	gswitch_pdata.subdevs = gswitch_subdevs_acer_t30;
 
 	for (i = 0; i < gswitch_pdata.num_subdevs; ++i) {
 		struct gpio_switch_regulator_subdev_data *gswitch_data = gswitch_pdata.subdevs[i];
