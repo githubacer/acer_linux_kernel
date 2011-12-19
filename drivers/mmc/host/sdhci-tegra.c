@@ -56,6 +56,8 @@
 
 #if defined(CONFIG_ARCH_ACER_T20)
 #define	EMMC_CLK_GPIO	66
+#elif defined(CONFIG_ARCH_ACER_T30)
+#define	EMMC_CLK_GPIO	228
 #endif
 
 static unsigned int tegra_sdhost_min_freq;
@@ -622,10 +624,10 @@ static int tegra_sdhci_pltfm_init(struct sdhci_host *host,
 			tegra_host->vddio_min_uv = SDHOST_HIGH_VOLT_MIN;
 			tegra_host->vddio_max_uv = SDHOST_HIGH_VOLT_MAX;
 		}
-		tegra_host->vdd_io_reg = regulator_get(mmc_dev(host->mmc), "vddio_sdmmc");
+		tegra_host->vdd_io_reg = regulator_get(mmc_dev(host->mmc), "vddio_sdmmc1");
 		if (IS_ERR_OR_NULL(tegra_host->vdd_io_reg)) {
 			dev_err(mmc_dev(host->mmc), "%s regulator not found: %ld\n",
-				"vddio_sdmmc", PTR_ERR(tegra_host->vdd_io_reg));
+				"vddio_sdmmc1", PTR_ERR(tegra_host->vdd_io_reg));
 			tegra_host->vdd_io_reg = NULL;
 		} else {
 			rc = regulator_set_voltage(tegra_host->vdd_io_reg,
@@ -837,7 +839,7 @@ static int tegra_sdhci_resume(struct sdhci_host *sdhci)
 	return 0;
 }
 
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 static void tegra_sdhci_set_mmc_clk_pin(bool enable)
 {
 	if (enable == 1) {
@@ -863,7 +865,7 @@ static struct sdhci_ops tegra_sdhci_ops = {
 	.platform_reset_exit = tegra_sdhci_reset_exit,
 	.set_uhs_signaling = tegra_sdhci_set_uhs_signaling,
 	.switch_signal_voltage = tegra_sdhci_signal_voltage_switch,
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	.set_mmc_clk_pin = tegra_sdhci_set_mmc_clk_pin,
 #endif
 };

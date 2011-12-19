@@ -36,8 +36,7 @@
 #define CARDHU_WLAN_PWR	TEGRA_GPIO_PD4
 #define CARDHU_WLAN_RST	TEGRA_GPIO_PD3
 #define CARDHU_WLAN_WOW	TEGRA_GPIO_PO4
-#define CARDHU_SD_CD TEGRA_GPIO_PI5
-#define CARDHU_SD_WP TEGRA_GPIO_PT3
+#define CARDHU_SD_CD TEGRA_GPIO_PS4
 #define PM269_SD_WP -1
 
 static void (*wifi_status_cb)(int card_present, void *dev_id);
@@ -148,16 +147,16 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data2 = {
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.cd_gpio = CARDHU_SD_CD,
-	.wp_gpio = CARDHU_SD_WP,
+	.wp_gpio = -1,
 	.power_gpio = -1,
-/*	.tap_delay = 6,
+	.tap_delay = 6,
 	.is_voltage_switch_supported = true,
 	.vdd_rail_name = "vddio_sdmmc1",
 	.slot_rail_name = "vddio_sd_slot",
 	.vdd_max_uv = 3320000,
 	.vdd_min_uv = 3280000,
-	.max_clk = 208000000,
-	.is_8bit_supported = false, */
+	.max_clk_limit = 208000000,
+	.is_8bit = false,
 };
 
 static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
@@ -167,15 +166,14 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data3 = {
 	.is_8bit = 1,
 	.mmc_data = {
 		.built_in = 1,
-	}
-/*	.tap_delay = 6,
+	},
+	.tap_delay = 6,
 	.is_voltage_switch_supported = false,
 	.vdd_rail_name = NULL,
 	.slot_rail_name = NULL,
 	.vdd_max_uv = -1,
 	.vdd_min_uv = -1,
-	.max_clk = 48000000,
-	.is_8bit_supported = true, */
+	.max_clk_limit = 48000000,
 };
 
 static struct platform_device tegra_sdhci_device0 = {
