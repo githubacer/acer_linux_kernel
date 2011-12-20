@@ -72,7 +72,9 @@ static int switch_audio_table_dual(int control_mode, bool fromAP);
 extern int getAudioTable(void);
 extern void setAudioTable(int table_value);
 extern int get_headset_state(void);
+#if !defined(CONFIG_MACH_PICASSO_E)
 extern void start_stop_psensor(bool);
+#endif
 
 extern struct acer_audio_data audio_data;
 
@@ -475,7 +477,9 @@ bool handset_mic_detect(struct snd_soc_codec *codec)
 		return false;
 	}
 
+#if !defined(CONFIG_MACH_PICASSO_E)
 	start_stop_psensor(false);
+#endif
 
 	snd_soc_update_bits(codec, WM8903_CLOCK_RATES_2,
 				WM8903_CLK_SYS_ENA_MASK, WM8903_CLK_SYS_ENA);
@@ -513,7 +517,9 @@ bool handset_mic_detect(struct snd_soc_codec *codec)
 	CtrlReg = WM8903_MICDET_ENA | WM8903_MICBIAS_ENA;
 	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, CtrlReg, 0);
 
+#if !defined(CONFIG_MACH_PICASSO_E)
 	start_stop_psensor(true);
+#endif
 
 	if (withMic > withoutMic) {
 		ACER_DBG("%s HEADSET_WITH_MIC !\n", __func__);
