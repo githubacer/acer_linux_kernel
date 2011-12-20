@@ -83,8 +83,13 @@
 #include <linux/leds-gpio-p2.h>
 #endif
 
+
 #if defined(CONFIG_ACER_ES305)
 #include "../../../sound/soc/tegra/acer_a1026.h"
+#endif
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+static void bt_shutdown_pin_init(void);
 #endif
 
 /* All units are in millicelsius */
@@ -147,13 +152,42 @@ static struct tegra_utmip_config utmi_phy_config[] = {
 	},
 };
 
+#ifdef CONFIG_BCM4329_RFKILL
+
 static struct resource cardhu_bcm4329_rfkill_resources[] = {
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	{
+		.name   = "bcm4329_nshutdown_gpio",
+		.start  = TEGRA_GPIO_PU6,
+		.end    = TEGRA_GPIO_PU6,
+		.flags  = IORESOURCE_IO,
+	},
+	{
+		.name   = "bcm4329_nreset_gpio",
+		.start  = TEGRA_GPIO_PU0,
+		.end    = TEGRA_GPIO_PU0,
+		.flags  = IORESOURCE_IO,
+	},
+	{
+		.name   = "bcm4329_vdd_gpio",
+		.start  = TEGRA_GPIO_PK7,
+		.end    = TEGRA_GPIO_PK7,
+		.flags  = IORESOURCE_IO,
+	},
+	{
+		.name   = "bcm4329_wifi_reset_gpio",
+		.start  = TEGRA_GPIO_PP2,
+		.end    = TEGRA_GPIO_PP2,
+		.flags  = IORESOURCE_IO,
+	},
+#else
 	{
 		.name   = "bcm4329_nshutdown_gpio",
 		.start  = TEGRA_GPIO_PU0,
 		.end    = TEGRA_GPIO_PU0,
 		.flags  = IORESOURCE_IO,
 	},
+#endif
 };
 
 static struct platform_device cardhu_bcm4329_rfkill_device = {
@@ -163,7 +197,55 @@ static struct platform_device cardhu_bcm4329_rfkill_device = {
 	.resource       = cardhu_bcm4329_rfkill_resources,
 };
 
+static noinline void __init cardhu_bcm4329_bt_rfkill(void)
+{
+	/*Add Clock Resource*/
+	clk_add_alias("bcm4329_32k_clk", cardhu_bcm4329_rfkill_device.name, \
+				"blink", NULL);
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	bt_shutdown_pin_init();
+#endif
+
+	return;
+}
+#else
+static inline void cardhu_bcm4329_bt_rfkill(void) { }
+#endif
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+static void bt_shutdown_pin_init(void) {
+        if(acer_board_type == BOARD_PICASSO_2) {
+            if(acer_board_id == BOARD_DVT1) {
+                cardhu_bcm4329_rfkill_device.resource[0].start = TEGRA_GPIO_PS3;
+                cardhu_bcm4329_rfkill_device.resource[0].end   = TEGRA_GPIO_PS3;
+                pr_info("bt_shutdown_pin_init: TEGRA_GPIO_PS3\n");
+            }
+        }
+}
+#endif
+
+
 static struct resource cardhu_bluesleep_resources[] = {
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	[0] = {
+		.name = "gpio_host_wake",
+			.start  = TEGRA_GPIO_PS7,
+			.end    = TEGRA_GPIO_PS7,
+			.flags  = IORESOURCE_IO,
+	},
+	[1] = {
+		.name = "gpio_ext_wake",
+			.start  = TEGRA_GPIO_PP0,
+			.end    = TEGRA_GPIO_PP0,
+			.flags  = IORESOURCE_IO,
+	},
+	[2] = {
+		.name = "host_wake",
+			.start  = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PS7),
+			.end    = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PS7),
+			.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
+	},
+#else
 	[0] = {
 		.name = "gpio_host_wake",
 			.start  = TEGRA_GPIO_PU6,
@@ -182,6 +264,7 @@ static struct resource cardhu_bluesleep_resources[] = {
 			.end    = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PU6),
 			.flags  = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
 	},
+#endif
 };
 
 static struct platform_device cardhu_bluesleep_device = {
@@ -194,8 +277,14 @@ static struct platform_device cardhu_bluesleep_device = {
 static noinline void __init cardhu_setup_bluesleep(void)
 {
 	platform_device_register(&cardhu_bluesleep_device);
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	tegra_gpio_enable(TEGRA_GPIO_PS7);
+	tegra_gpio_enable(TEGRA_GPIO_PP0);
+#else
 	tegra_gpio_enable(TEGRA_GPIO_PU6);
 	tegra_gpio_enable(TEGRA_GPIO_PU1);
+#endif
 	return;
 }
 
@@ -1227,6 +1316,9 @@ static void __init tegra_cardhu_init(void)
 	acer_keys_init();
 	acer_panel_init();
 	cardhu_sensors_init();
+#ifdef CONFIG_BCM4329_RFKILL
+        cardhu_bcm4329_bt_rfkill();
+#endif
 	cardhu_setup_bluesleep();
 	cardhu_sata_init();
 	//audio_wired_jack_init();

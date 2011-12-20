@@ -33,12 +33,17 @@
 #include <linux/slab.h>
 #include <linux/delay.h>
 
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+#include <linux/gpio.h>
+#include "../../../arch/arm/mach-tegra/gpio-names.h"
+#endif
+
 struct bcm4329_rfkill_data {
 	int gpio_reset;
 	int gpio_shutdown;
 	int delay;
 	struct clk *bt_32k_clk;
-#if defined(CONFIG_MACH_PICASSO_E)
+#if defined(CONFIG_MACH_PICASSO_E) || defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
 	int gpio_wifi_reset;
 	int gpio_bcm_vdd;
 #endif
@@ -46,19 +51,71 @@ struct bcm4329_rfkill_data {
 
 static struct bcm4329_rfkill_data *bcm4329_rfkill;
 
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+
+#define UART3_RX_GPIO    TEGRA_GPIO_PW7
+#define UART3_TX_GPIO    TEGRA_GPIO_PW6
+#define UART3_CTS_GPIO   TEGRA_GPIO_PA1
+#define UART3_RTS_GPIO   TEGRA_GPIO_PC0
+
+static void tegra_uart_fun_on(void)
+{
+        int gpio_rx, gpio_tx, gpio_cts, gpio_rts;
+
+        gpio_rx = gpio_tx = 0;
+        gpio_cts = gpio_rts = 0;
+
+        gpio_rx = UART3_RX_GPIO;
+        gpio_tx = UART3_TX_GPIO;
+        gpio_cts = UART3_CTS_GPIO;
+        gpio_rts = UART3_RTS_GPIO;
+
+        if(gpio_rx) {
+            tegra_gpio_disable(gpio_rx);
+            tegra_gpio_disable(gpio_tx);
+            tegra_gpio_disable(gpio_cts);
+            tegra_gpio_disable(gpio_rts);
+        }
+
+        pr_info("%s: \n", __func__);
+
+        return;
+}
+#endif
+
+
+#ifdef BT_DEBUG
+static void bcm4330_gpio_state(void)
+{
+    pr_info("%s: bcm4329_rfkill->gpio_shutdown = %d.\n", __func__,gpio_get_value(bcm4329_rfkill->gpio_shutdown));
+    pr_info("%s: bcm4329_rfkill->gpio_reset = %d.\n", __func__,gpio_get_value(bcm4329_rfkill->gpio_reset));
+    pr_info("%s: bcm4329_rfkill->gpio_wifi_vdd = %d.\n", __func__,gpio_get_value(bcm4329_rfkill->gpio_wifi_vdd));
+    pr_info("%s: bcm4329_rfkill->gpio_wifi_reset = %d.\n", __func__,gpio_get_value(bcm4329_rfkill->gpio_wifi_reset));
+}
+#endif
+
 static int bcm4329_bt_rfkill_set_power(void *data, bool blocked)
 {
 	if (blocked) {
 		pr_info("%s: BT Power off.\n", __func__);
 
-		if (bcm4329_rfkill->gpio_shutdown)
+		if (bcm4329_rfkill->gpio_shutdown) {
 			gpio_direction_output(bcm4329_rfkill->gpio_shutdown, 0);
-		if (bcm4329_rfkill->gpio_reset)
-			gpio_direction_output(bcm4329_rfkill->gpio_reset, 0);
-		if (bcm4329_rfkill->bt_32k_clk)
-			clk_disable(bcm4329_rfkill->bt_32k_clk);
+			pr_info("%s: bcm4329_rfkill->gpio_shutdown = 0.\n", __func__);
+		}
 
-#if defined(CONFIG_MACH_PICASSO_E)
+		if (bcm4329_rfkill->gpio_reset) {
+			gpio_direction_output(bcm4329_rfkill->gpio_reset, 0);
+			pr_info("%s: bcm4329_rfkill->gpio_reset = 0.\n", __func__);
+		}
+
+		if (bcm4329_rfkill->bt_32k_clk) {
+			clk_disable(bcm4329_rfkill->bt_32k_clk);
+			pr_info("%s: bcm4329_rfkill->bt_32k_clk = disable.\n", __func__);
+		}
+
+#if defined(CONFIG_MACH_PICASSO_E) || defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
 		if (bcm4329_rfkill->gpio_bcm_vdd) {
 			if (!gpio_get_value(bcm4329_rfkill->gpio_wifi_reset)) {
 				gpio_direction_output(bcm4329_rfkill->gpio_bcm_vdd, 0);
@@ -69,7 +126,7 @@ static int bcm4329_bt_rfkill_set_power(void *data, bool blocked)
 	} else {
 		pr_info("%s: BT Power on.\n", __func__);
 
-#if defined(CONFIG_MACH_PICASSO_E)
+#if defined(CONFIG_MACH_PICASSO_E) || defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
 		if (bcm4329_rfkill->gpio_bcm_vdd) {
 			if (!gpio_get_value(bcm4329_rfkill->gpio_wifi_reset)) {
 				pr_info("%s: bcm4329_rfkill->gpio_bcm_vdd = 1.\n", __func__);
@@ -78,14 +135,25 @@ static int bcm4329_bt_rfkill_set_power(void *data, bool blocked)
 			}
 		}
 #endif
-		if (bcm4329_rfkill->bt_32k_clk)
+		if (bcm4329_rfkill->bt_32k_clk) {
 			clk_enable(bcm4329_rfkill->bt_32k_clk);
-		if (bcm4329_rfkill->gpio_shutdown)
-			gpio_direction_output(bcm4329_rfkill->gpio_shutdown, 1);
-		if (bcm4329_rfkill->gpio_reset)
-			gpio_direction_output(bcm4329_rfkill->gpio_reset, 1);
-	}
+			pr_info("%s: bcm4329_rfkill->bt_32k_clk = enable.\n", __func__);
+		}
 
+		if (bcm4329_rfkill->gpio_shutdown)
+		{
+			pr_info("%s: bcm4329_rfkill->gpio_shutdown = 1.\n", __func__);
+			gpio_direction_output(bcm4329_rfkill->gpio_shutdown, 1);
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+			msleep(100);
+#endif
+		}
+		if (bcm4329_rfkill->gpio_reset)
+		{
+			pr_info("%s: bcm4329_rfkill->gpio_reset = 1.\n", __func__);
+			gpio_direction_output(bcm4329_rfkill->gpio_reset, 1);
+		}
+    }
 	return 0;
 }
 
@@ -100,6 +168,10 @@ static int bcm4329_rfkill_probe(struct platform_device *pdev)
 	int ret;
 	bool enable = false;  /* off */
 	bool default_sw_block_state;
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	tegra_uart_fun_on();
+#endif
 
 	bcm4329_rfkill = kzalloc(sizeof(*bcm4329_rfkill), GFP_KERNEL);
 	if (!bcm4329_rfkill)
@@ -136,7 +208,7 @@ static int bcm4329_rfkill_probe(struct platform_device *pdev)
 		bcm4329_rfkill->gpio_shutdown = 0;
 	}
 
-#if defined(CONFIG_MACH_PICASSO_E)
+#if defined(CONFIG_MACH_PICASSO_E) || defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
 	res = platform_get_resource_byname(pdev, IORESOURCE_IO,
 					"bcm4329_wifi_reset_gpio");
 	if (res) {
