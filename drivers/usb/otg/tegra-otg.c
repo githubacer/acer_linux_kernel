@@ -32,6 +32,11 @@
 #include <linux/delay.h>
 #include <linux/err.h>
 
+#if defined(CONFIG_ARCH_ACER_T30)
+#include <linux/gpio.h>
+#define TEGRA_GPIO_PN1          105
+#endif
+
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 #include <linux/wakelock.h>
 #include <linux/irq.h>
@@ -206,6 +211,12 @@ static void irq_work(struct work_struct *work)
 			else
 				to = OTG_STATE_A_SUSPEND;
 		}
+#if defined(CONFIG_ARCH_ACER_T30)
+			/* dock is attaching, USB1 status should be suspend */
+			if (gpio_get_value(TEGRA_GPIO_PN1))
+				to = OTG_STATE_A_SUSPEND;
+#endif
+
 	}
 	spin_unlock_irqrestore(&tegra->lock, flags);
 
