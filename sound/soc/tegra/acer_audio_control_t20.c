@@ -74,7 +74,7 @@ extern void setAudioTable(int table_value);
 extern int get_headset_state(void);
 extern void start_stop_psensor(bool);
 
-struct acer_audio_data audio_data;
+extern struct acer_audio_data audio_data;
 
 enum headset_state {
 	BIT_NO_HEADSET = 0,
@@ -92,7 +92,6 @@ int snd_soc_dapm_get_iconia_param(struct snd_kcontrol *kcontrol,
 
 	/* TODO: get iconia param. */
 	audio_data.pin = pin;
-	audio_data.codec = codec;
 
 	mutex_unlock(&codec->mutex);
 
@@ -110,7 +109,6 @@ int snd_soc_dapm_put_iconia_param(struct snd_kcontrol *kcontrol,
 	mutex_lock(&codec->mutex);
 
 	audio_data.pin = pin;
-	audio_data.codec = codec;
 
 	switch_audio_table(is_mode_new, false);
 
@@ -219,9 +217,9 @@ void set_drc_gain(struct snd_soc_codec* codec)
 int tune_codec_setting(int control_mode)
 {
 	int state = get_headset_state();
-	audio_data.mode = control_mode;
+	audio_data.mode.control = control_mode;
 
-	switch (audio_data.mode) {
+	switch (audio_data.mode.control) {
 		case VOICE_COMMUNICATION: /* For VOIP */
 			if (state == BIT_HEADSET)
 				set_voip_hp_gain(audio_data.codec);
@@ -265,28 +263,25 @@ void set_int_mic_state(bool state)
 	}
 #endif
 
-	audio_data.int_mic_state = state;
+	audio_data.state.int_mic = state;
 }
 
 void set_ext_mic_state(bool state)
 {
-	audio_data.ext_mic_state = state;
+	audio_data.state.ext_mic = state;
 }
 
 static void fm2018_switch(struct tegra_wm8903_platform_data *pdata)
 {
-	if (!audio_data.int_mic_state && !audio_data.ext_mic_state)
+	if (!audio_data.state.int_mic && !audio_data.state.ext_mic)
 		gpio_set_value_cansleep(pdata->gpio_int_mic_en, 0);
 	else
 		gpio_set_value_cansleep(pdata->gpio_int_mic_en, 1);
-
-	ACER_DBG("FM2018 state = %d",
-		gpio_get_value_cansleep(pdata->gpio_int_mic_en));
 }
 
 void mic_switch(struct tegra_wm8903_platform_data *pdata)
 {
-	switch_audio_table(audio_data.mode, false);
+	switch_audio_table(audio_data.mode.control, false);
 	fm2018_switch(pdata);
 }
 
@@ -294,116 +289,122 @@ static int switch_audio_table_single(int control_mode, bool fromAP)
 {
 	int state = get_headset_state();
 	bool state_change = false;
-	audio_data.mode = control_mode;
+	audio_data.mode.control = control_mode;
 
-	if ((audio_data.old_state != state) && audio_data.AP_Lock) {
+	if ((audio_data.state.old != state) && audio_data.AP_Lock) {
 		state_change = true;
-		audio_data.old_state = state;
-		if(audio_data.ap_control_mode != ACOUSTIC_DEVICE_MIC_RECORDING_TABLE)
-			control_mode = audio_data.ap_control_mode;
+		audio_data.state.old = state;
+		if(audio_data.mode.ap_control != ACOUSTIC_DEVICE_MIC_RECORDING_TABLE)
+			control_mode = audio_data.mode.ap_control;
 	}
 
 	if (!audio_data.AP_Lock && !fromAP) {
-		switch (audio_data.mode) {
+		switch (audio_data.mode.control) {
 			case VOICE_COMMUNICATION: /* For VOIP */
 				if (state == BIT_HEADSET)
-					audio_data.input_table = ACOUSTIC_HEADSET_MIC_VOIP_TABLE;
+					audio_data.table.input = ACOUSTIC_HEADSET_MIC_VOIP_TABLE;
 				else
-					audio_data.input_table = ACOUSTIC_DEVICE_MIC_VOIP_TABLE;
+					audio_data.table.input = ACOUSTIC_DEVICE_MIC_VOIP_TABLE;
 				break;
 
 			case VOICE_RECOGNITION: /* For CTS */
 				if (state == BIT_HEADSET)
-					audio_data.input_table = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
+					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
 				else
-					audio_data.input_table = ACOUSTIC_SPEECH_RECOGNITION_TABLE;
+					audio_data.table.input = ACOUSTIC_SPEECH_RECOGNITION_TABLE;
 				break;
 
 			case CAMCORDER:
 				if (state == BIT_HEADSET)
-					audio_data.input_table = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
+					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
 				else
-					audio_data.input_table = ACOUSTIC_CAMCORDER_RECORDER_TABLE;
+					audio_data.table.input = ACOUSTIC_CAMCORDER_RECORDER_TABLE;
 				break;
 
 			case MIC: /* For RECORD */
 			case DEFAULT:
+			default:
 				if (state == BIT_HEADSET)
-					audio_data.input_table = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
+					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
 				else
-					audio_data.input_table = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
+					audio_data.table.input = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
 		}
 	}
 
 	if (fromAP || state_change) {
-		audio_data.ap_control_mode = control_mode;
+		audio_data.mode.ap_control = control_mode;
 
 		switch (control_mode) {
 			case ACOUSTIC_DEVICE_MIC_MUSIC_RECOGNITION_TABLE: /* For MusicA or SoundHound music recognition */
 				if (state == BIT_HEADSET)
-					audio_data.input_table = ACOUSTIC_HEADSET_MIC_MUSIC_RECOGNITION_TABLE;
+					audio_data.table.input = ACOUSTIC_HEADSET_MIC_MUSIC_RECOGNITION_TABLE;
 				else
-					audio_data.input_table = control_mode;
+					audio_data.table.input = control_mode;
 				break;
 
 			case ACOUSTIC_CAMCORDER_RECORDER_TABLE: /* For Recorder */
 				if (state == BIT_HEADSET)
-					audio_data.input_table = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
+					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
 				else
-					audio_data.input_table = control_mode;
+					audio_data.table.input = control_mode;
 				break;
 
 			case ACOUSTIC_SPEECH_RECOGNITION_TABLE: /* For MusicA or SoundHound voice recognition */
 				if (state == BIT_HEADSET)
-					audio_data.input_table = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
+					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
 				else
-					audio_data.input_table = control_mode;
+					audio_data.table.input = control_mode;
 				break;
 
 			default:
-				audio_data.input_table = control_mode;
+				audio_data.table.input = control_mode;
 				ACER_DBG("Do not re-assign audio table!");
 				break;
 		}
 
-		if (audio_data.ap_control_mode == ACOUSTIC_DEVICE_MIC_RECORDING_TABLE)
+		if (audio_data.mode.ap_control == ACOUSTIC_DEVICE_MIC_RECORDING_TABLE)
 			audio_data.AP_Lock = false;
 		else
 			audio_data.AP_Lock = true;
 	}
 
-	ACER_DBG("previous table %d, current table %d !",
-			getAudioTable(), audio_data.input_table);
-	setAudioTable(audio_data.input_table);
+	ACER_DBG("audio source = %d, FM2018_EN = %d, pre_table = %d, cur_table %d!",
+			audio_data.mode.input_source,
+			gpio_get_value_cansleep(audio_data.gpio.int_mic_en),
+			getAudioTable(), audio_data.table.input);
+	setAudioTable(audio_data.table.input);
 
 	return 1;
 }
 #else
 static int switch_audio_table_dual(int control_mode, bool fromAP)
 {
-	audio_data.mode = control_mode;
+	audio_data.mode.control = control_mode;
 
-	switch (audio_data.mode) {
+	switch (audio_data.mode.control) {
 		case VOICE_COMMUNICATION: /* For VOIP */
-			audio_data.input_table = ACOUSTIC_DEVICE_MIC_VOIP_TABLE;
+			audio_data.table.input = ACOUSTIC_DEVICE_MIC_VOIP_TABLE;
 			break;
 
 		case VOICE_RECOGNITION: /* For CTS */
-			audio_data.input_table = ACOUSTIC_SPEECH_RECOGNITION_TABLE;
+			audio_data.table.input = ACOUSTIC_SPEECH_RECOGNITION_TABLE;
 			break;
 
 		case CAMCORDER:
-			audio_data.input_table = ACOUSTIC_REAR_CAMCORDER_TABLE;
+			audio_data.table.input = ACOUSTIC_REAR_CAMCORDER_TABLE;
 			break;
 
 		case MIC: /* For RECORD */
 		case DEFAULT:
-			audio_data.input_table = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
+		default:
+			audio_data.table.input = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
 	}
 
-	ACER_DBG("previous table %d, current table %d !",
-			getAudioTable(), audio_data.input_table);
-	setAudioTable(audio_data.input_table);
+	ACER_DBG("audio source = %d, FM2018_EN = %d, pre_table = %d, cur_table %d!",
+			audio_data.mode.input_source,
+			gpio_get_value_cansleep(audio_data.gpio.int_mic_en),
+			getAudioTable(), audio_data.table.input);
+	setAudioTable(audio_data.table.input);
 
 	return 1;
 }
@@ -411,8 +412,9 @@ static int switch_audio_table_dual(int control_mode, bool fromAP)
 
 int switch_audio_table(int control_mode, bool fromAP)
 {
-	ACER_DBG("audio source = %d", control_mode);
-
+	if (!fromAP) {
+		audio_data.mode.input_source = control_mode;
+	}
 	tune_codec_setting(control_mode);
 
 #ifdef CONFIG_ACER_FM_SINGLE_MIC
@@ -468,10 +470,11 @@ bool handset_mic_detect(struct snd_soc_codec *codec)
 
 	/* delay for avoiding pop noise when user plug in/out headset quickly */
 	msleep(1000);
-	if(gpio_get_value(tegra_wm8903_hp_jack_gpio.gpio)) {
+	if(gpio_get_value(audio_data.gpio.hp_det)) {
 		ACER_DBG("Do not enalbe mic bias when user plug in/out headset quickly");
 		return false;
 	}
+
 	start_stop_psensor(false);
 
 	snd_soc_update_bits(codec, WM8903_CLOCK_RATES_2,
@@ -537,13 +540,13 @@ static struct platform_device acer_audio_control_device = {
 
 static int acer_audio_control_probe(struct platform_device *pdev)
 {
-	audio_data.input_table = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
-	audio_data.mode = DEFAULT;
+	audio_data.table.input = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
+	audio_data.mode.control = DEFAULT;
 
-	audio_data.int_mic_state = false;
-	audio_data.ext_mic_state = false;
-	audio_data.old_state = BIT_NO_HEADSET;
-	audio_data.ap_control_mode = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
+	audio_data.state.int_mic = false;
+	audio_data.state.ext_mic = false;
+	audio_data.state.old = BIT_NO_HEADSET;
+	audio_data.mode.ap_control = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
 	audio_data.AP_Lock = false;
 	pr_info("[AudioControl] probe done.\n");
 	return 0;

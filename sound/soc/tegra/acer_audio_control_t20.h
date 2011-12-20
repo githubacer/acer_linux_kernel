@@ -61,7 +61,6 @@ extern void setAudioCABC(int enable);
 extern int switch_audio_table(int control_mode, bool fromAP);
 extern void acer_volume_setting(struct snd_soc_codec *codec, struct snd_pcm_substream *substream);
 extern bool handset_mic_detect(struct snd_soc_codec *codec);
-extern struct snd_soc_jack_gpio tegra_wm8903_hp_jack_gpio;
 int tune_codec_setting(int control_mode);
 void set_voip_hp_gain(struct snd_soc_codec* codec);
 void set_voip_spk_gain(struct snd_soc_codec* codec);
@@ -84,19 +83,40 @@ typedef enum {
 	VOICE_COMMUNICATION = 7,
 
 	AUDIO_SOURCE_CNT,
-	AUDIO_SOURCE_MAX                 = AUDIO_SOURCE_CNT - 1,
+	AUDIO_SOURCE_MAX    = AUDIO_SOURCE_CNT - 1,
 } audio_source_t;
 
+struct acer_table_data {
+	int input;
+	int output;
+};
+
+struct acer_gpio_data {
+	int spkr_en;
+	int hp_det;
+	int int_mic_en;
+};
+
+struct acer_state_data {
+	bool int_mic;
+	bool ext_mic;
+	int old;
+};
+
+struct acer_mode_data {
+	int control;
+	int input_source;
+	int ap_control;
+};
+
 struct acer_audio_data {
-	int mode;
-	int input_table;
 	struct snd_soc_codec* codec;
 	const char *pin;
-	bool int_mic_state;
-	bool ext_mic_state;
-	int old_state;
-	int ap_control_mode;
 	bool AP_Lock;
+	struct acer_table_data table;
+	struct acer_gpio_data gpio;
+	struct acer_state_data state;
+	struct acer_mode_data mode;
 };
 
 #define SOC_DAPM_SET_PARAM(xname) \

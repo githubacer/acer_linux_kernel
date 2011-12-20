@@ -251,14 +251,8 @@ static struct wm8903_platform_data ventana_wm8903_pdata = {
 	.micdet_delay = 100,
 	.gpio_base = VENTANA_GPIO_WM8903(0),
 	.gpio_cfg = {
-#ifdef CONFIG_ARCH_ACER_T20
 		0, /* Fn is GPIO */
 		0, /* Fn is GPIO */
-#else
-		(WM8903_GPn_FN_DMIC_LR_CLK_OUTPUT << WM8903_GP1_FN_SHIFT),
-		(WM8903_GPn_FN_DMIC_LR_CLK_OUTPUT << WM8903_GP2_FN_SHIFT) |
-			WM8903_GP2_DIR,
-#endif
 		0,
 		WM8903_GPIO_NO_CONFIG,
 		WM8903_GPIO_NO_CONFIG,
@@ -475,7 +469,8 @@ static struct tegra_wm8903_platform_data ventana_audio_pdata = {
 	.gpio_hp_det		= TEGRA_GPIO_HP_DET,
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
-	.gpio_ext_mic_en	= TEGRA_GPIO_EXT_MIC_EN,
+	.gpio_ext_mic_en	= -1,
+	.gpio_debug_switch_en   = TEGRA_GPIO_DEBUG_SWITCH_EN,
 };
 
 static struct platform_device ventana_audio_device = {
