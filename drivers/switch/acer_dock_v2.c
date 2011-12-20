@@ -18,11 +18,15 @@
 #define USB_HOST_EN     TEGRA_GPIO_PN1  //USB Vbus
 
 struct dock_switch_data *switch_data;
+struct input_dev *input_dock;
+static bool is_ir_wake = false;
+static bool is_ir_irq_enable = false;
 
 enum {
 	NO_DEVICE = 0,
 	DOCK_IN = 1,
-	DOCK_HEADSET_IN = 2
+	DOCK_HEADSET_IN = 2,
+	DOCK_IR_WAKE = 3
 };
 
 enum {
@@ -42,8 +46,6 @@ enum {
 	DOCK_KEY_RIGHT,
 	DOCK_KEY_ENTER,
 };
-
-struct input_dev *input_dock;
 
 static ssize_t dock_show(struct kobject* kobj, struct kobj_attribute* kobj_attr, char* buf);
 static ssize_t dock_store(struct kobject* kobj, struct kobj_attribute* kobj_attr, char* buf, size_t n);
@@ -93,9 +95,7 @@ struct dock_switch_data {
 	struct work_struct hs_work;
 	struct work_struct ir_work;
 	struct hrtimer hs_timer;
-	struct hrtimer ir_timer;
 	ktime_t hs_debounce_time;
-	ktime_t ir_debounce_time;
 };
 
 static int atoi(const char *a)
@@ -278,18 +278,12 @@ static ssize_t vbus_store(struct kobject* kobj, struct kobj_attribute* kobj_attr
 
 static void dock_switch_early_suspend(struct early_suspend *h)
 {
-	pr_debug("[ACER-DOCK] enable ir irq\n");
-	enable_irq(switch_data->ir_irq);
-	enable_irq_wake(switch_data->ir_irq);
-	enable_irq_wake(switch_data->det_irq);
+
 }
 
 static void dock_switch_late_resume(struct early_suspend *h)
 {
-	pr_debug("[ACER-DOCK] disable ir irq\n");
-	disable_irq_wake(switch_data->ir_irq);
-	disable_irq_wake(switch_data->det_irq);
-	disable_irq(switch_data->ir_irq);
+
 }
 
 static struct early_suspend dock_switch_early_suspend_handler = {
@@ -311,6 +305,8 @@ static ssize_t switch_print_state(struct switch_dev *sdev, char *buf)
 			return sprintf(buf, "%s\n", "1");
 		case DOCK_HEADSET_IN:
 			return sprintf(buf, "%s\n", "2");
+		case DOCK_IR_WAKE:
+			return sprintf(buf, "%s\n", "3");
 	}
 	return -EINVAL;
 }
@@ -322,7 +318,6 @@ static void dock_hs_switch_work(struct work_struct *work)
 	struct dock_switch_data *pSwitch = switch_data;
 
 	state = gpio_get_value(pSwitch->det_gpio);
-
 	if (!state) {
 		hs_state = gpio_get_value(pSwitch->hs_gpio);
 		printk("dock_switch hs_gpio=%d\n",hs_state);
@@ -346,15 +341,34 @@ static irqreturn_t dock_hs_interrupt(int irq, void *dev_id)
 {
 	struct dock_switch_data *pSwitch = switch_data;
 
+	pr_info("HS Interrupt!!!\n");
 	hrtimer_start(&pSwitch->hs_timer, pSwitch->hs_debounce_time, HRTIMER_MODE_REL);
-
 	return IRQ_HANDLED;
 }
 /* Dock Headset */
 
 /* Dock IR */
+static void dock_ir_switch_work(struct work_struct *work)
+{
+	int state,hs_state;
+	struct dock_switch_data *pSwitch = switch_data;
+
+	state = gpio_get_value(pSwitch->det_gpio);
+	if (!state) {
+		switch_set_state(&pSwitch->sdev, DOCK_IR_WAKE);
+		hrtimer_start(&pSwitch->hs_timer, pSwitch->hs_debounce_time, HRTIMER_MODE_REL);
+	}
+}
+
 static irqreturn_t dock_ir_interrupt(int irq, void *dev_id)
 {
+	struct dock_switch_data *pSwitch = switch_data;
+
+	if (is_ir_wake == false) {
+		is_ir_wake = true;
+		pr_info("IR Wake Interrupt!!!\n");
+		schedule_work(&pSwitch->ir_work);
+	}
 	return IRQ_HANDLED;
 }
 /* Dock IR*/
@@ -474,6 +488,7 @@ static int dock_switch_probe(struct platform_device *pdev)
 	}
 
 	/* Dock IR */
+	INIT_WORK(&switch_data->ir_work, dock_ir_switch_work);
 	ret = request_irq(switch_data->ir_irq, dock_ir_interrupt,
 	IRQF_DISABLED | IRQF_TRIGGER_FALLING,
 	DRIVER_NAME, switch_data);
@@ -555,8 +570,6 @@ err_register_switch:
 
 static int __devexit dock_switch_remove(struct platform_device *pdev)
 {
-	struct dock_switch_data *switch_data = platform_get_drvdata(pdev);
-
 	unregister_early_suspend(&dock_switch_early_suspend_handler);
 	cancel_work_sync(&switch_data->work);
 	switch_dev_unregister(&switch_data->sdev);
@@ -567,11 +580,28 @@ static int __devexit dock_switch_remove(struct platform_device *pdev)
 
 static int dock_switch_suspend(struct platform_device *pdev, pm_message_t state)
 {
+	int det;
+	det = gpio_get_value(switch_data->det_gpio);
+	if (!det) {
+		pr_info("[ACER-DOCK] enable ir irq wake\n");
+		enable_irq(switch_data->ir_irq);
+		enable_irq_wake(switch_data->ir_irq);
+		is_ir_wake = false;
+		is_ir_irq_enable = true;
+	}
+	enable_irq_wake(switch_data->det_irq);
 	return 0;
 }
 
 static int dock_switch_resume(struct platform_device *pdev)
 {
+	if (is_ir_irq_enable) {
+		pr_info("[ACER-DOCK] disable ir irq wake\n");
+		disable_irq_wake(switch_data->ir_irq);
+		disable_irq(switch_data->ir_irq);
+		is_ir_irq_enable = false;
+	}
+	disable_irq_wake(switch_data->det_irq);
 	return 0;
 }
 
