@@ -52,7 +52,6 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
-#include <linux/nfc/pn544.h>
 #include <mach/thermal.h>
 #ifdef CONFIG_ROTATELOCK
 #include <linux/switch.h>
@@ -311,20 +310,6 @@ static __initdata struct tegra_clk_init_table cardhu_clk_init_table[] = {
 	{ NULL,		NULL,		0,		0},
 };
 
-static struct pn544_i2c_platform_data nfc_pdata = {
-	.irq_gpio = TEGRA_GPIO_PX0,
-	.ven_gpio = TEGRA_GPIO_PP3,
-	.firm_gpio = TEGRA_GPIO_PO7,
-	};
-
-static struct i2c_board_info __initdata cardhu_i2c_bus3_board_info[] = {
-	{
-		I2C_BOARD_INFO("pn544", 0x28),
-		.platform_data = &nfc_pdata,
-		.irq = TEGRA_GPIO_TO_IRQ(TEGRA_GPIO_PX0),
-	},
-};
-
 #ifdef CONFIG_EEPROM_AT24C02C
 static struct at24_platform_data at24c02c = {
 	.byte_len = SZ_2K/8,
@@ -449,7 +434,6 @@ static void cardhu_i2c_init(void)
 	platform_device_register(&tegra_i2c_device1);
 
 	i2c_register_board_info(4, &wm8903_board_info, 1);
-	i2c_register_board_info(2, cardhu_i2c_bus3_board_info, 1);
 #ifdef CONFIG_EEPROM_AT24C02C
 	i2c_register_board_info(4, cardhu_i2c_eeprom_board_info, 1);
 #endif
@@ -1069,13 +1053,6 @@ static void cardhu_gps_init(void)
 		pr_err("EN_VDD_GPS direction configuration failed:%d\n", rc);
 }
 
-static void cardhu_nfc_init(void)
-{
-	tegra_gpio_enable(TEGRA_GPIO_PX0);
-	tegra_gpio_enable(TEGRA_GPIO_PP3);
-	tegra_gpio_enable(TEGRA_GPIO_PO7);
-}
-
 #ifdef CONFIG_ACER_LEDS
 static struct gpio_led_data led_pdata = {
 	.gpio = TEGRA_GPIO_PR0,
@@ -1337,7 +1314,6 @@ static void __init tegra_cardhu_init(void)
 	picasso2_led_init();
 #endif
 	tegra_release_bootloader_fb();
-	cardhu_nfc_init();
 	acer_board_info();
 #ifdef CONFIG_PSENSOR3G
 	picasso2_psensor_3g_init();
