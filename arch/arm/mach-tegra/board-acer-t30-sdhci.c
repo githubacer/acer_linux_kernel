@@ -150,6 +150,7 @@ static struct tegra_sdhci_platform_data tegra_sdhci_platform_data0 = {
 	.cd_gpio = CARDHU_SD_CD,
 	.wp_gpio = -1,
 	.power_gpio = -1,
+	.cd_gpio_polarity = 0,
 	.tap_delay = 6,
 	.is_voltage_switch_supported = true,
 	.vdd_rail_name = "vddio_sdmmc1",

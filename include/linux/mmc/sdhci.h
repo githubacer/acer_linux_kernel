@@ -150,6 +150,11 @@ struct sdhci_host {
 
 #if defined(CONFIG_ARCH_ACER_T20)
 	int card_present;
+#elif defined(CONFIG_ARCH_ACER_T30)
+	int card_present;
+	struct tasklet_struct sd_power_tasklet;
+	struct delayed_work sd_power_work;
+	unsigned int regulator_count;
 #endif
 	unsigned long private[0] ____cacheline_aligned;
 };

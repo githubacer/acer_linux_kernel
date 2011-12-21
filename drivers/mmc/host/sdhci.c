@@ -37,6 +37,9 @@
 #include <linux/fs.h>
 #include <linux/debugfs.h>
 #endif
+#if defined(CONFIG_ARCH_ACER_T30)
+#include "sdhci-pltfm.h"
+#endif
 
 #define DRIVER_NAME "sdhci"
 
@@ -1998,6 +2001,11 @@ int sdhci_resume_host(struct sdhci_host *host)
 #if defined(CONFIG_ARCH_ACER_T20)
 	struct platform_device *pdev = to_platform_device(mmc_dev(host->mmc));
 	struct tegra_sdhci_platform_data *plat = pdev->dev.platform_data;
+#elif defined(CONFIG_ARCH_ACER_T30)
+	struct platform_device *pdev = to_platform_device(mmc_dev(host->mmc));
+	struct tegra_sdhci_platform_data *plat = pdev->dev.platform_data;
+	struct sdhci_pltfm_host *pltfm_host = sdhci_priv(host);
+	struct tegra_sdhci_host *tegra_host = pltfm_host->priv;
 #endif
 
 	if (host->vmmc) {
@@ -2041,6 +2049,22 @@ int sdhci_resume_host(struct sdhci_host *host)
 			printk(KERN_INFO "%s was inserted in suspend mode !!\n", mmc_hostname(host->mmc));
 			host->card_present = (gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity);
 			gpio_set_value(plat->power_gpio, 1);
+			tasklet_schedule(&host->card_tasklet);
+		}
+	}
+#elif defined(CONFIG_ARCH_ACER_T30)
+	if (ret) {
+		host->card_present = 0;
+		regulator_disable(tegra_host->vdd_slot_reg);
+		host->regulator_count--;
+		ret = 0;
+	}
+	if (plat->cd_gpio != -1) {
+		if ((gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity) && (host->card_present == false)) {
+			printk(KERN_INFO "%s was inserted in suspend mode !!\n", mmc_hostname(host->mmc));
+			host->card_present = (gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity);
+			regulator_enable(tegra_host->vdd_slot_reg);
+			host->regulator_count++;
 			tasklet_schedule(&host->card_tasklet);
 		}
 	}
