@@ -107,12 +107,18 @@
 
 #define UTMIP_XCVR_CFG0		0x808
 #define   UTMIP_XCVR_SETUP(x)			(((x) & 0xf) << 0)
+#ifdef CONFIG_ARCH_ACER_T20
+#define   UTMIP_XCVR_HSSLEW(x)			(((x) & 0x3) << 4)
+#endif
 #define   UTMIP_XCVR_LSRSLEW(x)			(((x) & 0x3) << 8)
 #define   UTMIP_XCVR_LSFSLEW(x)			(((x) & 0x3) << 10)
 #define   UTMIP_FORCE_PD_POWERDOWN		(1 << 14)
 #define   UTMIP_FORCE_PD2_POWERDOWN		(1 << 16)
 #define   UTMIP_FORCE_PDZI_POWERDOWN		(1 << 18)
 #define   UTMIP_XCVR_LSBIAS_SEL			(1 << 21)
+#ifdef CONFIG_ARCH_ACER_T20
+#define   UTMIP_XCVR_SETUP_MSB(x)		(((x) & 0x7) << 22)
+#endif
 #define   UTMIP_XCVR_SETUP_MSB(x)		(((x) & 0x7) << 22)
 #define   UTMIP_XCVR_HSSLEW_MSB(x)		(((x) & 0x7f) << 25)
 
@@ -678,7 +684,11 @@ static struct tegra_utmip_config utmip_default[] = {
 		.term_range_adj = 6,
 		.xcvr_setup_offset = 0,
 		.xcvr_use_fuses = 1,
+#ifdef CONFIG_ARCH_ACER_T20
+		.xcvr_setup = 10,
+#else
 		.xcvr_setup = 9,
+#endif
 		.xcvr_lsfslew = 2,
 		.xcvr_lsrslew = 2,
 	},
@@ -1090,12 +1100,23 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy, bool is_dpd)
 		 UTMIP_FORCE_PD2_POWERDOWN | UTMIP_FORCE_PDZI_POWERDOWN |
 		 UTMIP_XCVR_SETUP(~0) | UTMIP_XCVR_LSFSLEW(~0) |
 		 UTMIP_XCVR_LSRSLEW(~0) | UTMIP_XCVR_HSSLEW_MSB(~0));
+#ifdef CONFIG_ARCH_ACER_T20
+	if (phy->instance == 2) {
+		val &= ~(UTMIP_XCVR_HSSLEW(~0) | UTMIP_XCVR_SETUP_MSB(~0));
+	}
+#endif
 	val |= UTMIP_XCVR_SETUP(xcvr_setup_value);
 	val |= UTMIP_XCVR_SETUP_MSB(XCVR_SETUP_MSB_CALIB(xcvr_setup_value));
 	val |= UTMIP_XCVR_LSFSLEW(config->xcvr_lsfslew);
 	val |= UTMIP_XCVR_LSRSLEW(config->xcvr_lsrslew);
 #ifndef CONFIG_ARCH_TEGRA_2x_SOC
 	val |= UTMIP_XCVR_HSSLEW_MSB(0x8);
+#endif
+#ifdef CONFIG_ARCH_ACER_T20
+	if (phy->instance == 2) {
+		val |= UTMIP_XCVR_HSSLEW(1);
+		val |= UTMIP_XCVR_SETUP_MSB(7);
+	}
 #endif
 	writel(val, base + UTMIP_XCVR_CFG0);
 
@@ -1135,6 +1156,11 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy, bool is_dpd)
 	val = readl(base + UTMIP_SPARE_CFG0);
 	val &= ~FUSE_SETUP_SEL;
 	val |= FUSE_ATERM_SEL;
+#ifdef CONFIG_ARCH_ACER_T20
+	if (phy->instance ==2) {
+		val &= ~FUSE_SETUP_SEL;
+	}
+#endif
 	writel(val, base + UTMIP_SPARE_CFG0);
 
 	val = readl(base + USB_SUSP_CTRL);
