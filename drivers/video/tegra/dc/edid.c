@@ -269,6 +269,7 @@ int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 				(ptr[2] == 0x0c) &&
 				(ptr[3] == 0)) {
 #if defined(CONFIG_ARCH_ACER_T30) || defined(CONFIG_ARCH_ACER_T20)
+				edid->eld.vsdb = 1;
 				*vsdb = 1;
 #endif
 				j = 8;
