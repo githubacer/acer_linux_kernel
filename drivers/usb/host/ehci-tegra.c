@@ -1203,6 +1203,17 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if(tegra->phy->instance == 1) {
+		err = enable_irq_wake(tegra->irq);
+		if (err < 0) {
+			dev_warn(&pdev->dev,
+				"Couldn't enable USB host mode wakeup, irq=%d, "
+				"error=%d\n", tegra->irq, err);
+			err = 0;
+		}
+	}
+#else
 	err = enable_irq_wake(tegra->irq);
 	if (err < 0) {
 		dev_warn(&pdev->dev,
@@ -1210,6 +1221,7 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 			"error=%d\n", tegra->irq, err);
 		err = 0;
 	}
+#endif
 
 #ifdef CONFIG_USB_EHCI_ONOFF_FEATURE
 	if (instance == 1)
@@ -1329,7 +1341,12 @@ static int tegra_ehci_remove(struct platform_device *pdev)
 	/* Turn Off Interrupts */
 	ehci_writel(tegra->ehci, 0, &tegra->ehci->regs->intr_enable);
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if(tegra->phy->instance == 1)
+		disable_irq_wake(tegra->irq);
+#else
 	disable_irq_wake(tegra->irq);
+#endif
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);
 	cancel_delayed_work(&tegra->work);
