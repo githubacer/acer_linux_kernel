@@ -169,6 +169,9 @@ struct suspend_context tegra_sctx;
 static struct clk *tegra_pclk;
 static const struct tegra_suspend_platform_data *pdata;
 static enum tegra_suspend_mode current_suspend_mode = TEGRA_SUSPEND_NONE;
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+void gpio_sleep_init(void);
+#endif
 
 static const char *tegra_suspend_name[TEGRA_MAX_SUSPEND_MODE] = {
 	[TEGRA_SUSPEND_NONE]	= "none",
@@ -751,9 +754,18 @@ static const char *lp_state[TEGRA_MAX_SUSPEND_MODE] = {
 static int tegra_suspend_enter(suspend_state_t state)
 {
 	int ret;
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	bool do_lp0 = (current_suspend_mode == TEGRA_SUSPEND_LP0);
+	bool do_lp2 = (current_suspend_mode == TEGRA_SUSPEND_LP2);
+#endif
 
 	if (pdata && pdata->board_suspend)
 		pdata->board_suspend(current_suspend_mode, TEGRA_SUSPEND_BEFORE_PERIPHERAL);
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	if (do_lp0)
+		gpio_sleep_init();
+#endif
 
 	ret = tegra_suspend_dram(current_suspend_mode, 0);
 

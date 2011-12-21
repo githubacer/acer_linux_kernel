@@ -426,6 +426,56 @@ int tegra_pinmux_set_tristate(enum tegra_pingroup pg,
 	return 0;
 }
 
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+int tegra_pinmux_set_suspend_state(const struct tegra_pingroup_config *config)
+{
+	unsigned long reg;
+	unsigned long flags;
+	enum tegra_pingroup pg = config->pingroup;
+	enum tegra_pullupdown pupd  = config->pupd;
+	enum tegra_tristate tristate = config->tristate;
+	enum tegra_pin_io io = config->io;
+
+	if (pg < 0 || pg >=  TEGRA_MAX_PINGROUP)
+		return -EINVAL;
+
+	if (pingroups[pg].tri_reg <= 0)
+		return -EINVAL;
+
+	if (pupd != TEGRA_PUPD_NORMAL &&
+	    pupd != TEGRA_PUPD_PULL_DOWN &&
+	    pupd != TEGRA_PUPD_PULL_UP)
+		return -EINVAL;
+
+	spin_lock_irqsave(&mux_lock, flags);
+
+	// pull up/down
+	reg = pg_readl(pingroups[pg].pupd_reg);
+	reg &= ~(0x3 << pingroups[pg].pupd_bit);
+	reg |= pupd << pingroups[pg].pupd_bit;
+	pg_writel(reg, pingroups[pg].pupd_reg);
+
+	// tristate
+	reg = pg_readl(pingroups[pg].tri_reg);
+	reg &= ~(0x1 << pingroups[pg].tri_bit);
+	if (tristate)
+		reg |= 1 << pingroups[pg].tri_bit;
+	pg_writel(reg, pingroups[pg].tri_reg);
+
+	// io direction
+	reg = pg_readl(pingroups[pg].mux_reg);
+#if defined(TEGRA_PINMUX_HAS_IO_DIRECTION)
+	reg &= ~(0x1 << 5);
+	reg |= (io & 0x1) << 5;
+#endif
+	pg_writel(reg, pingroups[pg].mux_reg);
+
+	spin_unlock_irqrestore(&mux_lock, flags);
+
+	return 0;
+}
+#endif
+
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
 static int tegra_pinmux_set_lock(enum tegra_pingroup pg,
 	enum tegra_pin_lock lock)

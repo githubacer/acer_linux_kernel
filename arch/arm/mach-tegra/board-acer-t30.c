@@ -90,6 +90,9 @@
 #if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
 static void bt_shutdown_pin_init(void);
 #endif
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)  // GPIO init
+void gpio_unused_init(void);
+#endif
 
 /* All units are in millicelsius */
 static struct tegra_thermal_data thermal_data = {
@@ -1268,6 +1271,9 @@ static void __init tegra_cardhu_init(void)
 	tegra_thermal_init(&thermal_data);
 	tegra_clk_init_from_table(cardhu_clk_init_table);
 	acer_t30_pinmux_init();
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)  // GPIO init
+	gpio_unused_init();
+#endif
 	cardhu_i2c_init();
 	cardhu_spi_init();
 	cardhu_usb_init();
