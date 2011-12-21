@@ -424,7 +424,6 @@ static void bluesleep_stop(void)
 	if (disable_irq_wake(bsi->host_wake_irq))
 		BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
 #endif
-	free_irq(bsi->host_wake_irq, NULL);
 	wake_lock_timeout(&bsi->wake_lock, HZ / 2);
 }
 /**
@@ -843,11 +842,11 @@ static void __exit bluesleep_exit(void)
 	if (test_bit(BT_PROTO, &flags)) {
 		if (disable_irq_wake(bsi->host_wake_irq))
 			BT_ERR("Couldn't disable hostwake IRQ wakeup mode\n");
-		free_irq(bsi->host_wake_irq, NULL);
 		del_timer(&tx_timer);
 		if (test_bit(BT_ASLEEP, &flags))
 			hsuart_power(1);
 	}
+	free_irq(bsi->host_wake_irq, NULL);
 
 	hci_unregister_notifier(&hci_event_nblock);
 	platform_driver_unregister(&bluesleep_driver);
