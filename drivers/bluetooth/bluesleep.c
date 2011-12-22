@@ -280,6 +280,7 @@ static int bluesleep_hci_event(struct notifier_block *this,
 
 	switch (event) {
 	case HCI_DEV_REG:
+		gpio_set_value(bsi->ext_wake, 1);
 		if (!bluesleep_hdev) {
 			bluesleep_hdev = hdev;
 			hu  = (struct hci_uart *) hdev->driver_data;
@@ -294,6 +295,7 @@ static int bluesleep_hci_event(struct notifier_block *this,
 		/* if bluetooth stopped, stop bluesleep also */
 		bluesleep_stop();
 		bsi->uport = NULL;
+		gpio_set_value(bsi->ext_wake, 0);
 		break;
 	case HCI_DEV_WRITE:
 		bluesleep_outgoing_data();
@@ -628,7 +630,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 			goto free_bt_host_wake;
 
 		/* configure ext_wake as output mode*/
-		ret = gpio_direction_output(bsi->ext_wake, 1);
+		ret = gpio_direction_output(bsi->ext_wake, 0);
 		if (ret < 0) {
 			pr_err("gpio-keys: failed to configure output"
 				" direction for GPIO %d, error %d\n",
@@ -636,6 +638,7 @@ static int bluesleep_probe(struct platform_device *pdev)
 			gpio_free(bsi->ext_wake);
 			goto free_bt_host_wake;
 		}
+
 	} else
 		set_bit(BT_EXT_WAKE, &flags);
 
@@ -811,7 +814,7 @@ static int __init bluesleep_init(void)
 
 	/* assert bt wake */
 	if (bsi->has_ext_wake == 1)
-		gpio_set_value(bsi->ext_wake, 1);
+		gpio_set_value(bsi->ext_wake, 0);
 	set_bit(BT_EXT_WAKE, &flags);
 	hci_register_notifier(&hci_event_nblock);
 

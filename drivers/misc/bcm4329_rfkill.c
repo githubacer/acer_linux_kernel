@@ -59,6 +59,38 @@ static struct bcm4329_rfkill_data *bcm4329_rfkill;
 #define UART3_CTS_GPIO   TEGRA_GPIO_PA1
 #define UART3_RTS_GPIO   TEGRA_GPIO_PC0
 
+static void tegra_uart_fun_off(void)
+{
+        int gpio_rx, gpio_tx, gpio_cts, gpio_rts;
+
+        gpio_rx = gpio_tx = 0;
+        gpio_cts = gpio_rts = 0;
+
+        gpio_rx = UART3_RX_GPIO;
+        gpio_tx = UART3_TX_GPIO;
+        gpio_cts = UART3_CTS_GPIO;
+        gpio_rts = UART3_RTS_GPIO;
+
+        if(gpio_rx) {
+            tegra_gpio_enable(gpio_rx);
+            tegra_gpio_enable(gpio_tx);
+            tegra_gpio_enable(gpio_cts);
+            tegra_gpio_enable(gpio_rts);
+            gpio_request(gpio_rx,"uart_rx_gpio");
+            gpio_request(gpio_tx,"uart_tx_gpio");
+            gpio_request(gpio_cts,"uart_cts_gpio");
+            gpio_request(gpio_rts,"uart_rts_gpio");
+            gpio_direction_output(gpio_rx, 0);
+            gpio_direction_output(gpio_tx, 0);
+            gpio_direction_output(gpio_cts, 0);
+            gpio_direction_output(gpio_rts, 0);
+        }
+
+        pr_info("%s: \n", __func__);
+
+        return;
+}
+
 static void tegra_uart_fun_on(void)
 {
         int gpio_rx, gpio_tx, gpio_cts, gpio_rts;
@@ -76,6 +108,10 @@ static void tegra_uart_fun_on(void)
             tegra_gpio_disable(gpio_tx);
             tegra_gpio_disable(gpio_cts);
             tegra_gpio_disable(gpio_rts);
+            gpio_free(gpio_rx);
+            gpio_free(gpio_tx);
+            gpio_free(gpio_cts);
+            gpio_free(gpio_rts);
         }
 
         pr_info("%s: \n", __func__);
@@ -123,8 +159,17 @@ static int bcm4329_bt_rfkill_set_power(void *data, bool blocked)
 			}
 		}
 #endif
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+		tegra_uart_fun_off();
+#endif
+
 	} else {
 		pr_info("%s: BT Power on.\n", __func__);
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+		tegra_uart_fun_on();
+#endif
 
 #if defined(CONFIG_MACH_PICASSO_E) || defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
 		if (bcm4329_rfkill->gpio_bcm_vdd) {
@@ -170,7 +215,7 @@ static int bcm4329_rfkill_probe(struct platform_device *pdev)
 	bool default_sw_block_state;
 
 #if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
-	tegra_uart_fun_on();
+	tegra_uart_fun_off();
 #endif
 
 	bcm4329_rfkill = kzalloc(sizeof(*bcm4329_rfkill), GFP_KERNEL);
@@ -213,9 +258,6 @@ static int bcm4329_rfkill_probe(struct platform_device *pdev)
 					"bcm4329_wifi_reset_gpio");
 	if (res) {
 		bcm4329_rfkill->gpio_wifi_reset = res->start;
-				tegra_gpio_enable(bcm4329_rfkill->gpio_wifi_reset);
-		ret = gpio_request(bcm4329_rfkill->gpio_wifi_reset,
-				"bcm4329_wifi_reset_gpio");
 	} else {
 		pr_warn("%s : can't find wifi_reset gpio.\n", __func__);
 		bcm4329_rfkill->gpio_wifi_reset = 0;
@@ -225,9 +267,7 @@ static int bcm4329_rfkill_probe(struct platform_device *pdev)
 			"bcm4329_vdd_gpio");
 	if (res) {
 		bcm4329_rfkill->gpio_bcm_vdd = res->start;
-		tegra_gpio_enable(bcm4329_rfkill->gpio_bcm_vdd);
-		ret = gpio_request(bcm4329_rfkill->gpio_bcm_vdd,
-				"bcm4329_vdd_gpio");
+		gpio_set_value(bcm4329_rfkill->gpio_bcm_vdd, 0);
 	} else {
 		pr_warn("%s : can't find bcm_vdd gpio.\n", __func__);
 		bcm4329_rfkill->gpio_bcm_vdd = 0;

@@ -154,6 +154,75 @@ static struct tegra_utmip_config utmi_phy_config[] = {
 	},
 };
 
+
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+
+static int bt_uart_gpio[] = {
+	TEGRA_GPIO_PW7,
+	TEGRA_GPIO_PW6,
+	TEGRA_GPIO_PA1,
+	TEGRA_GPIO_PC0,
+};
+
+static int disable_bt_uart_func(void)
+{
+	unsigned int rc = 0;
+	int i = 0;
+
+	for (i = 0; i < ARRAY_SIZE(bt_uart_gpio); i++) {
+		rc = gpio_request(bt_uart_gpio[i], NULL);
+		if (rc) {
+			printk(KERN_INFO "%s, request gpio %d failed !!!\n", __func__, bt_uart_gpio[i]);
+			return rc;
+		}
+
+		tegra_gpio_enable(bt_uart_gpio[i]);
+
+		rc = gpio_direction_output(bt_uart_gpio[i], 0);
+		if (rc) {
+			printk(KERN_INFO "%s, direction gpio %d failed !!!\n", __func__, bt_uart_gpio[i]);
+			return rc;
+		}
+	}
+	return 0;
+}
+
+static int enable_bt_uart_func(void)
+{
+	int i = 0;
+
+	for (i = 0; i < ARRAY_SIZE(bt_uart_gpio); i++) {
+		tegra_gpio_disable(bt_uart_gpio[i]);
+		gpio_free(bt_uart_gpio[i]);
+	}
+	return 0;
+}
+
+static void bt_ext_gpio_init(void)
+{
+	int ret;
+
+	pr_info("%s: \n", __func__);
+
+	tegra_gpio_enable(TEGRA_GPIO_PP0);
+
+	ret = gpio_request(TEGRA_GPIO_PP0, "bt_ext_wake");
+	if (ret)
+		pr_warn("%s : can't find bt_ext_wake gpio.\n", __func__);
+
+	/* configure ext_wake as output mode*/
+	ret = gpio_direction_output(TEGRA_GPIO_PP0, 0);
+	if (ret < 0) {
+		pr_warn("gpio-keys: failed to configure output"
+			" direction for GPIO %d, error %d\n",
+			  TEGRA_GPIO_PP0, ret);
+		gpio_free(TEGRA_GPIO_PP0);
+	}
+	gpio_set_value(TEGRA_GPIO_PP0, 0);
+	gpio_free(TEGRA_GPIO_PP0);
+}
+#endif
+
 #ifdef CONFIG_BCM4329_RFKILL
 
 static struct resource cardhu_bcm4329_rfkill_resources[] = {
@@ -205,6 +274,7 @@ static noinline void __init cardhu_bcm4329_bt_rfkill(void)
 	clk_add_alias("bcm4329_32k_clk", cardhu_bcm4329_rfkill_device.name, \
 				"blink", NULL);
 #if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	disable_bt_uart_func();
 	bt_shutdown_pin_init();
 #endif
 
@@ -281,6 +351,7 @@ static noinline void __init cardhu_setup_bluesleep(void)
 	platform_device_register(&cardhu_bluesleep_device);
 
 #if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	bt_ext_gpio_init();
 	tegra_gpio_enable(TEGRA_GPIO_PS7);
 	tegra_gpio_enable(TEGRA_GPIO_PP0);
 #else
