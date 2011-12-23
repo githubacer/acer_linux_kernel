@@ -17,7 +17,8 @@ config TEGRA_DC
 
 config TEGRA_OVERLAY
 	tristate "Tegra Overlay Device Node"
-	depends on TEGRA_DC && !TEGRA_DC_EXTENSIONS
+	depends on TEGRA_DC
+	default y
 	help
 	  Device node for multi-client overlay support.
 
