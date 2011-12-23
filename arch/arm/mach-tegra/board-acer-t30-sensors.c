@@ -1083,10 +1083,10 @@ int __init cardhu_sensors_init(void)
 
 	err = cardhu_nct1008_init();
 	if (err)
-		return err;
-
-	i2c_register_board_info(4, cardhu_i2c4_nct1008_board_info,
-		ARRAY_SIZE(cardhu_i2c4_nct1008_board_info));
+		pr_err("nct1008 init fail %d\n", err);
+	else
+		i2c_register_board_info(4, cardhu_i2c4_nct1008_board_info,
+			ARRAY_SIZE(cardhu_i2c4_nct1008_board_info));
 
 #ifdef CONFIG_MPU_SENSORS_MPU3050
 	cardhu_mpuirq_init();
