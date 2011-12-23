@@ -299,6 +299,16 @@ int tps6591x_power_off(void)
 
 	dev = &tps6591x_i2c_client->dev;
 
+#if defined(CONFIG_ARCH_ACER_T30)
+	/* Prevent rtc alarm after power off */
+	dev_info(&tps6591x_i2c_client->dev, "Disable RTC ALARM interrupt.\n");
+	ret = i2c_smbus_write_byte_data(tps6591x_i2c_client, TPS6591X_INT_MSK, 0xFF);
+	if (ret < 0) {
+		dev_err(&tps6591x_i2c_client->dev, "Mask RTC ALARM interrupt failed %d.\n", ret);
+		return -EIO;
+	}
+#endif
+
 	ret = tps6591x_set_bits(dev, TPS6591X_DEVCTRL, DEVCTRL_PWR_OFF_SEQ);
 	if (ret < 0)
 		return ret;
