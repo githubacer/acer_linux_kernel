@@ -567,11 +567,7 @@ static void tegra_otg_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops tegra_otg_pm_ops = {
-#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
-	.resume = tegra_otg_resume,
-#else
 	.complete = tegra_otg_resume,
-#endif
 	.suspend = tegra_otg_suspend,
 };
 #endif
