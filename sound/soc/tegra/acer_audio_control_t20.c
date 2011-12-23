@@ -72,9 +72,6 @@ static int switch_audio_table_dual(int control_mode, bool fromAP);
 extern int getAudioTable(void);
 extern void setAudioTable(int table_value);
 extern int get_headset_state(void);
-#if !defined(CONFIG_MACH_PICASSO_E)
-extern void start_stop_psensor(bool);
-#endif
 
 extern struct acer_audio_data audio_data;
 
@@ -455,78 +452,6 @@ void acer_volume_setting(struct snd_soc_codec *codec, struct snd_pcm_substream *
 		snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
 						WM8903_DRC_AMP_COMP_MASK,
 						R43_COMPRESSOR_THRESSHOLD_DEFAULT_YT << WM8903_DRC_AMP_COMP_SHIFT);
-	}
-}
-
-bool handset_mic_detect(struct snd_soc_codec *codec)
-{
-	int i = 0;
-	int withMic= 0;
-	int withoutMic= 0;
-	int MICDET_EINT_14= 0;
-	int MICSHRT_EINT_15= 0;
-	int irqStatus= 0;
-	int irq_mask;
-	int irq_val;
-	int CtrlReg = 0;
-
-	/* delay for avoiding pop noise when user plug in/out headset quickly */
-	msleep(1000);
-	if(gpio_get_value(audio_data.gpio.hp_det)) {
-		ACER_DBG("Do not enalbe mic bias when user plug in/out headset quickly");
-		return false;
-	}
-
-#if !defined(CONFIG_MACH_PICASSO_E)
-	start_stop_psensor(false);
-#endif
-
-	snd_soc_update_bits(codec, WM8903_CLOCK_RATES_2,
-				WM8903_CLK_SYS_ENA_MASK, WM8903_CLK_SYS_ENA);
-	snd_soc_update_bits(codec, WM8903_WRITE_SEQUENCER_0,
-				WM8903_WSEQ_ENA_MASK, WM8903_WSEQ_ENA);
-
-	irq_mask = WM8903_MICDET_EINT_MASK | WM8903_MICSHRT_EINT_MASK;
-	irq_val = WM8903_MICDET_EINT | WM8903_MICSHRT_EINT;
-	snd_soc_update_bits(codec, WM8903_INTERRUPT_STATUS_1_MASK, irq_mask, 0);
-
-	CtrlReg = WM8903_MICDET_ENA | WM8903_MICBIAS_ENA;
-	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, CtrlReg, CtrlReg);
-
-	/* add delay for mic bias stable */
-	msleep(100);
-
-	for (i = 0 ; i < 5 ; i++)
-	{
-		msleep(1);
-		irqStatus = snd_soc_read(codec, WM8903_INTERRUPT_STATUS_1);
-		MICDET_EINT_14 = (irqStatus >> 14) & 0x1;
-		MICSHRT_EINT_15 = (irqStatus >> 15) & 0x1;
-
-		if (MICDET_EINT_14 == MICSHRT_EINT_15)
-			withoutMic++;
-		else
-			withMic++;
-
-		if (i%2 == 0)
-			snd_soc_update_bits(codec, WM8903_INTERRUPT_POLARITY_1, irq_mask, 0);
-		else
-			snd_soc_update_bits(codec, WM8903_INTERRUPT_POLARITY_1, irq_mask, irq_val);
-	}
-
-	CtrlReg = WM8903_MICDET_ENA | WM8903_MICBIAS_ENA;
-	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, CtrlReg, 0);
-
-#if !defined(CONFIG_MACH_PICASSO_E)
-	start_stop_psensor(true);
-#endif
-
-	if (withMic > withoutMic) {
-		ACER_DBG("%s HEADSET_WITH_MIC !\n", __func__);
-		return true;
-	} else {
-		ACER_DBG("%s HEADSET_WITHOUT_MIC !\n", __func__);
-		return false;
 	}
 }
 

@@ -32,6 +32,8 @@ obj-$(CONFIG_SND_SOC_TEGRA_WM8753) += snd-soc-tegra-wm8753.o
 obj-$(CONFIG_SND_SOC_TEGRA_MAX98088) += snd-soc-tegra-max98088.o
 obj-$(CONFIG_SND_SOC_TEGRA_TLV320AIC326X) += snd-soc-tegra-aic326x.o
 
+obj-$(CONFIG_ARCH_ACER_T20) += acer_audio_common.o
+obj-$(CONFIG_ARCH_ACER_T30) += acer_audio_common.o
 obj-$(CONFIG_ARCH_ACER_T20) += acer_audio_control_t20.o
 obj-$(CONFIG_ARCH_ACER_T30) += acer_audio_control_t30.o
 obj-$(CONFIG_ACER_ES305)    += acer_a1026.o

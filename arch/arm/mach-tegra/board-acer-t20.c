@@ -470,7 +470,11 @@ static struct tegra_wm8903_platform_data ventana_audio_pdata = {
 	.gpio_hp_mute		= -1,
 	.gpio_int_mic_en	= TEGRA_GPIO_INT_MIC_EN,
 	.gpio_ext_mic_en	= -1,
+#ifdef CONFIG_MACH_PICASSO_E
 	.gpio_debug_switch_en   = TEGRA_GPIO_DEBUG_SWITCH_EN,
+#else
+	.gpio_debug_switch_en   = -1,
+#endif
 };
 
 static struct platform_device ventana_audio_device = {

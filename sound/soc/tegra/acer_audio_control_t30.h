@@ -1,9 +1,7 @@
-#ifndef __ACER_AUDIO_CONTROL_H__
-#define __ACER_AUDIO_CONTROL_H__
+#ifndef __ACER_AUDIO_CONTROL_T30_H__
+#define __ACER_AUDIO_CONTROL_T30_H__
 
-#include <mach/tegra_wm8903_pdata.h>
-#include <linux/delay.h>
-#include <sound/wm8903.h>
+#include "acer_audio_common.h"
 
 /* Define for Fops function */
 #define ACER_AUDIO_CONTROL_IOCTL_MAGIC	'f'
@@ -20,42 +18,6 @@
 #endif
 
 extern int switch_audio_table(int control_mode);
-extern bool handset_mic_detect(struct snd_soc_codec *codec);
-
-typedef enum {
-	DEFAULT             = 0,
-	MIC                 = 1,
-	VOICE_UPLINK        = 2,
-	VOICE_DOWNLINK      = 3,
-	VOICE_CALL          = 4,
-	CAMCORDER           = 5,
-	VOICE_RECOGNITION   = 6,
-	VOICE_COMMUNICATION = 7,
-
-	AUDIO_SOURCE_CNT,
-	AUDIO_SOURCE_MAX    = AUDIO_SOURCE_CNT - 1,
-} audio_source_t;
-
-struct acer_gpio_data {
-	/* gpio */
-	int spkr_en;
-	int hp_det;
-	int bypass_en;
-};
-
-struct acer_state_data {
-	bool int_mic;
-	bool ext_mic;
-};
-
-struct acer_audio_data {
-	int mode;
-	int input_table;
-	struct snd_soc_codec* codec;
-	const char *pin;
-	struct acer_gpio_data gpio;
-	struct acer_state_data state;
-};
 
 struct wm8903_codec_info {
 	uint32_t reg;

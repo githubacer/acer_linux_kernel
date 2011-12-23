@@ -135,9 +135,9 @@ int switch_audio_table(int control_mode)
 {
 	ACER_DBG("audio source = %d", control_mode);
 
-	audio_data.mode = control_mode;
+	audio_data.mode.control = control_mode;
 
-	switch (audio_data.mode) {
+	switch (audio_data.mode.control) {
 		case VOICE_COMMUNICATION: /* For VOIP */
 			/* TODO: input talbe for es305*/
 			break;
@@ -155,69 +155,6 @@ int switch_audio_table(int control_mode)
 	}
 
 	return 1;
-}
-
-bool handset_mic_detect(struct snd_soc_codec *codec)
-{
-	int i = 0;
-	int withMic= 0;
-	int withoutMic= 0;
-	int MICDET_EINT_14= 0;
-	int MICSHRT_EINT_15= 0;
-	int irqStatus= 0;
-	int irq_mask;
-	int irq_val;
-	int CtrlReg = 0;
-
-	/* delay for avoiding pop noise when user plug in/out headset quickly */
-	msleep(1000);
-	if (!gpio_get_value(audio_data.gpio.hp_det)) {
-		ACER_DBG("Do not enalbe mic bias when user plug in/out headset quickly");
-		return false;
-	}
-
-	snd_soc_update_bits(codec, WM8903_CLOCK_RATES_2,
-				WM8903_CLK_SYS_ENA_MASK, WM8903_CLK_SYS_ENA);
-	snd_soc_update_bits(codec, WM8903_WRITE_SEQUENCER_0,
-				WM8903_WSEQ_ENA_MASK, WM8903_WSEQ_ENA);
-
-	irq_mask = WM8903_MICDET_EINT_MASK | WM8903_MICSHRT_EINT_MASK;
-	irq_val = WM8903_MICDET_EINT | WM8903_MICSHRT_EINT;
-	snd_soc_update_bits(codec, WM8903_INTERRUPT_STATUS_1_MASK, irq_mask, 0);
-
-	CtrlReg = WM8903_MICDET_ENA | WM8903_MICBIAS_ENA;
-	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, CtrlReg, CtrlReg);
-
-	/* add delay for mic bias stable */
-	msleep(100);
-
-	for (i = 0; i <= 5; i++) {
-		msleep(1);
-		irqStatus = snd_soc_read(codec, WM8903_INTERRUPT_STATUS_1);
-		MICDET_EINT_14 = (irqStatus >> 14) & 0x1;
-		MICSHRT_EINT_15 = (irqStatus >> 15) & 0x1;
-
-		if (MICDET_EINT_14 == MICSHRT_EINT_15)
-			withoutMic++;
-		else
-			withMic++;
-
-		if (i%2 == 0)
-			snd_soc_update_bits(codec, WM8903_INTERRUPT_POLARITY_1, irq_mask, 0);
-		else
-			snd_soc_update_bits(codec, WM8903_INTERRUPT_POLARITY_1, irq_mask, irq_val);
-	}
-
-	CtrlReg = WM8903_MICDET_ENA | WM8903_MICBIAS_ENA;
-	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, CtrlReg, 0);
-
-	if (withMic > withoutMic) {
-		ACER_DBG("%s HEADSET_WITH_MIC !\n", __func__);
-		return true;
-	} else {
-		ACER_DBG("%s HEADSET_WITHOUT_MIC !\n", __func__);
-		return false;
-	}
 }
 
 /* fops for auxpga */
@@ -394,14 +331,14 @@ static int acer_audio_control_probe(struct platform_device *pdev)
 
 static int acer_audio_control_remove(struct platform_device *pdev)
 {
-	ACER_DBG("%s\n", __func__);
+	ACER_DBG("%s", __func__);
 	return 0;
 }
 
 static int __init acer_audio_control_init(void)
 {
 	int ret;
-	ACER_DBG("%s\n", __func__);
+	ACER_DBG("%s", __func__);
 	ret = platform_driver_register(&acer_audio_control_driver);
 	if (ret) {
 		pr_err("[acer_audio_control_driver] failed to register!!\n");

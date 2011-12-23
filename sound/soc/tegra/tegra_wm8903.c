@@ -371,19 +371,15 @@ int acer_soc_resume_post(struct snd_soc_card *card)
 {
 	enum headset_state state = BIT_NO_HEADSET;
 
-#if defined(CONFIG_ARCH_ACER_T30)
-	if (gpio_get_value(audio_data.gpio.hp_det)) {
-#else
-	if (!gpio_get_value(audio_data.gpio.hp_det)) {
-#endif
+	if (is_hp_plugged() && !is_debug_on()) {
 		if (handset_mic_detect(audio_data.codec)) {
 			state = BIT_HEADSET;
 		} else {
 			state = BIT_HEADSET_NO_MIC;
 		}
-	}
 
-	switch_set_state(&tegra_wm8903_headset_switch, state);
+		switch_set_state(&tegra_wm8903_headset_switch, state);
+	}
 
 	return 0;
 }
@@ -452,18 +448,6 @@ static struct snd_soc_jack_pin tegra_wm8903_mic_jack_pins[] = {
 		.mask = SND_JACK_MICROPHONE,
 	},
 };
-#endif
-
-#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
-static void wm8903_event_printf(const char* func, int event)
-{
-#if defined(CONFIG_ARCH_ACER_T30)
-	pr_info("[Audio]:%s = %d, bypass = %d\n", func, SND_SOC_DAPM_EVENT_ON(event),
-			gpio_get_value(audio_data.gpio.bypass_en));
-#else
-	pr_info("[Audio]:%s = %d\n", func, SND_SOC_DAPM_EVENT_ON(event));
-#endif
-}
 #endif
 
 static int tegra_wm8903_event_int_spk(struct snd_soc_dapm_widget *w,
@@ -856,9 +840,9 @@ static int tegra_wm8903_init(struct snd_soc_pcm_runtime *rtd)
 #endif
 
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	audio_data.gpio.debug_en = pdata->gpio_debug_switch_en;
 	/* if debug on, will not enable headset */
-	if (gpio_is_valid(pdata->gpio_hp_det) &&
-		!gpio_get_value(pdata->gpio_debug_switch_en)) {
+	if (gpio_is_valid(pdata->gpio_hp_det) && !is_debug_on()) {
 		pr_info("[Audio]register headphone jack\n");
 #else
 	if (gpio_is_valid(pdata->gpio_hp_det)) {
