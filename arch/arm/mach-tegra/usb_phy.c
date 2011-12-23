@@ -36,12 +36,6 @@
 #include "gpio-names.h"
 #include "fuse.h"
 
-#if defined(CONFIG_ARCH_ACER_T30)
-#include <linux/gpio.h>
-#include "../../../../arch/arm/mach-tegra/gpio-names.h"
-#include "../../../../arch/arm/mach-tegra/board-acer-t30.h"
-#endif
-
 /* Modem hibernate test parameters */
 #define TRIGGER_BY_MDM2AP_ACK	1
 /* ------------------------------- */
@@ -705,19 +699,6 @@ struct usb_phy_plat_data usb_phy_data[] = {
 	{ 0, 0, -1, NULL},
 	{ 0, 0, -1, NULL},
 };
-
-#if defined(CONFIG_ARCH_ACER_T30)
-extern int acer_board_type;
-extern int acer_board_id;
-
-static int get_dock_gpio_pin(void)
-{
-        if (acer_board_type == BOARD_PICASSO_2 && (acer_board_id == BOARD_EVT || acer_board_id == BOARD_DVT1))
-                return TEGRA_GPIO_PBB0;
-        else
-                return TEGRA_GPIO_PBB6;
-}
-#endif
 
 static int utmip_pad_open(struct tegra_usb_phy *phy)
 {
@@ -2478,7 +2459,7 @@ struct tegra_usb_phy *tegra_usb_phy_open(int instance, void __iomem *regs,
 	}
 #endif
 #if defined(CONFIG_ARCH_ACER_T30)
-	if ((instance == 0) && (gpio_get_value(get_dock_gpio_pin())) &&
+	if ((instance == 0) &&
 #else
 	if (((instance == 2) || (instance == 0)) &&
 #endif
