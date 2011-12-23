@@ -382,6 +382,24 @@ static __initdata struct tegra_pingroup_config picasso2_pinmux_common[] = {
 	DEFAULT_PINMUX(UART3_RTS_N,     UARTC,           NORMAL,    NORMAL,     OUTPUT), // Function o
 	DEFAULT_PINMUX(UART3_RXD,       UARTC,           NORMAL,    NORMAL,     INPUT), // Function
 	DEFAULT_PINMUX(UART3_TXD,       UARTC,           NORMAL,    NORMAL,     OUTPUT), // Function o
+
+	/*Add from 14r2*/
+	DEFAULT_PINMUX(CLK1_REQ,        DAP,             NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(PEX_L0_PRSNT_N,  PCIE,            NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(PEX_L0_RST_N,    PCIE,            NORMAL,    NORMAL,     OUTPUT),
+	DEFAULT_PINMUX(PEX_L0_CLKREQ_N, PCIE,            NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(PEX_L1_PRSNT_N,  PCIE,            NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(PEX_L1_RST_N,    PCIE,            NORMAL,    NORMAL,     OUTPUT),
+	DEFAULT_PINMUX(PEX_L1_CLKREQ_N, PCIE,            NORMAL,    NORMAL,     INPUT),
+	DEFAULT_PINMUX(JTAG_RTCK,       RTCK,            NORMAL,    NORMAL,     OUTPUT),
+	VI_PINMUX(VI_D6,           VI,              NORMAL,    NORMAL,     OUTPUT, DISABLE, DISABLE),
+	VI_PINMUX(VI_D8,           SDMMC2,          NORMAL,    NORMAL,     INPUT,  DISABLE, DISABLE),
+	VI_PINMUX(VI_D9,           SDMMC2,          NORMAL,    NORMAL,     INPUT,  DISABLE, DISABLE),
+	VI_PINMUX(VI_PCLK,         RSVD1,           PULL_UP,   TRISTATE,   INPUT,  DISABLE, DISABLE),
+	VI_PINMUX(VI_HSYNC,        RSVD1,           NORMAL,    NORMAL,     INPUT,  DISABLE, DISABLE),
+	VI_PINMUX(VI_VSYNC,        RSVD1,           NORMAL,    NORMAL,     INPUT,  DISABLE, DISABLE),
+	/* SDMMC1 WP gpio */
+	DEFAULT_PINMUX(VI_D11,          RSVD1,           PULL_UP,   NORMAL,     INPUT),
 };
 #endif /* Picasso2 & PicassoM Pinmux configuration */
 
@@ -480,35 +498,30 @@ int __init acer_t30_pinmux_init(void)
 		switch(acer_board_id) {
 		case BOARD_EVT:
 		case BOARD_DVT1:
-			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up, ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
-			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt1, ARRAY_SIZE(cardhu_pinmux_sensor_dvt1));
+			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up,
+						ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
+			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt1,
+						ARRAY_SIZE(cardhu_pinmux_sensor_dvt1));
 			break;
 		case BOARD_DVT2:
-			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up, ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
-			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt2, ARRAY_SIZE(cardhu_pinmux_sensor_dvt2));
+			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up,
+						ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
+			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt2,
+						ARRAY_SIZE(cardhu_pinmux_sensor_dvt2));
 			break;
 		default:
-			tegra_pinmux_config_table(cardhu_pinmux_dock_internal_pull_up, ARRAY_SIZE(cardhu_pinmux_dock_internal_pull_up));
-			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt2, ARRAY_SIZE(cardhu_pinmux_sensor_dvt2));
+			tegra_pinmux_config_table(cardhu_pinmux_dock_internal_pull_up,
+						ARRAY_SIZE(cardhu_pinmux_dock_internal_pull_up));
+			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt2,
+						ARRAY_SIZE(cardhu_pinmux_sensor_dvt2));
 			break;
 		}
 		break;
 	case BOARD_PICASSO_M:
-		switch(acer_board_id) {
-		case BOARD_EVT:
-		case BOARD_DVT1:
-			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up, ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
-			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt1, ARRAY_SIZE(cardhu_pinmux_sensor_dvt1));
-			break;
-		case BOARD_DVT2:
-			tegra_pinmux_config_table(cardhu_pinmux_dock_external_pull_up, ARRAY_SIZE(cardhu_pinmux_dock_external_pull_up));
-			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt2, ARRAY_SIZE(cardhu_pinmux_sensor_dvt2));
-			break;
-		default:
-			tegra_pinmux_config_table(cardhu_pinmux_dock_internal_pull_up, ARRAY_SIZE(cardhu_pinmux_dock_internal_pull_up));
-			tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt2, ARRAY_SIZE(cardhu_pinmux_sensor_dvt2));
-			break;
-		}
+		tegra_pinmux_config_table(cardhu_pinmux_dock_internal_pull_up,
+					ARRAY_SIZE(cardhu_pinmux_dock_internal_pull_up));
+		tegra_pinmux_config_table(cardhu_pinmux_sensor_dvt2,
+					ARRAY_SIZE(cardhu_pinmux_sensor_dvt2));
 		break;
 	}
 	tegra_drive_pinmux_config_table(cardhu_drive_pinmux,
