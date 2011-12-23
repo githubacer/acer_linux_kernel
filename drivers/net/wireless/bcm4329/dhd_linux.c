@@ -402,7 +402,7 @@ module_param(dhd_dongle_memsize, int, 0);
 
 /* Control fw roaming */
 #ifdef CUSTOMER_HW2
-uint dhd_roam = 0;
+uint dhd_roam = 1;
 #else
 uint dhd_roam = 1;
 #endif
