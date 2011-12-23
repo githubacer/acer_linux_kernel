@@ -151,6 +151,8 @@ static void hsuart_power(int on)
 #if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
 	return;
 #endif
+	if (bsi->uport == NULL)
+		return;
 	if (on) {
 		tegra_uart_request_clock_on(bsi->uport);
 		tegra_uart_set_mctrl(bsi->uport, TIOCM_RTS);
