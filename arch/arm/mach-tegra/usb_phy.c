@@ -682,7 +682,11 @@ static struct tegra_utmip_config utmip_default[] = {
 		.idle_wait_delay = 17,
 		.elastic_limit = 16,
 		.term_range_adj = 6,
+#ifdef CONFIG_ARCH_ACER_T30
+		.xcvr_setup_offset = 4,
+#else
 		.xcvr_setup_offset = 0,
+#endif
 		.xcvr_use_fuses = 1,
 #ifdef CONFIG_ARCH_ACER_T20
 		.xcvr_setup = 10,
@@ -2363,7 +2367,14 @@ struct tegra_usb_phy *tegra_usb_phy_open(int instance, void __iomem *regs,
 
 	if (phy->usb_phy_type == TEGRA_USB_PHY_TYPE_UTMIP) {
 		err = utmip_pad_open(phy);
+#ifdef CONFIG_ARCH_ACER_T30
+		if (instance == 0)
+			phy->xcvr_setup_value = 0x3F;
+		else
+			phy->xcvr_setup_value = tegra_phy_xcvr_setup_value(phy->config);
+#else
 		phy->xcvr_setup_value = tegra_phy_xcvr_setup_value(phy->config);
+#endif
 		if (err < 0)
 			goto err1;
 	} else if (phy->usb_phy_type == TEGRA_USB_PHY_TYPE_LINK_ULPI) {
