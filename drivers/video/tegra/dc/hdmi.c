@@ -1045,7 +1045,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto err_free_irq;
 	}
 
-#ifdef CONFIG_TEGRA_NVHDCP
 	hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
 			dc->out->dcc_bus);
 	if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
@@ -1053,9 +1052,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		err = PTR_ERR(hdmi->nvhdcp);
 		goto err_edid_destroy;
 	}
-#else
-	hdmi->nvhdcp = NULL;
-#endif
 
 	INIT_DELAYED_WORK(&hdmi->work, tegra_dc_hdmi_detect_worker);
 
@@ -1100,9 +1096,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	return 0;
 
-#ifdef CONFIG_TEGRA_NVHDCP
 err_edid_destroy:
-#endif
 	tegra_edid_destroy(hdmi->edid);
 err_free_irq:
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
