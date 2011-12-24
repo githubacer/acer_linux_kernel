@@ -68,6 +68,7 @@
 #include "fuse.h"
 #include "pm.h"
 #include "baseband-xmm-power.h"
+#include "wdt-recovery.h"
 
 #if defined(CONFIG_DOCK_V2)
 #include <linux/switch.h>
@@ -375,6 +376,8 @@ static __initdata struct tegra_clk_init_table cardhu_clk_init_table[] = {
 	{ "dam0",	"pll_a_out0",	0,		false},
 	{ "dam1",	"pll_a_out0",	0,		false},
 	{ "dam2",	"pll_a_out0",	0,		false},
+	{ "audio1",     "i2s1_sync",    0,              false},
+	{ "audio3",     "i2s3_sync",    0,              false},
 	{ "vi_sensor",	"pll_p",	150000000,	false},
 	{ "i2c1",	"pll_p",	3200000,	false},
 	{ "i2c2",	"pll_p",	3200000,	false},
@@ -766,6 +769,8 @@ static void __init cardhu_spi_init(void)
 	if (board_info.board_id == BOARD_E1198) {
 		tegra_spi_device2.dev.platform_data = &cardhu_spi_pdata;
 		platform_device_register(&tegra_spi_device2);
+		tegra_spi_slave_device1.dev.platform_data = &cardhu_spi_pdata;
+		platform_device_register(&tegra_spi_slave_device1);
 	}
 }
 
@@ -1049,7 +1054,7 @@ static struct usb_phy_plat_data tegra_usb_phy_pdata[] = {
 	},
 };
 
-static int cardu_usb_hsic_postsupend(void)
+static int cardhu_usb_hsic_postsupend(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L2);
@@ -1057,7 +1062,7 @@ static int cardu_usb_hsic_postsupend(void)
 	return 0;
 }
 
-static int cardu_usb_hsic_preresume(void)
+static int cardhu_usb_hsic_preresume(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L2TOL0);
@@ -1065,7 +1070,7 @@ static int cardu_usb_hsic_preresume(void)
 	return 0;
 }
 
-static int cardu_usb_hsic_phy_ready(void)
+static int cardhu_usb_hsic_phy_ready(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L0);
@@ -1073,7 +1078,7 @@ static int cardu_usb_hsic_phy_ready(void)
 	return 0;
 }
 
-static int cardu_usb_hsic_phy_off(void)
+static int cardhu_usb_hsic_phy_off(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L3);
@@ -1391,6 +1396,9 @@ static void __init tegra_cardhu_init(void)
 	picasso2_led_init();
 #endif
 	tegra_release_bootloader_fb();
+#ifdef CONFIG_TEGRA_WDT_RECOVERY
+	tegra_wdt_recovery_init();
+#endif
 	acer_board_info();
 #ifdef CONFIG_PSENSOR3G
 	picasso2_psensor_3g_init();

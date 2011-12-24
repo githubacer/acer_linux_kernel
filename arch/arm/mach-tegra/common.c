@@ -96,6 +96,7 @@ unsigned long tegra_grhost_aperture = ~0ul;
 static   bool is_tegra_debug_uart_hsport;
 static struct board_info pmu_board_info;
 static struct board_info display_board_info;
+static struct board_info camera_board_info;
 
 static int pmu_core_edp = 1200;	/* default 1.2V EDP limit */
 static int board_panel_type;
@@ -268,6 +269,7 @@ void tegra_init_cache(bool init)
 #ifdef CONFIG_CACHE_L2X0
 	void __iomem *p = IO_ADDRESS(TEGRA_ARM_PERIF_BASE) + 0x3000;
 	u32 aux_ctrl;
+	u32 speedo;
 	u32 tmp;
 
 #ifdef CONFIG_TRUSTED_FOUNDATIONS
@@ -295,9 +297,15 @@ void tegra_init_cache(bool init)
 		writel(0x221, p + L2X0_TAG_LATENCY_CTRL);
 		writel(0x221, p + L2X0_DATA_LATENCY_CTRL);
 	} else {
-		/* FIXME: This should be based on speedo id. */
-		writel(0x442, p + L2X0_TAG_LATENCY_CTRL);
-		writel(0x552, p + L2X0_DATA_LATENCY_CTRL);
+		/* relax l2-cache latency for speedos 4,5,6 (T33's chips) */
+		speedo = tegra_cpu_speedo_id();
+		if (speedo == 4 || speedo == 5 || speedo == 6) {
+			writel(0x442, p + L2X0_TAG_LATENCY_CTRL);
+			writel(0x552, p + L2X0_DATA_LATENCY_CTRL);
+		} else {
+			writel(0x441, p + L2X0_TAG_LATENCY_CTRL);
+			writel(0x551, p + L2X0_DATA_LATENCY_CTRL);
+		}
 	}
 #else
 	writel(0x770, p + L2X0_TAG_LATENCY_CTRL);
@@ -641,6 +649,24 @@ void tegra_get_display_board_info(struct board_info *bi)
 
 __setup("displayboard=", tegra_display_board_info);
 
+static int __init tegra_camera_board_info(char *info)
+{
+	char *p = info;
+	camera_board_info.board_id = memparse(p, &p);
+	camera_board_info.sku = memparse(p+1, &p);
+	camera_board_info.fab = memparse(p+1, &p);
+	camera_board_info.major_revision = memparse(p+1, &p);
+	camera_board_info.minor_revision = memparse(p+1, &p);
+	return 1;
+}
+
+void tegra_get_camera_board_info(struct board_info *bi)
+{
+	memcpy(bi, &camera_board_info, sizeof(struct board_info));
+}
+
+__setup("cameraboard=", tegra_camera_board_info);
+
 static int __init tegra_modem_id(char *id)
 {
 	char *p = id;
@@ -768,18 +794,24 @@ out:
 	iounmap(to_io);
 }
 
-#ifdef CONFIG_TEGRA_IOVMM_SMMU
+#ifdef CONFIG_TEGRA_SMMU_BASE_AT_E0000000
+#define FORCE_SMMU_BASE_FOR_TEGRA3_A01 1
+#else
+#define FORCE_SMMU_BASE_FOR_TEGRA3_A01 0
+#endif
+#if FORCE_SMMU_BASE_FOR_TEGRA3_A01 ||  \
+	(defined(CONFIG_TEGRA_IOVMM_SMMU) && defined(CONFIG_ARCH_TEGRA_3x_SOC))
 /* Support for Tegra3 A01 chip mask that needs to have SMMU IOVA reside in
  * the upper half of 4GB IOVA space. A02 and after use the bottom 1GB and
  * do not need to reserve memory.
  */
-#define SUPPORT_TEGRA_3_IOVMM_SMMU_A01
+#define SUPPORT_SMMU_BASE_FOR_TEGRA3_A01
 #endif
 
 void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	unsigned long fb2_size)
 {
-#ifdef SUPPORT_TEGRA_3_IOVMM_SMMU_A01
+#ifdef SUPPORT_SMMU_BASE_FOR_TEGRA3_A01
 	int smmu_reserved = 0;
 	struct tegra_smmu_window *smmu_window = tegra_smmu_window(0);
 #endif
@@ -829,16 +861,18 @@ void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 	if (tegra_carveout_size && tegra_carveout_start < tegra_grhost_aperture)
 		tegra_grhost_aperture = tegra_carveout_start;
 
-#ifdef SUPPORT_TEGRA_3_IOVMM_SMMU_A01
+#ifdef SUPPORT_SMMU_BASE_FOR_TEGRA3_A01
 	if (!smmu_window) {
 		pr_err("No SMMU resource\n");
 	} else {
 		size_t smmu_window_size;
 
-		if (tegra_get_revision() == TEGRA_REVISION_A01) {
-			smmu_window->start = TEGRA_SMMU_BASE_A01;
-			smmu_window->end   = TEGRA_SMMU_BASE_A01 +
-						TEGRA_SMMU_SIZE_A01 - 1;
+		if (FORCE_SMMU_BASE_FOR_TEGRA3_A01 ||
+			(tegra_get_chipid() == TEGRA_CHIPID_TEGRA3 &&
+			tegra_get_revision() == TEGRA_REVISION_A01)) {
+			smmu_window->start = TEGRA_SMMU_BASE_TEGRA3_A01;
+			smmu_window->end   = TEGRA_SMMU_BASE_TEGRA3_A01 +
+						TEGRA_SMMU_SIZE_TEGRA3_A01 - 1;
 		}
 		smmu_window_size = smmu_window->end + 1 - smmu_window->start;
 		if (smmu_window->start >= 0x80000000) {
@@ -908,7 +942,7 @@ void __init tegra_reserve(unsigned long carveout_size, unsigned long fb_size,
 		tegra_vpr_size ?
 			tegra_vpr_start + tegra_vpr_size - 1 : 0);
 
-#ifdef SUPPORT_TEGRA_3_IOVMM_SMMU_A01
+#ifdef SUPPORT_SMMU_BASE_FOR_TEGRA3_A01
 	if (smmu_reserved)
 		pr_info("SMMU:                   %08lx - %08lx\n",
 			smmu_window->start, smmu_window->end);

@@ -712,6 +712,12 @@ static int nct_get_temp(void *_data, long *temp)
 	return nct1008_thermal_get_temp(data, temp);
 }
 
+static int nct_get_temp_low(void *_data, long *temp)
+{
+	struct nct1008_data *data = _data;
+	return nct1008_thermal_get_temp_low(data, temp);
+}
+
 static int nct_set_limits(void *_data,
 			long lo_limit_milli,
 			long hi_limit_milli)
@@ -746,9 +752,11 @@ static void nct1008_probe_callback(struct nct1008_data *data)
 		return;
 	}
 
+	thermal_device->name = "nct1008";
 	thermal_device->data = data;
 	thermal_device->offset = TDIODE_OFFSET;
 	thermal_device->get_temp = nct_get_temp;
+	thermal_device->get_temp_low = nct_get_temp_low;
 	thermal_device->set_limits = nct_set_limits;
 	thermal_device->set_alert = nct_set_alert;
 	thermal_device->set_shutdown_temp = nct_set_shutdown_temp;

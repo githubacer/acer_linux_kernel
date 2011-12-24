@@ -250,6 +250,27 @@ static struct resource spi_resource6[] = {
 };
 #endif
 
+#ifndef CONFIG_ARCH_TEGRA_2x_SOC
+static struct resource dtv_resource[] = {
+	[0] = {
+		.start  = INT_DTV,
+		.end    = INT_DTV,
+		.flags  = IORESOURCE_IRQ,
+	},
+	[1] = {
+		.start  = TEGRA_DTV_BASE,
+		.end    = TEGRA_DTV_BASE + TEGRA_DTV_SIZE - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start	= TEGRA_DMA_REQ_SEL_DTV,
+		.end	= TEGRA_DMA_REQ_SEL_DTV,
+		.flags	= IORESOURCE_DMA
+	},
+};
+#endif
+
+
 struct platform_device tegra_spi_device1 = {
 	.name		= "spi_tegra",
 	.id		= 0,
@@ -402,6 +423,19 @@ struct platform_device tegra_nor_device = {
 	},
 };
 
+#ifndef CONFIG_ARCH_TEGRA_2x_SOC
+struct platform_device tegra_dtv_device = {
+	.name           = "tegra_dtv",
+	.id             = -1,
+	.resource       = dtv_resource,
+	.num_resources  = ARRAY_SIZE(dtv_resource),
+	.dev = {
+		.init_name = "dtv",
+		.coherent_dma_mask = 0xffffffff,
+	},
+};
+#endif
+
 static struct resource sdhci_resource1[] = {
 	[0] = {
 		.start	= INT_SDMMC1,
@@ -451,6 +485,16 @@ static struct resource sdhci_resource4[] = {
 		.start	= TEGRA_SDMMC4_BASE,
 		.end	= TEGRA_SDMMC4_BASE + TEGRA_SDMMC4_SIZE-1,
 		.flags	= IORESOURCE_MEM,
+	},
+};
+
+struct platform_device tegra_pci_device = {
+	.name		= "tegra-pcie",
+	.id		= 0,
+	.resource	= 0,
+	.num_resources	= 0,
+	.dev = {
+		.platform_data = 0,
 	},
 };
 

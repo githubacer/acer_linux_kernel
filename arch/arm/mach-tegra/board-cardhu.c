@@ -38,6 +38,7 @@
 #include <linux/tegra_uart.h>
 #include <linux/memblock.h>
 #include <linux/spi-tegra.h>
+#include <linux/nfc/pn544.h>
 
 #include <sound/wm8903.h>
 
@@ -52,8 +53,8 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <mach/usb_phy.h>
-#include <linux/nfc/pn544.h>
 #include <mach/thermal.h>
+#include <mach/pci.h>
 
 #include "board.h"
 #include "clock.h"
@@ -63,6 +64,7 @@
 #include "fuse.h"
 #include "pm.h"
 #include "baseband-xmm-power.h"
+#include "wdt-recovery.h"
 
 /* All units are in millicelsius */
 static struct tegra_thermal_data thermal_data = {
@@ -500,6 +502,8 @@ static void __init cardhu_spi_init(void)
 	if (board_info.board_id == BOARD_E1198) {
 		tegra_spi_device2.dev.platform_data = &cardhu_spi_pdata;
 		platform_device_register(&tegra_spi_device2);
+		tegra_spi_slave_device1.dev.platform_data = &cardhu_spi_pdata;
+		platform_device_register(&tegra_spi_slave_device1);
 	}
 }
 
@@ -745,7 +749,7 @@ static struct usb_phy_plat_data tegra_usb_phy_pdata[] = {
 	},
 };
 
-static int cardu_usb_hsic_postsupend(void)
+static int cardhu_usb_hsic_postsupend(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L2);
@@ -753,7 +757,7 @@ static int cardu_usb_hsic_postsupend(void)
 	return 0;
 }
 
-static int cardu_usb_hsic_preresume(void)
+static int cardhu_usb_hsic_preresume(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L2TOL0);
@@ -761,7 +765,7 @@ static int cardu_usb_hsic_preresume(void)
 	return 0;
 }
 
-static int cardu_usb_hsic_phy_ready(void)
+static int cardhu_usb_hsic_phy_ready(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L0);
@@ -769,7 +773,7 @@ static int cardu_usb_hsic_phy_ready(void)
 	return 0;
 }
 
-static int cardu_usb_hsic_phy_off(void)
+static int cardhu_usb_hsic_phy_off(void)
 {
 #ifdef CONFIG_TEGRA_BB_XMM_POWER
 	baseband_xmm_set_power_status(BBXMM_PS_L3);
@@ -799,10 +803,10 @@ static void cardhu_usb_init(void)
 	} else if (bi.board_id == BOARD_E1186) {
 		/* for baseband devices do not switch off phy during suspend */
 		tegra_ehci_uhsic_pdata.power_down_on_bus_suspend = 0;
-		uhsic_phy_config.postsuspend = cardu_usb_hsic_postsupend;
-		uhsic_phy_config.preresume = cardu_usb_hsic_preresume;
-		uhsic_phy_config.usb_phy_ready = cardu_usb_hsic_phy_ready;
-		uhsic_phy_config.post_phy_off = cardu_usb_hsic_phy_off;
+		uhsic_phy_config.postsuspend = cardhu_usb_hsic_postsupend;
+		uhsic_phy_config.preresume = cardhu_usb_hsic_preresume;
+		uhsic_phy_config.usb_phy_ready = cardhu_usb_hsic_phy_ready;
+		uhsic_phy_config.post_phy_off = cardhu_usb_hsic_phy_off;
 		tegra_ehci2_device.dev.platform_data = &tegra_ehci_uhsic_pdata;
 		/* baseband registration happens in baseband-xmm-power  */
 	} else {
@@ -860,6 +864,31 @@ static struct platform_device tegra_baseband_power2_device = {
 		.platform_data = &tegra_baseband_power_data,
 	},
 };
+
+
+static struct tegra_pci_platform_data cardhu_pci_platform_data = {
+	.port_status[0]	= 1,
+	.port_status[1]	= 1,
+	.port_status[2]	= 1,
+	.use_dock_detect	= 0,
+	.gpio		= 0,
+};
+
+static void cardhu_pci_init(void)
+{
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if (board_info.board_id == BOARD_E1291) {
+		cardhu_pci_platform_data.port_status[0] = 0;
+		cardhu_pci_platform_data.port_status[1] = 0;
+		cardhu_pci_platform_data.port_status[2] = 1;
+		cardhu_pci_platform_data.use_dock_detect = 1;
+		cardhu_pci_platform_data.gpio = DOCK_DETECT_GPIO;
+	}
+	tegra_pci_device.dev.platform_data = &cardhu_pci_platform_data;
+	platform_device_register(&tegra_pci_device);
+}
 
 static void cardhu_modem_init(void)
 {
@@ -967,6 +996,10 @@ static void __init tegra_cardhu_init(void)
 	cardhu_emc_init();
 	tegra_release_bootloader_fb();
 	cardhu_nfc_init();
+	cardhu_pci_init();
+#ifdef CONFIG_TEGRA_WDT_RECOVERY
+	tegra_wdt_recovery_init();
+#endif
 }
 
 static void __init cardhu_ramconsole_reserve(unsigned long size)

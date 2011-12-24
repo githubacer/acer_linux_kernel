@@ -64,7 +64,6 @@ struct tegra_ehci_hcd {
 	int bus_suspended;
 	int port_resuming;
 	int power_down_on_bus_suspend;
-	int ehci_power_off;
 	struct delayed_work work;
 	enum tegra_usb_phy_port_speed port_speed;
 	struct work_struct clk_timer_work;
@@ -910,85 +909,6 @@ static void clk_timer_work_handler(struct work_struct* clk_timer_work) {
 	}
 }
 
-#ifdef CONFIG_USB_EHCI_ONOFF_FEATURE
-/* Stored ehci handle for hsic insatnce */
-struct usb_hcd *ehci_handle;
-int ehci_tegra_irq;
-
-static ssize_t show_ehci_power(struct device *dev,
-			struct device_attribute *attr,
-			char *buf)
-{
-	return sprintf(buf, "EHCI Power %s\n", (ehci_handle) ? "on" : "off");
-}
-
-static ssize_t store_ehci_power(struct device *dev,
-		struct device_attribute *attr,
-		const char *buf, size_t count)
-{
-	int power_on;
-	int retval;
-	struct tegra_ehci_hcd *tegra = dev_get_drvdata(dev);
-	struct usb_hcd *hcd = ehci_to_hcd(tegra->ehci);
-	bool clock_enabled;
-	unsigned long flags;
-
-	if (sscanf(buf, "%d", &power_on) != 1)
-		return -EINVAL;
-
-	if (power_on == 0 && ehci_handle != NULL) {
-		del_timer_sync(&tegra->clk_timer);
-		spin_lock_irqsave(&tegra->ehci->lock, flags);
-		clock_enabled = tegra->clock_enabled;
-		spin_unlock_irqrestore(&tegra->ehci->lock, flags);
-		if (clock_enabled) {
-			spin_lock_irqsave(&tegra->ehci->lock, flags);
-			tegra->clock_enabled = 0;
-			spin_unlock_irqrestore(&tegra->ehci->lock, flags);
-			clk_disable(tegra->emc_clk);
-			clk_disable(tegra->sclk_clk);
-		}
-		tegra->ehci_power_off = 1;
-		usb_remove_hcd(hcd);
-		tegra_ehci_power_down(hcd, false);
-		ehci_handle = NULL;
-	} else if (power_on == 1) {
-		if (ehci_handle) {
-			del_timer_sync(&tegra->clk_timer);
-			usb_remove_hcd(hcd);
-		}
-		tegra->ehci_power_off = 0;
-		tegra_ehci_power_up(hcd, false);
-		retval = usb_add_hcd(hcd, ehci_tegra_irq,
-					IRQF_DISABLED | IRQF_SHARED);
-		if (retval < 0)
-			printk(KERN_ERR "power_on error\n");
-		ehci_handle = hcd;
-		init_timer(&tegra->clk_timer);
-		tegra->clk_timer.function = clk_timer_callback;
-		tegra->clk_timer.data = (unsigned long) tegra;
-	}
-
-	return count;
-}
-
-static DEVICE_ATTR(ehci_power, S_IRUSR | S_IRGRP | S_IWUSR | S_IWGRP,
-		show_ehci_power, store_ehci_power);
-
-static inline int create_ehci_sys_file(struct ehci_hcd *ehci)
-{
-	return device_create_file(ehci_to_hcd(ehci)->self.controller,
-							&dev_attr_ehci_power);
-}
-
-static inline void remove_ehci_sys_file(struct ehci_hcd *ehci)
-{
-	device_remove_file(ehci_to_hcd(ehci)->self.controller,
-						&dev_attr_ehci_power);
-}
-
-#endif
-
 static int tegra_ehci_urb_enqueue (
 	struct usb_hcd	*hcd,
 	struct urb	*urb,
@@ -1129,8 +1049,8 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 	/* Set DDR busy hints to 150MHz. For Tegra 2x SOC, DDR rate is half of EMC rate */
 	clk_set_rate(tegra->emc_clk, 300000000);
 #else
-	/* Set DDR busy hints to 150MHz. For Tegra 3x SOC DDR rate equals to EMC rate */
-	clk_set_rate(tegra->emc_clk, 150000000);
+	/* Set DDR busy hints to 100MHz. For Tegra 3x SOC DDR rate equals to EMC rate */
+	clk_set_rate(tegra->emc_clk, 100000000);
 #endif
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	clk_enable(tegra->emc_clk);
@@ -1182,13 +1102,6 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 	set_irq_flags(irq, IRQF_VALID);
 	tegra->irq = irq;
 
-#ifdef CONFIG_USB_EHCI_ONOFF_FEATURE
-	if (instance == 1) {
-		ehci_tegra_irq = irq;
-		create_ehci_sys_file(tegra->ehci);
-	}
-#endif
-
 #ifdef CONFIG_USB_OTG_UTILS
 	if (pdata->operating_mode == TEGRA_USB_OTG) {
 		tegra->transceiver = otg_get_transceiver();
@@ -1220,13 +1133,10 @@ static int tegra_ehci_probe(struct platform_device *pdev)
 			"Couldn't enable USB host mode wakeup, irq=%d, "
 			"error=%d\n", tegra->irq, err);
 		err = 0;
+		tegra->irq = 0;
 	}
 #endif
 
-#ifdef CONFIG_USB_EHCI_ONOFF_FEATURE
-	if (instance == 1)
-		ehci_handle = hcd;
-#endif
 	return err;
 
 fail:
@@ -1262,13 +1172,6 @@ static int tegra_ehci_resume(struct platform_device *pdev)
 	struct tegra_ehci_hcd *tegra = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = ehci_to_hcd(tegra->ehci);
 
-#ifdef CONFIG_USB_EHCI_ONOFF_FEATURE
-	if (tegra->ehci_power_off) {
-		pr_info("%s: ehci_power off - nop\n", __func__);
-		return 0;
-	}
-#endif
-
 	if ((tegra->bus_suspended) && (tegra->power_down_on_bus_suspend)) {
 #ifdef CONFIG_USB_HOTPLUG
 		clk_enable(tegra->clk);
@@ -1287,13 +1190,6 @@ static int tegra_ehci_suspend(struct platform_device *pdev, pm_message_t state)
 	struct tegra_ehci_hcd *tegra = platform_get_drvdata(pdev);
 	struct usb_hcd *hcd = ehci_to_hcd(tegra->ehci);
 	int ret;
-
-#ifdef CONFIG_USB_EHCI_ONOFF_FEATURE
-	if (tegra->ehci_power_off) {
-		pr_info("%s: ehci_power off - nop\n", __func__);
-		return 0;
-	}
-#endif
 
 	if ((tegra->bus_suspended) && (tegra->power_down_on_bus_suspend)) {
 #ifdef CONFIG_USB_HOTPLUG
@@ -1331,13 +1227,6 @@ static int tegra_ehci_remove(struct platform_device *pdev)
 	}
 #endif
 
-#ifdef CONFIG_USB_EHCI_ONOFF_FEATURE
-	if (tegra->phy->instance == 1) {
-		remove_ehci_sys_file(hcd_to_ehci(hcd));
-		ehci_handle = NULL;
-	}
-#endif
-
 	/* Turn Off Interrupts */
 	ehci_writel(tegra->ehci, 0, &tegra->ehci->regs->intr_enable);
 	clear_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags);
@@ -1345,7 +1234,8 @@ static int tegra_ehci_remove(struct platform_device *pdev)
 	if(tegra->phy->instance == 1)
 		disable_irq_wake(tegra->irq);
 #else
-	disable_irq_wake(tegra->irq);
+	if (tegra->irq)
+		disable_irq_wake(tegra->irq);
 #endif
 	usb_remove_hcd(hcd);
 	usb_put_hcd(hcd);

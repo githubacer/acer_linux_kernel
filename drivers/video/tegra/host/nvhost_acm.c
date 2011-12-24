@@ -348,6 +348,7 @@ void nvhost_module_preinit(const char *name,
 		const struct nvhost_moduledesc *desc)
 {
 	int i = 0;
+
 	/* initialize clocks to known state */
 	while (desc->clocks[i].name && i < NVHOST_MODULE_MAX_CLOCKS) {
 		char devname[MAX_DEVID_LENGTH];
@@ -380,6 +381,14 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		struct device *dev)
 {
 	int i = 0;
+	int err;
+
+	/* register to kernel */
+	mod->drv.driver.name = name;
+	mod->drv.driver.owner = THIS_MODULE;
+	err = nvhost_driver_register(&mod->drv);
+	if (err)
+		return err;
 
 	nvhost_module_preinit(name, desc);
 	mod->name = name;
@@ -450,7 +459,7 @@ static void debug_not_idle(struct nvhost_master *dev)
 		dev_dbg(&dev->pdev->dev, "tegra_grhost: all locks released\n");
 }
 
-void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
+int nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 {
 	int ret;
 	struct nvhost_master *dev;
@@ -465,8 +474,10 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 
 	ret = wait_event_timeout(mod->idle, is_module_idle(mod),
 			ACM_SUSPEND_WAIT_FOR_IDLE_TIMEOUT);
-	if (ret == 0)
-		nvhost_debug_dump(dev);
+	if (ret == 0) {
+		dev_info(&dev->pdev->dev, "%s prevented suspend\n", mod->name);
+		return -EBUSY;
+	}
 
 	if (system_suspend)
 		dev_dbg(&dev->pdev->dev, "tegra_grhost: entered idle\n");
@@ -479,12 +490,14 @@ void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend)
 	if (mod->desc->suspend)
 		mod->desc->suspend(mod);
 
-	BUG_ON(nvhost_module_powered(mod));
+	return 0;
 }
 
 void nvhost_module_deinit(struct device *dev, struct nvhost_module *mod)
 {
 	int i;
+
+	nvhost_driver_unregister(&mod->drv);
 
 	if (mod->desc->deinit)
 		mod->desc->deinit(dev, mod);

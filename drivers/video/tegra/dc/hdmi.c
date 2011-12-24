@@ -32,6 +32,7 @@
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
+#include <linux/device.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>
@@ -928,11 +929,30 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 	tegra_nvhdcp_resume(hdmi->nvhdcp);
 }
 
+static ssize_t underscan_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+#ifdef CONFIG_SWITCH
+	struct tegra_dc_hdmi_data *hdmi =
+			container_of(dev_get_drvdata(dev), struct tegra_dc_hdmi_data, hpd_switch);
+
+	if (hdmi->edid)
+		return sprintf(buf, "%d\n", tegra_edid_underscan_supported(hdmi->edid));
+	else
+		return 0;
+#else
+	return 0;
+#endif
+}
+
+static DEVICE_ATTR(underscan, S_IRUGO | S_IWUSR, underscan_show, NULL);
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi;
 	struct resource *res;
 	struct resource *base_res;
+	int ret;
 	void __iomem *base;
 	struct clk *clk = NULL;
 	struct clk *disp1_clk = NULL;
@@ -1025,6 +1045,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		goto err_free_irq;
 	}
 
+#ifdef CONFIG_TEGRA_NVHDCP
 	hdmi->nvhdcp = tegra_nvhdcp_create(hdmi, dc->ndev->id,
 			dc->out->dcc_bus);
 	if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
@@ -1032,6 +1053,9 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		err = PTR_ERR(hdmi->nvhdcp);
 		goto err_edid_destroy;
 	}
+#else
+	hdmi->nvhdcp = NULL;
+#endif
 
 	INIT_DELAYED_WORK(&hdmi->work, tegra_dc_hdmi_detect_worker);
 
@@ -1050,7 +1074,12 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
-	switch_dev_register(&hdmi->hpd_switch);
+	ret = switch_dev_register(&hdmi->hpd_switch);
+
+	if (!ret)
+		ret = device_create_file(hdmi->hpd_switch.dev,
+			&dev_attr_underscan);
+	WARN(ret, "could not create dev_attr_underscan\n");
 #endif
 
 	dc->out->depth = 24;
@@ -1071,7 +1100,9 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	return 0;
 
+#ifdef CONFIG_TEGRA_NVHDCP
 err_edid_destroy:
+#endif
 	tegra_edid_destroy(hdmi->edid);
 err_free_irq:
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);

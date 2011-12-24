@@ -283,7 +283,7 @@ static struct tegra_utmip_config utmi_phy_config[] = {
 
 static struct tegra_ulpi_config ulpi_phy_config = {
 	.reset_gpio = TEGRA_GPIO_PG2,
-	.clk = "clk_dev2",
+	.clk = "cdev2",
 };
 
 static __initdata struct tegra_clk_init_table whistler_clk_init_table[] = {
@@ -452,6 +452,7 @@ static struct platform_device *whistler_devices[] __initdata = {
 	&tegra_das_device,
 	&spdif_dit_device,
 	&bluetooth_dit_device,
+	&baseband_dit_device,
 	&whistler_bcm4329_rfkill_device,
 	&tegra_pcm_device,
 	&whistler_audio_device1,
@@ -597,7 +598,7 @@ void __init tegra_whistler_reserve(void)
 	if (memblock_reserve(0x0, 4096) < 0)
 		pr_warn("Cannot reserve first 4K of memory for safety\n");
 
-	tegra_reserve(SZ_128M, SZ_8M, SZ_16M);
+	tegra_reserve(SZ_160M, SZ_8M, SZ_16M);
 }
 
 MACHINE_START(WHISTLER, "whistler")

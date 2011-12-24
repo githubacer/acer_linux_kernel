@@ -37,6 +37,7 @@
 #include <linux/nct1008.h>
 #include <linux/err.h>
 #include <linux/mpu.h>
+#include <linux/platform_data/ina230.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <mach/gpio.h>
@@ -55,6 +56,12 @@ static int nct_get_temp(void *_data, long *temp)
 {
 	struct nct1008_data *data = _data;
 	return nct1008_thermal_get_temp(data, temp);
+}
+
+static int nct_get_temp_low(void *_data, long *temp)
+{
+	struct nct1008_data *data = _data;
+	return nct1008_thermal_get_temp_low(data, temp);
 }
 
 static int nct_set_limits(void *_data,
@@ -93,9 +100,11 @@ static void nct1008_probe_callback(struct nct1008_data *data)
 		return;
 	}
 
+	thermal_device->name = "nct1008";
 	thermal_device->data = data;
 	thermal_device->offset = TDIODE_OFFSET;
 	thermal_device->get_temp = nct_get_temp;
+	thermal_device->get_temp_low = nct_get_temp_low;
 	thermal_device->set_limits = nct_set_limits;
 	thermal_device->set_alert = nct_set_alert;
 	thermal_device->set_shutdown_temp = nct_set_shutdown_temp;
@@ -555,6 +564,8 @@ static int enterprise_cam_init(void)
 	int ret;
 	int i;
 	struct board_info bi;
+	struct board_info cam_bi;
+	bool i2c_mux = false;
 
 	pr_info("%s:++\n", __func__);
 	memset(ent_vicsi_pwr, 0, sizeof(ent_vicsi_pwr));
@@ -573,11 +584,24 @@ static int enterprise_cam_init(void)
 	}
 
 	tegra_get_board_info(&bi);
+	tegra_get_camera_board_info(&cam_bi);
 
-	if (bi.fab == BOARD_FAB_A00 || bi.fab == BOARD_FAB_A01)
+	if (bi.board_id == BOARD_E1205) {
+		if (bi.fab == BOARD_FAB_A00 || bi.fab == BOARD_FAB_A01)
+			i2c_mux = false;
+		else if (bi.fab == BOARD_FAB_A02)
+			i2c_mux = true;
+	} else if (bi.board_id == BOARD_E1197) {
+		if (cam_bi.fab == BOARD_FAB_A00)
+			i2c_mux = false;
+		else if (cam_bi.fab == BOARD_FAB_A01)
+			i2c_mux = true;
+	}
+
+	if (!i2c_mux)
 		i2c_register_board_info(2, ar0832_i2c2_boardinfo,
 			ARRAY_SIZE(ar0832_i2c2_boardinfo));
-	else if (bi.fab == BOARD_FAB_A02) {
+	else {
 		i2c_register_board_info(2, enterprise_i2c2_boardinfo,
 			ARRAY_SIZE(enterprise_i2c2_boardinfo));
 		/*
@@ -589,7 +613,6 @@ static int enterprise_cam_init(void)
 		i2c_register_board_info(PCA954x_I2C_BUS1, enterprise_i2c7_boardinfo,
 			ARRAY_SIZE(enterprise_i2c7_boardinfo));
 	}
-
 	return 0;
 
 fail_free_gpio:
@@ -599,6 +622,31 @@ fail_free_gpio:
 	return ret;
 }
 
+#define ENTERPRISE_INA230_ENABLED 0
+
+#if ENTERPRISE_INA230_ENABLED
+static struct ina230_platform_data ina230_platform = {
+	.rail_name = "VDD_AC_BAT",
+	.current_threshold = TEGRA_CUR_MON_THRESHOLD,
+	.resistor = TEGRA_CUR_MON_RESISTOR,
+	.min_cores_online = TEGRA_CUR_MON_MIN_CORES,
+};
+
+static struct i2c_board_info enterprise_i2c0_ina230_info[] = {
+	{
+		I2C_BOARD_INFO("ina230", 0x42),
+		.platform_data = &ina230_platform,
+		.irq = -1,
+	},
+};
+
+static int __init enterprise_ina230_init(void)
+{
+	return i2c_register_board_info(0, enterprise_i2c0_ina230_info,
+				       ARRAY_SIZE(enterprise_i2c0_ina230_info));
+}
+#endif
+
 int __init enterprise_sensors_init(void)
 {
 	int ret;
@@ -606,6 +654,9 @@ int __init enterprise_sensors_init(void)
 	enterprise_isl_init();
 	enterprise_nct1008_init();
 	mpuirq_init();
+#if ENTERPRISE_INA230_ENABLED
+	enterprise_ina230_init();
+#endif
 	ret = enterprise_cam_init();
 
 	return ret;

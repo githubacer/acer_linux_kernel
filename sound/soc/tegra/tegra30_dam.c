@@ -45,7 +45,7 @@ enum {
 
 struct tegra30_dam_src_step_table  step_table[] = {
 	{ 8000, 44100, 80 },
-	{ 8000, 48000, 0 },
+	{ 8000, 48000, 1 },
 	{ 16000, 44100, 160 },
 	{ 16000, 48000, 1 },
 	{ 44100, 8000, 441 },
@@ -108,16 +108,17 @@ int tegra30_dam_resume(int ifc)
 }
 #endif
 
-void tegra30_dam_disable_clock(int ifc)
+int tegra30_dam_disable_clock(int ifc)
 {
 	struct tegra30_dam_context *dam;
 
 	if (ifc >= TEGRA30_NR_DAM_IFC)
-		return;
+		return -EINVAL;
 
 	dam =  dams_cont_info[ifc];
 	clk_disable(dam->dam_clk);
 	tegra30_ahub_disable_clocks();
+	return 0;
 }
 
 int tegra30_dam_enable_clock(int ifc)
@@ -277,12 +278,12 @@ int tegra30_dam_free_controller(int ifc)
 	return -EINVAL;
 }
 
-void tegra30_dam_set_samplerate(int ifc, int chid, int samplerate)
+int tegra30_dam_set_samplerate(int ifc, int chid, int samplerate)
 {
 	struct tegra30_dam_context *dam = dams_cont_info[ifc];
 
 	if (ifc >= TEGRA30_NR_DAM_IFC)
-		return;
+		return -EINVAL;
 
 	switch (chid) {
 	case dam_ch_in0:
@@ -292,7 +293,7 @@ void tegra30_dam_set_samplerate(int ifc, int chid, int samplerate)
 		break;
 	case dam_ch_in1:
 		if (samplerate != dam->outsamplerate)
-			return;
+			return -EINVAL;
 		dam->ch_insamplerate[dam_ch_in1] = samplerate;
 		break;
 	case dam_ch_out:
@@ -302,6 +303,7 @@ void tegra30_dam_set_samplerate(int ifc, int chid, int samplerate)
 	default:
 		break;
 	}
+	return 0;
 }
 
 void tegra30_dam_set_output_samplerate(struct tegra30_dam_context *dam,
@@ -452,13 +454,13 @@ int tegra30_dam_set_acif(int ifc, int chid, unsigned int audio_channels,
 	return 0;
 }
 
-void tegra30_dam_enable(int ifc, int on, int chid)
+int tegra30_dam_enable(int ifc, int on, int chid)
 {
 	u32 old_val, val, enreg;
 	struct tegra30_dam_context *dam = dams_cont_info[ifc];
 
 	if (ifc >= TEGRA30_NR_DAM_IFC)
-		return;
+		return -EINVAL;
 
 	if (chid == dam_ch_in0)
 		enreg = TEGRA30_DAM_CH0_CTRL;
@@ -489,6 +491,7 @@ void tegra30_dam_enable(int ifc, int on, int chid)
 
 	if (old_val != val)
 		tegra30_dam_writel(dam, val, TEGRA30_DAM_CTRL);
+	return 0;
 }
 
 void tegra30_dam_ch0_set_datasync(struct tegra30_dam_context *dam, int datasync)
@@ -525,7 +528,10 @@ static int __devinit tegra30_dam_probe(struct platform_device *pdev)
 {
 	struct resource *res,  *region;
 	struct tegra30_dam_context *dam;
-	int ret = 0, i;
+	int ret = 0;
+#ifdef CONFIG_PM
+	int i;
+#endif
 
 	if ((pdev->id < 0) ||
 		(pdev->id >= TEGRA30_NR_DAM_IFC)) {
@@ -572,6 +578,7 @@ static int __devinit tegra30_dam_probe(struct platform_device *pdev)
 		goto err_clk_put_dam;
 	}
 
+#ifdef CONFIG_PM
 	/* cache the POR values of DAM regs*/
 	tegra30_dam_enable_clock(pdev->id);
 
@@ -585,6 +592,7 @@ static int __devinit tegra30_dam_probe(struct platform_device *pdev)
 	}
 
 	tegra30_dam_disable_clock(pdev->id);
+#endif
 
 	platform_set_drvdata(pdev, dam);
 

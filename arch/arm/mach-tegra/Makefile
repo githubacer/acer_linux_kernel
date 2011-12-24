@@ -23,6 +23,7 @@ obj-y                                   += devices.o
 obj-y                                   += delay.o
 obj-y                                   += powergate.o
 obj-y                                   += pm.o
+obj-$(CONFIG_TEGRA_WDT_RECOVERY)        += wdt-recovery.o
 obj-$(CONFIG_PM_SLEEP)                  += pm-irq.o
 obj-y                                   += gic.o
 obj-y                                   += sleep.o
@@ -101,7 +102,7 @@ endif
 obj-$(CONFIG_ARCH_TEGRA_3x_SOC)         += tegra3_tsensor.o
 obj-$(CONFIG_TEGRA_DYNAMIC_PWRDET)      += powerdetect.o
 obj-$(CONFIG_TEGRA_USB_MODEM_POWER)     += tegra_usb_modem_power.o
-
+obj-$(CONFIG_TEGRA_PCI)                 += pcie.o
 obj-${CONFIG_MACH_HARMONY}              += board-harmony.o
 obj-${CONFIG_MACH_HARMONY}              += board-harmony-kbc.o
 obj-${CONFIG_MACH_HARMONY}              += board-harmony-panel.o

@@ -23,6 +23,7 @@
 #include <linux/interrupt.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/irq.h>
 
 #include <mach/gpio.h>
 #include <mach/iomap.h>
@@ -38,6 +39,7 @@
 #include "pm.h"
 #include "sleep.h"
 #include "tegra3_emc.h"
+#include "dvfs.h"
 
 #ifdef CONFIG_TEGRA_CLUSTER_CONTROL
 #define CAR_CCLK_BURST_POLICY \
@@ -260,8 +262,25 @@ static void cluster_switch_epilog_gic(void)
 	max_irq = readl(gic_base + GIC_DIST_CTR) & 0x1f;
 	max_irq = (max_irq + 1) * 32;
 
-	for (i = 32; i < max_irq; i += 4)
-		writel(0x01010101, gic_base + GIC_DIST_TARGET + i * 4 / 4);
+	for (i = 32; i < max_irq; i += 4) {
+		u32 val = 0x01010101;
+#ifdef CONFIG_GIC_SET_MULTIPLE_CPUS
+		unsigned int irq;
+		for (irq = i; irq < (i + 4); irq++) {
+			struct cpumask mask;
+			struct irq_desc *desc = irq_to_desc(irq);
+
+			if (desc && desc->affinity_hint &&
+			    desc->irq_data.affinity) {
+				if (cpumask_and(&mask, desc->affinity_hint,
+						desc->irq_data.affinity))
+					val |= (*cpumask_bits(&mask) & 0xff) <<
+						((irq & 3) * 8);
+			}
+		}
+#endif
+		writel(val, gic_base + GIC_DIST_TARGET + i * 4 / 4);
+	}
 }
 
 void tegra_cluster_switch_epilog(unsigned int flags)
@@ -322,26 +341,32 @@ int tegra_cluster_control(unsigned int us, unsigned int flags)
 	if (flags & TEGRA_POWER_CLUSTER_IMMEDIATE)
 		us = 0;
 
-	if (current_cluster != target_cluster && !timekeeping_suspended) {
-		if (target_cluster == TEGRA_POWER_CLUSTER_G) {
-			s64 t = ktime_to_us(ktime_sub(ktime_get(), last_g2lp));
-			s64 t_off = tegra_cpu_power_off_time();
-			if (t_off > t)
-				udelay((unsigned int)(t_off - t));
-		}
-		else
-			last_g2lp = ktime_get();
-	}
-
 	DEBUG_CLUSTER(("%s(LP%d): %s->%s %s %s %d\r\n", __func__,
 		(flags & TEGRA_POWER_SDRAM_SELFREFRESH) ? 1 : 2,
 		is_lp_cluster() ? "LP" : "G",
 		(target_cluster == TEGRA_POWER_CLUSTER_G) ? "G" : "LP",
 		(flags & TEGRA_POWER_CLUSTER_IMMEDIATE) ? "immediate" : "",
 		(flags & TEGRA_POWER_CLUSTER_FORCE) ? "force" : "",
-	        us));
+		us));
 
 	local_irq_save(irq_flags);
+
+	if (current_cluster != target_cluster && !timekeeping_suspended) {
+		ktime_t now = ktime_get();
+		if (target_cluster == TEGRA_POWER_CLUSTER_G) {
+			s64 t = ktime_to_us(ktime_sub(now, last_g2lp));
+			s64 t_off = tegra_cpu_power_off_time();
+			if (t_off > t)
+				udelay((unsigned int)(t_off - t));
+
+			tegra_dvfs_rail_on(tegra_cpu_rail, now);
+
+		} else {
+			last_g2lp = now;
+			tegra_dvfs_rail_off(tegra_cpu_rail, now);
+		}
+	}
+
 	if (flags & TEGRA_POWER_SDRAM_SELFREFRESH) {
 		if (us)
 			tegra_lp2_set_trigger(us);

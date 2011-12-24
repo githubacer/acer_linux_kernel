@@ -23,6 +23,7 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
+#include <linux/module.h>
 
 #include <linux/io.h>
 #include <linux/gpio.h>
@@ -206,6 +207,7 @@ void tegra_gpio_enable(int gpio)
 	}
 	tegra_gpio_mask_write(GPIO_MSK_CNF(gpio), gpio, 1);
 }
+EXPORT_SYMBOL_GPL(tegra_gpio_enable);
 
 void tegra_gpio_disable(int gpio)
 {
@@ -215,6 +217,7 @@ void tegra_gpio_disable(int gpio)
 	}
 	tegra_gpio_mask_write(GPIO_MSK_CNF(gpio), gpio, 0);
 }
+EXPORT_SYMBOL_GPL(tegra_gpio_disable);
 
 void tegra_gpio_init_configure(unsigned gpio, bool is_input, int value)
 {
@@ -258,6 +261,13 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 	return 0;
 }
 
+int tegra_gpio_to_int_pin(int gpio)
+{
+	if (gpio < TEGRA_NR_GPIOS)
+		return tegra_gpio_banks[gpio >> 5].irq;
+
+	return -EIO;
+}
 
 
 static struct gpio_chip tegra_gpio_chip = {

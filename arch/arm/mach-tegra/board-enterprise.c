@@ -53,7 +53,7 @@
 #include <mach/i2s.h>
 #include <mach/tegra_max98088_pdata.h>
 #include <mach/thermal.h>
-
+#include <mach/tegra-bb-power.h>
 #include "board.h"
 #include "clock.h"
 #include "board-enterprise.h"
@@ -180,6 +180,7 @@ static __initdata struct tegra_clk_init_table enterprise_clk_init_table[] = {
 	{ "pll_a",	NULL,		564480000,	false},
 	{ "pll_a_out0",	NULL,		11289600,	false},
 	{ "i2s0",	"pll_a_out0",	0,		false},
+	{ "i2s1",	"pll_a_out0",	0,		false},
 	{ "i2s2",	"pll_a_out0",	0,		false},
 	{ "i2s3",	"pll_a_out0",	0,		false},
 	{ "spdif_out",	"pll_a_out0",	0,		false},
@@ -528,20 +529,7 @@ static struct platform_device *enterprise_devices[] __initdata = {
 	&tegra_avp_device,
 #endif
 	&tegra_camera,
-	&tegra_ahub_device,
-	&tegra_dam_device0,
-	&tegra_dam_device1,
-	&tegra_dam_device2,
-	&tegra_i2s_device0,
-	&tegra_i2s_device2,
-	&tegra_i2s_device3,
-	&tegra_spdif_device,
-	&spdif_dit_device,
-	&bluetooth_dit_device,
 	&enterprise_bcm4329_rfkill_device,
-	&baseband_dit_device,
-	&tegra_pcm_device,
-	&enterprise_audio_device,
 	&tegra_spi_device4,
 	&tegra_hda_device,
 #if defined(CONFIG_CRYPTO_DEV_TEGRA_SE)
@@ -698,6 +686,53 @@ static struct tegra_otg_platform_data tegra_otg_pdata = {
 	.ehci_pdata = &tegra_ehci_pdata[0],
 };
 
+struct platform_device *tegra_usb_hsic_host_register(void)
+{
+	struct platform_device *pdev;
+	void *platform_data;
+	int val;
+
+	pdev = platform_device_alloc(tegra_ehci2_device.name,
+		tegra_ehci2_device.id);
+	if (!pdev)
+		return NULL;
+
+	val = platform_device_add_resources(pdev, tegra_ehci2_device.resource,
+		tegra_ehci2_device.num_resources);
+	if (val)
+		goto error;
+
+	pdev->dev.dma_mask =  tegra_ehci2_device.dev.dma_mask;
+	pdev->dev.coherent_dma_mask = tegra_ehci2_device.dev.coherent_dma_mask;
+
+	platform_data = kmalloc(sizeof(struct tegra_ehci_platform_data),
+		GFP_KERNEL);
+	if (!platform_data)
+		goto error;
+
+	memcpy(platform_data, &tegra_ehci_uhsic_pdata,
+				sizeof(struct tegra_ehci_platform_data));
+	pdev->dev.platform_data = platform_data;
+
+	val = platform_device_add(pdev);
+	if (val)
+		goto error_add;
+
+	return pdev;
+
+error_add:
+	kfree(platform_data);
+error:
+	pr_err("%s: failed to add the host contoller device\n", __func__);
+	platform_device_put(pdev);
+	return NULL;
+}
+
+void tegra_usb_hsic_host_unregister(struct platform_device *pdev)
+{
+	platform_device_unregister(pdev);
+}
+
 static int enterprise_usb_hsic_postsupend(void)
 {
 	pr_debug("%s\n", __func__);
@@ -746,6 +781,36 @@ static void enterprise_usb_init(void)
 	udc_pdata = tegra_udc_device.dev.platform_data;
 }
 
+static struct platform_device *enterprise_audio_devices[] __initdata = {
+	&tegra_ahub_device,
+	&tegra_dam_device0,
+	&tegra_dam_device1,
+	&tegra_dam_device2,
+	&tegra_i2s_device2,
+	&tegra_i2s_device3,
+	&tegra_spdif_device,
+	&spdif_dit_device,
+	&bluetooth_dit_device,
+	&baseband_dit_device,
+	&tegra_pcm_device,
+	&enterprise_audio_device,
+};
+
+static void enterprise_audio_init(void)
+{
+	struct board_info board_info;
+
+	tegra_get_board_info(&board_info);
+	if (board_info.board_id == BOARD_E1197) {
+		platform_device_register(&tegra_i2s_device1);
+		enterprise_audio_pdata.audio_port_id[HIFI_CODEC] = 1;
+	} else
+		platform_device_register(&tegra_i2s_device0);
+
+	platform_add_devices(enterprise_audio_devices,
+			ARRAY_SIZE(enterprise_audio_devices));
+}
+
 static void enterprise_gps_init(void)
 {
 	tegra_gpio_enable(TEGRA_GPIO_PE4);
@@ -762,7 +827,6 @@ static struct baseband_power_platform_data tegra_baseband_power_data = {
 			.ipc_ap_wake = XMM_GPIO_IPC_AP_WAKE,
 			.ipc_hsic_active = XMM_GPIO_IPC_HSIC_ACTIVE,
 			.ipc_hsic_sus_req = XMM_GPIO_IPC_HSIC_SUS_REQ,
-			.hsic_device = &tegra_ehci2_device,
 		},
 	},
 };
@@ -783,24 +847,52 @@ static struct platform_device tegra_baseband_power2_device = {
 	},
 };
 
+#ifdef CONFIG_TEGRA_BB_M7400
+static union tegra_bb_gpio_id m7400_gpio_id = {
+	.m7400 = {
+		.pwr_status = GPIO_BB_RESET,
+		.pwr_on = GPIO_BB_PWRON,
+		.uart_awr = GPIO_BB_APACK,
+		.uart_cwr = GPIO_BB_CPACK,
+		.usb_awr = GPIO_BB_APACK2,
+		.usb_cwr = GPIO_BB_CPACK2,
+		.service = GPIO_BB_RSVD2,
+		.resout2 = GPIO_BB_RSVD1,
+	},
+};
+
+static struct tegra_bb_pdata m7400_pdata = {
+	.id = &m7400_gpio_id,
+	.device = &tegra_ehci2_device,
+	.ehci_register = tegra_usb_hsic_host_register,
+	.ehci_unregister = tegra_usb_hsic_host_unregister,
+	.bb_id = TEGRA_BB_M7400,
+};
+
+static struct platform_device tegra_baseband_m7400_device = {
+	.name = "tegra_baseband_power",
+	.id = -1,
+	.dev = {
+		.platform_data = &m7400_pdata,
+	},
+};
+#endif
+
 static void enterprise_baseband_init(void)
 {
 	int modem_id = tegra_get_modem_id();
 
 	switch (modem_id) {
-	case 1: /* PH450 ULPI */
+	case TEGRA_BB_PH450: /* PH450 ULPI */
 		enterprise_modem_init();
 		break;
-	case 2: /* XMM6260 HSIC */
+	case TEGRA_BB_XMM6260: /* XMM6260 HSIC */
 		/* xmm baseband - do not switch off phy during suspend */
 		tegra_ehci_uhsic_pdata.power_down_on_bus_suspend = 0;
 		uhsic_phy_config.postsuspend = enterprise_usb_hsic_postsupend;
 		uhsic_phy_config.preresume = enterprise_usb_hsic_preresume;
 		uhsic_phy_config.usb_phy_ready = enterprise_usb_hsic_phy_ready;
 		uhsic_phy_config.post_phy_off = enterprise_usb_hsic_phy_off;
-		/* baseband-power.ko will register ehci2 device */
-		tegra_ehci2_device.dev.platform_data
-			= &tegra_ehci_uhsic_pdata;
 		/* enable XMM6260 baseband gpio(s) */
 		tegra_gpio_enable(tegra_baseband_power_data.modem.generic
 			.mdm_reset);
@@ -814,9 +906,20 @@ static void enterprise_baseband_init(void)
 			.ap2mdm_ack2);
 		tegra_gpio_enable(tegra_baseband_power_data.modem.generic
 			.mdm2ap_ack2);
+		tegra_baseband_power_data.hsic_register =
+						&tegra_usb_hsic_host_register;
+		tegra_baseband_power_data.hsic_unregister =
+						&tegra_usb_hsic_host_unregister;
 		platform_device_register(&tegra_baseband_power_device);
 		platform_device_register(&tegra_baseband_power2_device);
 		break;
+#ifdef CONFIG_TEGRA_BB_M7400
+	case TEGRA_BB_M7400: /* M7400 HSIC */
+		tegra_ehci2_device.dev.platform_data
+			= &tegra_ehci_uhsic_pdata;
+		platform_device_register(&tegra_baseband_m7400_device);
+		break;
+#endif
 	}
 }
 
@@ -843,6 +946,7 @@ static void __init tegra_enterprise_init(void)
 #endif
 	enterprise_kbc_init();
 	enterprise_touch_init();
+	enterprise_audio_init();
 	enterprise_gps_init();
 	enterprise_baseband_init();
 	enterprise_panel_init();
@@ -850,6 +954,7 @@ static void __init tegra_enterprise_init(void)
 	enterprise_emc_init();
 	enterprise_sensors_init();
 	enterprise_suspend_init();
+	enterprise_bpc_mgmt_init();
 	tegra_release_bootloader_fb();
 	enterprise_nfc_init();
 }

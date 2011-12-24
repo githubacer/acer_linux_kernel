@@ -29,6 +29,7 @@
 #include "../t20/syncpt_t20.h"
 #include "../3dctx_common.h"
 #include "3dctx_t30.h"
+#include "../t20/mpectx_t20.h"
 #include "scale3d.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
@@ -42,7 +43,6 @@
 #define NVMODMUTEX_DSI       (9)
 #define NV_FIFO_READ_TIMEOUT 200000
 
-#define HOST_EMC_FLOOR 300000000
 #ifndef TEGRA_POWERGATE_3D1
 #define TEGRA_POWERGATE_3D1 -1
 #endif
@@ -77,7 +77,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 			.suspend = nvhost_scale3d_suspend,
 			.clocks = {{"gr3d", UINT_MAX},
 					{"gr3d2", UINT_MAX},
-					{"emc", HOST_EMC_FLOOR} },
+					{"emc", UINT_MAX} },
 			.powergate_ids = {TEGRA_POWERGATE_3D,
 					TEGRA_POWERGATE_3D1},
 			NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -95,7 +95,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.module        = {
 			.clocks = {{"gr2d", 0},
 					{"epp", 0},
-					{"emc", HOST_EMC_FLOOR} },
+					{"emc", 300000000} },
 			NVHOST_MODULE_NO_POWERGATE_IDS,
 			.clockgate_delay = 0,
 			},
@@ -130,9 +130,10 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 			 BIT(NVSYNCPT_MPE_WR_SAFE),
 	.waitbases     = BIT(NVWAITBASE_MPE),
 	.class	       = NV_VIDEO_ENCODE_MPEG_CLASS_ID,
-	.exclusive     = true,
+	.waitbasesync  = true,
 	.keepalive     = true,
 	.module        = {
+			.prepare_poweroff = nvhost_mpectx_prepare_power_off,
 			.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
 			.powergate_ids  = {TEGRA_POWERGATE_MPE, -1},
 			NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -159,6 +160,8 @@ static inline int t30_nvhost_hwctx_handler_init(
 {
 	if (strcmp(module, "gr3d") == 0)
 		return t30_nvhost_3dctx_handler_init(h);
+	else if (strcmp(module, "mpe") == 0)
+		return t20_nvhost_mpectx_handler_init(h);
 
 	return 0;
 }

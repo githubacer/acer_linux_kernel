@@ -617,17 +617,6 @@ static int __init ventana_gps_init(void)
 	return 0;
 }
 
-static void ventana_power_off(void)
-{
-	int ret;
-
-	ret = tps6586x_power_off();
-	if (ret)
-		pr_err("ventana: failed to power off\n");
-
-	while(1);
-}
-
 static void __init ventana_power_off_init(void)
 {
 	pm_power_off = SysShutdown;
@@ -635,9 +624,6 @@ static void __init ventana_power_off_init(void)
 
 static void ventana_usb_init(void)
 {
-	char *src = NULL;
-	int i;
-
 	tegra_usb_phy_init(tegra_usb_phy_pdata, ARRAY_SIZE(tegra_usb_phy_pdata));
 	/* OTG should be the first to be registered */
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;

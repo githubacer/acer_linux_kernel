@@ -180,6 +180,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 	switch (blank) {
 	case FB_BLANK_UNBLANK:
 		dev_dbg(&tegra_fb->ndev->dev, "unblank\n");
+		tegra_fb->win->flags = TEGRA_WIN_FLAG_ENABLED;
 		tegra_dc_enable(tegra_fb->win->dc);
 		return 0;
 
@@ -330,6 +331,12 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		memset(&fb_info->info->monspecs, 0x0,
 		       sizeof(fb_info->info->monspecs));
 		memset(&mode, 0x0, sizeof(mode));
+
+		/*
+		 * reset video mode properties to prevent garbage being displayed on 'mode' device.
+		 */
+		fb_info->info->mode = (struct fb_videomode*) NULL;
+
 		tegra_dc_set_mode(fb_info->win->dc, &mode);
 		mutex_unlock(&fb_info->info->lock);
 		return;

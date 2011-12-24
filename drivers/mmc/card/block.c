@@ -57,6 +57,7 @@ static DEFINE_MUTEX(block_mutex);
 #define INAND_CMD38_ARG_SECTRIM1 0x81
 #define INAND_CMD38_ARG_SECTRIM2 0x88
 
+#define MMC_CMD_RETRIES 3
 /*
  * The defaults come from config options but can be overriden by module
  * or bootarg options.
@@ -381,6 +382,7 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 		if (!mmc_card_blockaddr(card))
 			brq.cmd.arg <<= 9;
 		brq.cmd.flags = MMC_RSP_SPI_R1 | MMC_RSP_R1 | MMC_CMD_ADTC;
+		brq.cmd.retries = MMC_CMD_RETRIES;
 		brq.data.blksz = 512;
 		brq.stop.opcode = MMC_STOP_TRANSMISSION;
 		brq.stop.arg = 0;
@@ -569,6 +571,9 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 		spin_unlock_irq(&md->lock);
 	} while (ret);
 
+	if (brq.cmd.resp[0] & R1_URGENT_BKOPS)
+		mmc_card_set_need_bkops(card);
+
 	mmc_release_host(card->host);
 
 	return 1;
@@ -628,6 +633,10 @@ static int mmc_blk_issue_rq(struct mmc_queue *mq, struct request *req)
 		else
 			return mmc_blk_issue_discard_rq(mq, req);
 	} else {
+		/* Abort any current bk ops of eMMC card by issuing HPI */
+		if (mmc_card_mmc(mq->card) && mmc_card_doing_bkops(mq->card))
+			mmc_interrupt_hpi(mq->card);
+
 		return mmc_blk_issue_rw_rq(mq, req);
 	}
 }

@@ -568,9 +568,6 @@ static void __init ventana_power_off_init(void)
 
 static void ventana_usb_init(void)
 {
-	char *src = NULL;
-	int i;
-
 	tegra_usb_phy_init(tegra_usb_phy_pdata, ARRAY_SIZE(tegra_usb_phy_pdata));
 	/* OTG should be the first to be registered */
 	tegra_otg_device.dev.platform_data = &tegra_otg_pdata;
@@ -642,7 +639,7 @@ void __init tegra_ventana_reserve(void)
 	if (memblock_reserve(0x0, 4096) < 0)
 		pr_warn("Cannot reserve first 4K of memory for safety\n");
 
-	tegra_reserve(SZ_256M, SZ_8M, SZ_16M);
+	tegra_reserve(SZ_256M, SZ_8M + SZ_1M, SZ_16M);
 }
 
 MACHINE_START(VENTANA, "ventana")

@@ -41,9 +41,13 @@
 #define TEGRA_GPIO_WLAN_PWR_LOW         TEGRA_GPIO_PK5
 #define TEGRA_GPIO_WLAN_RST_LOW         TEGRA_GPIO_PK6
 
+#define TEGRA_GPIO_POWERKEY		TEGRA_GPIO_PV2
+
 void harmony_pinmux_init(void);
 int harmony_regulator_init(void);
+int harmony_suspend_init(void);
 int harmony_panel_init(void);
 int harmony_kbc_init(void);
+int harmony_pcie_init(void);
 
 #endif

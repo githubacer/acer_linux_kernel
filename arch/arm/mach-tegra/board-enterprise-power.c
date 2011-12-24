@@ -28,6 +28,8 @@
 #include <linux/tps80031-charger.h>
 #include <linux/gpio.h>
 #include <linux/io.h>
+#include <linux/cpumask.h>
+#include <linux/platform_data/tegra_bpc_mgmt.h>
 
 #include <mach/edp.h>
 #include <mach/iomap.h>
@@ -43,6 +45,9 @@
 
 #define PMC_CTRL		0x0
 #define PMC_CTRL_INTR_LOW	(1 << 17)
+
+#define PMC_DPD_PADS_ORIDE		0x01c
+#define PMC_DPD_PADS_ORIDE_BLINK	(1 << 20)
 
 /************************ TPS80031 based regulator ****************/
 static struct regulator_consumer_supply tps80031_vio_supply[] = {
@@ -492,12 +497,16 @@ int __init enterprise_regulator_init(void)
 {
 	void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
 	u32 pmc_ctrl;
+	u32 pmc_dpd_pads;
 
 	/* configure the power management controller to trigger PMU
 	 * interrupts when low */
 
 	pmc_ctrl = readl(pmc + PMC_CTRL);
 	writel(pmc_ctrl | PMC_CTRL_INTR_LOW, pmc + PMC_CTRL);
+
+	pmc_dpd_pads = readl(pmc + PMC_DPD_PADS_ORIDE);
+	writel(pmc_dpd_pads & ~PMC_DPD_PADS_ORIDE_BLINK , pmc + PMC_DPD_PADS_ORIDE);
 
 	/* Disable battery charging if power adapter is connected. */
 	if (get_power_supply_type() == POWER_SUPPLY_TYPE_MAINS) {
@@ -570,6 +579,39 @@ int __init enterprise_edp_init(void)
 	pr_info("%s: CPU regulator %d mA\n", __func__, regulator_mA);
 
 	tegra_init_cpu_edp_limits(regulator_mA);
+	tegra_init_system_edp_limits(TEGRA_BPC_CPU_PWR_LIMIT);
 	return 0;
 }
 #endif
+
+static struct tegra_bpc_mgmt_platform_data bpc_mgmt_platform_data = {
+	.gpio_trigger = TEGRA_BPC_TRIGGER,
+	.bpc_mgmt_timeout = TEGRA_BPC_TIMEOUT,
+};
+
+static struct platform_device enterprise_bpc_mgmt_device = {
+	.name		= "tegra-bpc-mgmt",
+	.id		= -1,
+	.dev		= {
+		.platform_data = &bpc_mgmt_platform_data,
+	},
+};
+
+void __init enterprise_bpc_mgmt_init(void)
+{
+	int int_gpio;
+
+	tegra_gpio_enable(TEGRA_BPC_TRIGGER);
+
+	int_gpio = tegra_gpio_to_int_pin(TEGRA_BPC_TRIGGER);
+
+#ifdef CONFIG_SMP
+	cpumask_setall(&(bpc_mgmt_platform_data.affinity_mask));
+	irq_set_affinity_hint(int_gpio,
+				&(bpc_mgmt_platform_data.affinity_mask));
+	irq_set_affinity(int_gpio, &(bpc_mgmt_platform_data.affinity_mask));
+#endif
+	platform_device_register(&enterprise_bpc_mgmt_device);
+
+	return;
+}

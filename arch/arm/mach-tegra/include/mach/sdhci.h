@@ -25,11 +25,11 @@ struct tegra_sdhci_platform_data {
 	int wp_gpio;
 	int power_gpio;
 	int is_8bit;
+	unsigned int tap_delay;
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	int cd_gpio_polarity;
 #endif
 #if defined(CONFIG_ARCH_ACER_T30)
-	unsigned int tap_delay;
 	bool is_voltage_switch_supported;
 	const char *vdd_rail_name;
 	const char *slot_rail_name;

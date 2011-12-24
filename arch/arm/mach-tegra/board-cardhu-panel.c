@@ -1048,8 +1048,6 @@ struct early_suspend cardhu_panel_early_suspender;
 
 static void cardhu_panel_early_suspend(struct early_suspend *h)
 {
-	unsigned i;
-
 	/* power down LCD, add use a black screen for HDMI */
 	if (num_registered_fb > 0)
 		fb_blank(registered_fb[0], FB_BLANK_POWERDOWN);
@@ -1084,6 +1082,7 @@ int __init cardhu_panel_init(void)
 		cardhu_disp1_out.n_modes = ARRAY_SIZE(cardhu_panel_modes_55hz);
 	}
 
+#if defined(CONFIG_TEGRA_DC) && !defined(CONFIG_TEGRA_CARDHU_DSI)
 	if (display_board_info.board_id == BOARD_DISPLAY_PM313) {
 		/* initialize the values */
 #if defined(PM313_LVDS_PANEL_19X12)
@@ -1144,6 +1143,7 @@ int __init cardhu_panel_init(void)
 		gpio_direction_output(cardhu_lvds_shutdown, 1);
 		tegra_gpio_enable(cardhu_lvds_shutdown);
 	}
+#endif
 
 	tegra_gpio_enable(cardhu_hdmi_hpd);
 	gpio_request(cardhu_hdmi_hpd, "hdmi_hpd");

@@ -27,6 +27,7 @@
 #include <linux/wait.h>
 #include <linux/mutex.h>
 #include <linux/clk.h>
+#include <linux/nvhost.h>
 
 #define NVHOST_MODULE_MAX_CLOCKS 3
 #define NVHOST_MODULE_MAX_POWERGATE_IDS 2
@@ -65,6 +66,7 @@ enum nvhost_module_powerstate_t {
 };
 
 struct nvhost_module {
+	struct nvhost_driver drv;
 	const char *name;
 	struct delayed_work powerstate_down;
 	int num_clks;
@@ -85,7 +87,7 @@ int nvhost_module_init(struct nvhost_module *mod, const char *name,
 		struct nvhost_module *parent,
 		struct device *dev);
 void nvhost_module_deinit(struct device *dev, struct nvhost_module *mod);
-void nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend);
+int nvhost_module_suspend(struct nvhost_module *mod, bool system_suspend);
 
 void nvhost_module_reset(struct device *dev, struct nvhost_module *mod);
 void nvhost_module_busy(struct nvhost_module *mod);

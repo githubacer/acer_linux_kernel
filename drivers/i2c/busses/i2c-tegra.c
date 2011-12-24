@@ -44,11 +44,6 @@
 #include "../../../arch/arm/mach-tegra/gpio-names.h"
 #endif
 
-#ifdef CONFIG_I2C_ACER_ENABLE
-atomic_t during_suspend = ATOMIC_INIT(0);
-atomic_t finished = ATOMIC_INIT(1);
-#endif
-
 #define TEGRA_I2C_TIMEOUT			(msecs_to_jiffies(1000))
 #define TEGRA_I2C_RETRIES			3
 #define BYTES_PER_FIFO_WORD			4
@@ -122,7 +117,6 @@ atomic_t finished = ATOMIC_INIT(1);
 #define SL_ADDR1(addr) (addr & 0xff)
 #define SL_ADDR2(addr) ((addr >> 8) & 0xff)
 
-
 #if defined(CONFIG_ARCH_ACER_T20)
 #define GEN1_SCL_GPIO    TEGRA_GPIO_PC4
 #define GEN1_SDA_GPIO    TEGRA_GPIO_PC5
@@ -133,6 +127,7 @@ atomic_t finished = ATOMIC_INIT(1);
 #define PWR_SCL_GPIO     TEGRA_GPIO_PZ6
 #define PWR_SDA_GPIO     TEGRA_GPIO_PZ7
 #endif
+
 
 struct tegra_i2c_dev;
 
@@ -460,7 +455,7 @@ static int tegra_i2c_recover_bus_busy(struct tegra_i2c_dev *dev)
 		for (i = 0; i < 9; i++) {
 			if (gpio_get_value(gpio_dat) && gpio_clk_status){
 				dev_err(dev->dev, "(0x%x) Bus busy cleared after %d clock cycles\n"
-					,dev->msgs[0].addr, i);
+						,dev->msgs[0].addr, i);
 				break;
 			}
 			gpio_direction_output(gpio_clk, 0);
@@ -479,7 +474,7 @@ static int tegra_i2c_recover_bus_busy(struct tegra_i2c_dev *dev)
 		}
 		if (!(gpio_get_value(gpio_dat) & gpio_get_value(gpio_clk))){
 			dev_err(dev->dev, "(0x%x) Bus still busy, SCLK %d, SDA %d\n",
-				dev->msgs[0].addr, gpio_get_value(gpio_clk), gpio_get_value(gpio_dat));
+					dev->msgs[0].addr, gpio_get_value(gpio_clk), gpio_get_value(gpio_dat));
 		}
 rv_quit:
 		tegra_gpio_disable(gpio_clk);
@@ -556,7 +551,6 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 	u32 status;
 	const u32 status_err = I2C_INT_NO_ACK | I2C_INT_ARBITRATION_LOST | I2C_INT_TX_FIFO_OVERFLOW;
 	struct tegra_i2c_dev *i2c_dev = dev_id;
-	unsigned long flags;
 
 	status = i2c_readl(i2c_dev, I2C_INT_STATUS);
 
@@ -640,6 +634,7 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 #if defined(CONFIG_ARCH_ACER_T20)
 transaction_completed:
 #endif
+
 	i2c_writel(i2c_dev, status, I2C_INT_STATUS);
 
 	if (i2c_dev->is_dvc)
@@ -696,7 +691,6 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_bus *i2c_bus,
 	struct tegra_i2c_dev *i2c_dev = i2c_bus->dev;
 	u32 int_mask;
 	int ret;
-	unsigned long flags;
 #if !defined(CONFIG_ARCH_ACER_T20)
 	int arb_stat;
 #endif
@@ -778,6 +772,7 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_bus *i2c_bus,
 
 		tegra_i2c_recover_bus_busy(i2c_dev);
 #endif
+
 		tegra_i2c_init(i2c_dev);
 		return -ETIMEDOUT;
 	}
@@ -825,26 +820,11 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 	struct tegra_i2c_dev *i2c_dev = i2c_bus->dev;
 	int i;
 	int ret = 0;
-	unsigned long flags;
 
-#ifdef CONFIG_I2C_ACER_ENABLE
-	while(atomic_read(&during_suspend))
-		msleep(1);
-#else
 	if (i2c_dev->is_suspended)
 		return -EBUSY;
-#endif
 
 	rt_mutex_lock(&i2c_dev->dev_lock);
-
-#ifdef CONFIG_I2C_ACER_ENABLE
-	if (i2c_dev->is_suspended){
-		rt_mutex_unlock(&i2c_dev->dev_lock);
-		return -EBUSY;
-	}
-
-	atomic_set(&finished, 0);
-#endif
 
 	if (i2c_dev->last_mux != i2c_bus->mux) {
 		tegra_pinmux_set_safe_pinmux_table(i2c_dev->last_mux,
@@ -875,18 +855,10 @@ static int tegra_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 
 	pm_runtime_put_sync(i2c_dev->dev);
 
-#ifndef CONFIG_I2C_ACER_ENABLE
 	rt_mutex_unlock(&i2c_dev->dev_lock);
-#endif
 
 	i2c_dev->msgs = NULL;
 	i2c_dev->msgs_num = 0;
-
-#ifdef CONFIG_I2C_ACER_ENABLE
-	atomic_set(&finished, 1);
-
-	rt_mutex_unlock(&i2c_dev->dev_lock);
-#endif
 
 	return ret ?: i;
 }
@@ -1090,12 +1062,6 @@ static int tegra_i2c_suspend_noirq(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_i2c_dev *i2c_dev = platform_get_drvdata(pdev);
 
-#ifdef CONFIG_I2C_ACER_ENABLE
-	atomic_set(&during_suspend, 1);
-	while(!atomic_read(&finished))
-		msleep(1);
-#endif
-
 	rt_mutex_lock(&i2c_dev->dev_lock);
 
 	i2c_dev->is_suspended = true;
@@ -1122,18 +1088,12 @@ static int tegra_i2c_resume_noirq(struct device *dev)
 
 	if (ret) {
 		rt_mutex_unlock(&i2c_dev->dev_lock);
-#ifdef CONFIG_I2C_ACER_ENABLE
-		atomic_set(&during_suspend, 0);
-#endif
 		return ret;
 	}
 
 	i2c_dev->is_suspended = false;
 
 	rt_mutex_unlock(&i2c_dev->dev_lock);
-#ifdef CONFIG_I2C_ACER_ENABLE
-	atomic_set(&during_suspend, 0);
-#endif
 
 	return 0;
 }
