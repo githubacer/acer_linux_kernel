@@ -120,5 +120,12 @@ config TEGRA_HDMI
 	help
 	  Say Y here to Enable HDMI.
 
+config TEGRA_NVHDCP
+	bool "Enable HDCP"
+	default n
+	depends on TEGRA_HDMI
+	help
+	  Say Y here to Enable HDCP.
+
 endif
 
