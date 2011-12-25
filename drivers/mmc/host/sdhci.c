@@ -1164,15 +1164,18 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	host->mrq = mrq;
 
 	/* If polling, assume that the card is always present. */
-	if (host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION) {
-		if (host->ops->get_cd)
-			present = host->ops->get_cd(host);
-		else
-			present = true;
-	} else {
+	if (host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+               if (plat->cd_gpio != -1)
+                       present = !(gpio_get_value(plat->cd_gpio));
+               else
+                       present = true;
+#else
+		present = true;
+#endif
+	else
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 				SDHCI_CARD_PRESENT;
-	}
 
 	if (!present || host->flags & SDHCI_DEVICE_DEAD) {
 		host->mrq->cmd->error = -ENOMEDIUM;
@@ -2313,8 +2316,7 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	if ((host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION) &&
 	    mmc_card_is_removable(mmc))
-		if (!host->ops->get_cd)
-			mmc->caps |= MMC_CAP_NEEDS_POLL;
+		mmc->caps |= MMC_CAP_NEEDS_POLL;
 
 	/* UHS-I mode(s) supported by the host controller. */
 	if (host->version >= SDHCI_SPEC_300)
