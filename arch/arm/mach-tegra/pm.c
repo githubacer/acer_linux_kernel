@@ -192,6 +192,15 @@ enum tegra_cluster_switch_time_id {
 	tegra_cluster_switch_time_id_max
 };
 
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+#include <linux/gpio.h>
+#include "gpio-names.h"
+
+#define POWER_KEY_GPIO TEGRA_GPIO_PV0
+int p2_wakeup = 1;
+#endif
+
+
 static unsigned long
 		tegra_cluster_switch_times[tegra_cluster_switch_time_id_max];
 #define tegra_cluster_switch_time(flags, id) \
@@ -991,6 +1000,9 @@ static int tegra_pm_enter_suspend(void)
 
 static void tegra_pm_enter_resume(void)
 {
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+	p2_wakeup = gpio_get_value(POWER_KEY_GPIO);
+#endif
 	if (current_suspend_mode == TEGRA_SUSPEND_LP0)
 		tegra_lp0_cpu_mode(false);
 	pr_info("Exited suspend state %s\n", lp_state[current_suspend_mode]);
