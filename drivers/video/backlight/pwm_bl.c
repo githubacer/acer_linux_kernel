@@ -187,7 +187,7 @@ static int pwm_backlight_resume(struct platform_device *pdev)
 #define pwm_backlight_resume	NULL
 #endif
 
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20)||defined(CONFIG_ARCH_ACER_T30)
 static int pwm_backlight_shutdown(struct platform_device *pdev)
 {
 	struct platform_pwm_backlight_data *data = pdev->dev.platform_data;
@@ -210,7 +210,7 @@ static struct platform_driver pwm_backlight_driver = {
 	.remove		= pwm_backlight_remove,
 	.suspend	= pwm_backlight_suspend,
 	.resume		= pwm_backlight_resume,
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20)||defined(CONFIG_ARCH_ACER_T30)
 	.shutdown	= pwm_backlight_shutdown,
 #endif
 };

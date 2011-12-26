@@ -56,6 +56,7 @@ static int acer_backlight_init(struct device *dev)
 static void acer_backlight_exit(struct device *dev)
 {
 	gpio_set_value(BL_ENABLE, 0);
+	msleep(200);
 }
 
 static int acer_backlight_notify(struct device *unused, int brightness)
