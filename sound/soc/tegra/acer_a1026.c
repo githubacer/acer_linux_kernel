@@ -292,6 +292,7 @@ int execute_cmdmsg(unsigned int msg)
 
 		if (msgbuf[0] == chkbuf[0]  && msgbuf[1] == chkbuf[1] &&
 			msgbuf[2] == chkbuf[2]  && msgbuf[3] == chkbuf[3]) {
+			pr_info("msgbuf=0x%02x 0x%02x 0x%02x 0x%02x\n",msgbuf[0],msgbuf[1],msgbuf[2],msgbuf[3]);
 			pass = 1;
 			break;
 		} else if (msgbuf[0] == 0xff && msgbuf[1] == 0xff) {
@@ -335,6 +336,10 @@ ssize_t chk_wakeup_a1026(void)
 
 		do {
 			rc = execute_cmdmsg(A1026_msg_Sync);
+		} while ((rc < 0) && --retry);
+
+		do {
+			rc = execute_cmdmsg(PassThrotuh_Disable);
 		} while ((rc < 0) && --retry);
 
 		gpio_set_value(a1026_data.pdata->gpio_a1026_wakeup, 1);
@@ -430,9 +435,7 @@ static ssize_t a1026_uart_sync_command(void)
 
 	rc = config_wakeup_gpio();
 
-#if 0
 	acer_set_bypass_switch(0);
-#endif
 
 set_suspend_err:
 set_sync_err:
@@ -480,6 +483,10 @@ static ssize_t a1026_set_config(int newid)
 	if ((a1026_suspended) && (newid == A1026_TABLE_SUSPEND))
 		return rc;
 
+	if (a1026_current_config == newid) {
+		return rc;
+	}
+
 	rc = chk_wakeup_a1026();
 
 	if (rc < 0)
@@ -490,8 +497,53 @@ static ssize_t a1026_set_config(int newid)
 			rc = a1026_suspend_es305();
 			return rc;
 			break;
-		case A1026_TABLE_VOIP_SPEAKER:
-			rc = execute_cmdmsg(VOIP_SPEAKER);
+		case A1026_TABLE_VOIP_INTMIC:
+			rc = execute_cmdmsg(VOIP_INTMIC);
+			break;
+		case A1026_TABLE_VOIP_EXTMIC:
+			rc = execute_cmdmsg(VOIP_EXTMIC);
+			break;
+		case A1026_TABLE_30CM_CAMCORDER_INTMIC:
+			rc = execute_cmdmsg(T30CM_CAMCORDER_INTMIC);
+			break;
+		case A1026_TABLE_30CM_CAMCORDER_INTMIC_REAR:
+			rc = execute_cmdmsg(T30CM_CAMCORDER_INTMIC_REAR);
+			break;
+		case A1026_TABLE_CAMCORDER_EXTMIC:
+			rc = execute_cmdmsg(A1026_TABLE_CAMCORDER_EXTMIC);
+			break;
+		case A1026_TABLE_30CM_ASR_INTMIC:
+			rc = execute_cmdmsg(T30CM_ASR_INTMIC);
+			break;
+		case A1026_TABLE_ASR_EXTMIC:
+			rc = execute_cmdmsg(ASR_EXTMIC);
+			break;
+		case A1026_TABLE_STEREO_CAMCORDER:
+			rc = execute_cmdmsg(STEREO_CAMCORDER);
+			break;
+		case A1026_TABLE_3M_CAMCORDER_INTMIC:
+			rc = execute_cmdmsg(T3M_CAMCORDER_INTMIC);
+			break;
+		case A1026_TABLE_3M_CAMCORDER_INTMIC_REAR:
+			rc = execute_cmdmsg(T3M_CAMCORDER_INTMIC_REAR);
+			break;
+		case A1026_TABLE_3M_ASR_INTMIC:
+			rc = execute_cmdmsg(T3M_ASR_INTMIC);
+			break;
+		case A1026_TABLE_SOUNDHOUND_INTMIC:
+			rc = execute_cmdmsg(SOUNDHOUND_INTMIC);
+			break;
+		case A1026_TABLE_SOUNDHOUND_EXTMIC:
+			rc = execute_cmdmsg(SOUNDHOUND_EXTMIC);
+			break;
+		case A1026_TABLE_ES305_PLAYBACK:
+			rc = execute_cmdmsg(ES305_PLAYBACK);
+			break;
+		case A1026_TABLE_CTS:
+			rc = execute_cmdmsg(CTS);
+			break;
+		case A1026_TABLE_HDMI_VOIP:
+			rc = execute_cmdmsg(HDMI_VOIP);
 			break;
 		default:
 			pr_err("%s: invalid cmd %d\n", __func__, newid);
