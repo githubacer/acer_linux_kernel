@@ -581,8 +581,13 @@ static ssize_t store_go_maxspeed_load(struct kobject *kobj,
 	return -EINVAL;
 }
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+static struct global_attr go_maxspeed_load_attr = __ATTR(go_maxspeed_load, 0644,
+		show_go_maxspeed_load, store_go_maxspeed_load);
+#else
 static struct global_attr go_maxspeed_load_attr = __ATTR(go_maxspeed_load, 0666,
 		show_go_maxspeed_load, store_go_maxspeed_load);
+#endif
 
 static ssize_t show_boost_factor(struct kobject *kobj,
 				     struct attribute *attr, char *buf)
@@ -615,8 +620,13 @@ static ssize_t store_max_boost(struct kobject *kobj,
 	return -EINVAL;
 }
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+static struct global_attr max_boost_attr = __ATTR(max_boost, 0644,
+		show_max_boost, store_max_boost);
+#else
 static struct global_attr max_boost_attr = __ATTR(max_boost, 0666,
 		show_max_boost, store_max_boost);
+#endif
 
 
 static ssize_t show_sustain_load(struct kobject *kobj,
