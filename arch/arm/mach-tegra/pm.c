@@ -67,6 +67,15 @@
 #include "sleep.h"
 #include "timer.h"
 #include "dvfs.h"
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+#include <linux/gpio.h>
+#include "gpio-names.h"
+
+#define POWER_KEY_GPIO TEGRA_GPIO_PV0
+int p2_wakeup = 1;
+#endif
+
+
 
 struct suspend_context {
 	/*
@@ -191,15 +200,6 @@ enum tegra_cluster_switch_time_id {
 	tegra_cluster_switch_time_id_epilog,
 	tegra_cluster_switch_time_id_max
 };
-
-#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
-#include <linux/gpio.h>
-#include "gpio-names.h"
-
-#define POWER_KEY_GPIO TEGRA_GPIO_PV0
-int p2_wakeup = 1;
-#endif
-
 
 static unsigned long
 		tegra_cluster_switch_times[tegra_cluster_switch_time_id_max];
