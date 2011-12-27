@@ -1326,18 +1326,20 @@ static struct platform_device dock_switch_dvt2 = {
 
 static void acer_dock_init(void)
 {
-	if (is_tegra_debug_uartport_hs()) {
-		if (acer_board_type == BOARD_PICASSO_2 && (acer_board_id == BOARD_EVT || acer_board_id == BOARD_DVT1)) {
-			tegra_gpio_enable(TEGRA_GPIO_PBB0);
-			tegra_gpio_enable(TEGRA_GPIO_PS6);
+	if (acer_board_type == BOARD_PICASSO_2 && (acer_board_id == BOARD_EVT || acer_board_id == BOARD_DVT1)) {
+		tegra_gpio_enable(TEGRA_GPIO_PBB0);
+		tegra_gpio_enable(TEGRA_GPIO_PS6);
+		if (is_tegra_debug_uartport_hs())
 			platform_device_register(&dock_switch_dvt1);
-		} else {
-			tegra_gpio_enable(TEGRA_GPIO_PBB6);
-			tegra_gpio_enable(TEGRA_GPIO_PS6);
-			platform_device_register(&dock_switch_dvt2);
-		}
+		else
+			pr_info("[ACER-DOCK-DVT1] Enable the debug message, close the dock!\n");
 	} else {
-		pr_info("[ACER-DOCK] Enable the debug message, close the dock!\n");
+		tegra_gpio_enable(TEGRA_GPIO_PBB6);
+		tegra_gpio_enable(TEGRA_GPIO_PS6);
+		if (is_tegra_debug_uartport_hs())
+			platform_device_register(&dock_switch_dvt2);
+		else
+			pr_info("[ACER-DOCK-DVT2] Enable the debug message, close the dock!\n");
 	}
 }
 #endif
