@@ -276,6 +276,8 @@ static void fm2018_switch(struct tegra_wm8903_platform_data *pdata)
 		gpio_set_value_cansleep(pdata->gpio_int_mic_en, 0);
 	else
 		gpio_set_value_cansleep(pdata->gpio_int_mic_en, 1);
+
+	ACER_DBG("FM2018_EN = %d", gpio_get_value_cansleep(audio_data.gpio.int_mic_en));
 }
 
 void mic_switch(struct tegra_wm8903_platform_data *pdata)
@@ -367,11 +369,12 @@ static int switch_audio_table_single(int control_mode, bool fromAP)
 			audio_data.AP_Lock = true;
 	}
 
-	ACER_DBG("audio source = %d, FM2018_EN = %d, pre_table = %d, cur_table %d!",
-			audio_data.mode.input_source,
-			gpio_get_value_cansleep(audio_data.gpio.int_mic_en),
-			getAudioTable(), audio_data.table.input);
-	setAudioTable(audio_data.table.input);
+	if (audio_data.state.int_mic || audio_data.state.ext_mic) {
+		ACER_DBG("audio source = %d, pre_table = %d, cur_table %d!",
+				audio_data.mode.input_source,
+				getAudioTable(), audio_data.table.input);
+		setAudioTable(audio_data.table.input);
+	}
 
 	return 1;
 }
@@ -399,12 +402,12 @@ static int switch_audio_table_dual(int control_mode, bool fromAP)
 			audio_data.table.input = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
 	}
 
-	ACER_DBG("audio source = %d, FM2018_EN = %d, pre_table = %d, cur_table %d!",
-			audio_data.mode.input_source,
-			gpio_get_value_cansleep(audio_data.gpio.int_mic_en),
-			getAudioTable(), audio_data.table.input);
-	setAudioTable(audio_data.table.input);
-
+	if (audio_data.state.int_mic || audio_data.state.ext_mic) {
+		ACER_DBG("audio source = %d, pre_table = %d, cur_table %d!",
+				audio_data.mode.input_source,
+				getAudioTable(), audio_data.table.input);
+		setAudioTable(audio_data.table.input);
+	}
 	return 1;
 }
 #endif
