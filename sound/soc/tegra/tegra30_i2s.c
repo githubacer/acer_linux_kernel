@@ -303,8 +303,13 @@ static int tegra30_i2s_hw_params(struct snd_pcm_substream *substream,
 	srate = params_rate(params);
 
 	if (i2s->reg_ctrl & TEGRA30_I2S_CTRL_MASTER_ENABLE) {
+#ifdef CONFIG_ACER_ES305
+		/* FIXME: audience suggest BCLK: 1.536MHz, they will fix this issue */
+		i2sclock = srate * params_channels(params) * sample_size * 1;
+#else
 		/* Final "* 2" required by Tegra hardware */
 		i2sclock = srate * params_channels(params) * sample_size * 2;
+#endif
 
 		/* Additional "* 2" is needed for FSYNC mode */
 		if (i2s->reg_ctrl & TEGRA30_I2S_CTRL_FRAME_FORMAT_FSYNC)
