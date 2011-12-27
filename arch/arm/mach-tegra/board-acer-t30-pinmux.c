@@ -178,7 +178,7 @@ static __initdata struct tegra_pingroup_config picasso2_pinmux_common[] = {
 	DEFAULT_PINMUX(ULPI_DATA1,      UARTA,           NORMAL,    NORMAL,     INPUT), // Function
 	DEFAULT_PINMUX(ULPI_DATA2,      UARTA,           NORMAL,    NORMAL,     OUTPUT), // G (NC)
 	DEFAULT_PINMUX(ULPI_DATA3,      UARTA,           NORMAL,    TRISTATE,     INPUT), // GI
-	DEFAULT_PINMUX(ULPI_DATA4,      UARTA,           PULL_UP,   TRISTATE,     INPUT), // GI
+	DEFAULT_PINMUX(ULPI_DATA4,      UARTA,           PULL_UP,   NORMAL,     INPUT), // GI
 	DEFAULT_PINMUX(ULPI_DATA5,      UARTA,           NORMAL,    NORMAL,     OUTPUT), // G (NC)
 	DEFAULT_PINMUX(ULPI_DATA6,      UARTA,           NORMAL,    NORMAL,     OUTPUT), // G (NC)
 	DEFAULT_PINMUX(ULPI_DATA7,      UARTA,           NORMAL,    NORMAL,     OUTPUT), // G (NC)
@@ -238,7 +238,7 @@ static __initdata struct tegra_pingroup_config picasso2_pinmux_common[] = {
 	DEFAULT_PINMUX(GMI_OE_N,        NAND,            NORMAL,    TRISTATE,     INPUT), //GI
 	DEFAULT_PINMUX(GMI_RST_N,       RSVD3,           NORMAL,   NORMAL,     OUTPUT), //G
 	DEFAULT_PINMUX(GMI_WAIT,        NAND,           PULL_UP,    NORMAL,     OUTPUT), //G
-	DEFAULT_PINMUX(GMI_WP_N,       RSVD1,         PULL_UP,   TRISTATE,     INPUT), //GI
+	DEFAULT_PINMUX(GMI_WP_N,       RSVD1,         PULL_UP,   NORMAL,     INPUT), //GI
 	DEFAULT_PINMUX(GMI_WR_N,        NAND,            NORMAL,    TRISTATE,     INPUT), //GI
 	DEFAULT_PINMUX(CRT_HSYNC,       CRT,             NORMAL,    NORMAL,     OUTPUT), // G (NC)
 	DEFAULT_PINMUX(CRT_VSYNC,       CRT,             NORMAL,    NORMAL,     OUTPUT), // G (NC)
