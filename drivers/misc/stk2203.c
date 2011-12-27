@@ -36,6 +36,8 @@
 #include <linux/interrupt.h>
 #include <linux/stk_lk_defs.h>
 #include <linux/stk_i2c_als_220xgeneric.h>
+#include "../../arch/arm/mach-tegra/board-acer-t30.h"
+extern int acer_board_id;
 
 #define STK_DRIVER_VER	"1.6.2"
 #define ALS_NAME	"lightsensor-level"
@@ -79,7 +81,10 @@ inline int32_t get_reading(void)
 inline int32_t alscode2lux(int32_t alscode)
 {
 #ifdef CONFIG_MACH_PICASSO_M
-	alscode<<=9;
+	if (acer_board_id == BOARD_PVT)
+		alscode<<=10;
+	else
+		alscode<<=9;
 #else
 	alscode<<=10;
 #endif
@@ -149,7 +154,10 @@ static int32_t init_all_setting()
 
 	enable_als(0);
 #ifdef CONFIG_MACH_PICASSO_M
-	set_gain(2);
+	if (acer_board_id == BOARD_PVT)
+		set_gain(1);
+	else
+		set_gain(2);
 #else
 	set_gain(1);
 #endif
