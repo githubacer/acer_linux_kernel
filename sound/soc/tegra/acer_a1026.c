@@ -9,6 +9,7 @@
 #include <linux/input.h>
 #include <linux/workqueue.h>
 #include <linux/freezer.h>
+#include <mach/pinmux.h>
 #include "acer_a1026.h"
 
 #if 0
@@ -21,6 +22,7 @@
 
 static int execute_cmdmsg(unsigned int);
 static ssize_t config_wakeup_gpio(void);
+static void es305_set_uart_tx(int on);
 static ssize_t a1026_suspend_es305(void);
 int a1026_i2c_read(char *rxData, int length);
 int a1026_i2c_write(char *txData, int length);
@@ -41,6 +43,26 @@ static struct a1026_data {
 struct vp_ctxt {
 	unsigned char *data;
 	unsigned int img_size;
+};
+
+#define DEFAULT_PINMUX(_pingroup, _mux, _pupd, _tri, _io)	\
+	{							\
+		.pingroup	= TEGRA_PINGROUP_##_pingroup,	\
+		.func		= TEGRA_MUX_##_mux,		\
+		.pupd		= TEGRA_PUPD_##_pupd,		\
+		.tristate	= TEGRA_TRI_##_tri,		\
+		.io		= TEGRA_PIN_##_io,		\
+		.lock		= TEGRA_PIN_LOCK_DEFAULT,	\
+		.od		= TEGRA_PIN_OD_DEFAULT,		\
+		.ioreset	= TEGRA_PIN_IO_RESET_DEFAULT,	\
+	}
+
+static struct tegra_pingroup_config ES_305_UART_MODE[] = {
+	DEFAULT_PINMUX(ULPI_CLK,        UARTD,           NORMAL,    NORMAL,     OUTPUT),
+};
+
+static struct tegra_pingroup_config ES_305_GPIO_MODE[] = {
+	DEFAULT_PINMUX(ULPI_CLK,        RSVD,            NORMAL,    NORMAL,     OUTPUT),
 };
 
 #define AUDIENCE_A1026_NAME "audience_a1026"
@@ -359,6 +381,9 @@ static ssize_t config_wakeup_gpio(void)
 	int rc = 0;
 
 	if (!a1026_config_wakeup_gpio) {
+		/* Enable GPIO mode for wake up */
+		es305_set_uart_tx(0);
+
 		tegra_gpio_enable(a1026_data.pdata->gpio_a1026_wakeup);
 
 		/* config a1026 wakeup GPIO */
@@ -382,6 +407,20 @@ err_free_gpio:
 	gpio_free(a1026_data.pdata->gpio_a1026_wakeup);
 err_gpio_request:
 	return rc;
+}
+
+static void es305_set_uart_tx(int on)
+{
+	if(on) {
+		if (a1026_config_wakeup_gpio) {
+			a1026_config_wakeup_gpio = 0;
+			tegra_gpio_disable(a1026_data.pdata->gpio_a1026_wakeup);
+			gpio_free(a1026_data.pdata->gpio_a1026_wakeup);
+		}
+		tegra_pinmux_config_table(ES_305_UART_MODE, ARRAY_SIZE(ES_305_UART_MODE));
+	} else {
+		tegra_pinmux_config_table(ES_305_GPIO_MODE, ARRAY_SIZE(ES_305_GPIO_MODE));
+	}
 }
 
 static int a1026_open(struct inode *inode, struct file *file)
@@ -449,6 +488,9 @@ set_sync_err:
 
 static void a1026_download_mode(void)
 {
+	/* Enable UART mode for download firmware */
+	es305_set_uart_tx(1);
+
 	/* Enable A1026 clock */
 	if (control_a1026_clk)
 		gpio_set_value(a1026_data.pdata->gpio_a1026_clk, 1);
