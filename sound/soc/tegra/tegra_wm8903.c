@@ -837,6 +837,7 @@ static int tegra_wm8903_init(struct snd_soc_pcm_runtime *rtd)
 	/* if debug on, will not enable headset */
 	if (gpio_is_valid(pdata->gpio_hp_det) && !is_debug_on()) {
 		pr_info("[Audio]register headphone jack\n");
+		audio_data.gpio.hp_det = pdata->gpio_hp_det;
 #else
 	if (gpio_is_valid(pdata->gpio_hp_det)) {
 #endif
@@ -887,7 +888,6 @@ static int tegra_wm8903_init(struct snd_soc_pcm_runtime *rtd)
 
 	audio_data.codec = codec;
 	audio_data.gpio.spkr_en = pdata->gpio_spkr_en;
-	audio_data.gpio.hp_det = pdata->gpio_hp_det;
 #if defined(CONFIG_ARCH_ACER_T20)
 	audio_data.gpio.int_mic_en = pdata->gpio_int_mic_en;
 #elif defined(CONFIG_ARCH_ACER_T30)
