@@ -369,17 +369,10 @@ int acer_soc_suspend_pre(struct snd_soc_card *card)
 
 int acer_soc_resume_post(struct snd_soc_card *card)
 {
-	enum headset_state state = BIT_NO_HEADSET;
+	int state = (int) is_hp_plugged();
 
-	if (is_hp_plugged() && !is_debug_on()) {
-		if (handset_mic_detect(audio_data.codec)) {
-			state = BIT_HEADSET;
-		} else {
-			state = BIT_HEADSET_NO_MIC;
-		}
-
-		switch_set_state(&tegra_wm8903_headset_switch, state);
-	}
+	if (!is_debug_on())
+		snd_soc_jack_report(&tegra_wm8903_hp_jack, state, 1);
 
 	return 0;
 }
