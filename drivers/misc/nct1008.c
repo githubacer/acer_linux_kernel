@@ -716,6 +716,20 @@ static int __devinit nct1008_configure_sensor(struct nct1008_data* data)
 	if (err < 0)
 		goto error;
 
+#if defined(CONFIG_ARCH_ACER_T30)
+	value = temperature_to_value(pdata->ext_range, pdata->throttling_ext_limit);
+
+	/*External Temperature Throttling limit */
+	err = i2c_smbus_write_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
+	if (err < 0)
+		goto error;
+
+	/* Local Temperature Throttling limit */
+	err = i2c_smbus_write_byte_data(client, LOCAL_TEMP_HI_LIMIT_WR, value);
+	if (err < 0)
+		goto error;
+#endif
+
 	/* register sysfs hooks */
 	err = sysfs_create_group(&client->dev.kobj, &nct1008_attr_group);
 	if (err < 0) {
@@ -785,6 +799,8 @@ int nct1008_thermal_set_limits(struct nct1008_data *data,
 				long lo_limit_milli,
 				long hi_limit_milli)
 {
+	struct i2c_client *client = data->client;
+	struct nct1008_platform_data *pdata = client->dev.platform_data;
 	int err;
 	u8 value;
 	bool extended_range = data->plat_data.ext_range;
@@ -810,7 +826,11 @@ int nct1008_thermal_set_limits(struct nct1008_data *data,
 	}
 
 	if (data->current_hi_limit != hi_limit) {
+#if defined(CONFIG_ARCH_ACER_T30)
+		value = temperature_to_value(pdata->ext_range, pdata->throttling_ext_limit);
+#else
 		value = temperature_to_value(extended_range, hi_limit);
+#endif
 		pr_debug("%s: %d\n", __func__, value);
 		err = i2c_smbus_write_byte_data(data->client,
 				EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
