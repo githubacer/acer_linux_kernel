@@ -30,22 +30,20 @@
 #include <linux/interrupt.h>
 #include <mach/gpio.h>
 #include <linux/bq27541.h>
-
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/err.h>
 #include <linux/debugfs.h>
 #include <linux/timer.h>
-
+#include <linux/irq.h>
 #include "../../arch/arm/mach-tegra/gpio-names.h"
-
 #if defined(CONFIG_ARCH_ACER_T30)
 #include "../../arch/arm/mach-tegra/board-acer-t30.h"
 extern int acer_board_id;
 extern int acer_board_type;
 #endif
 
-#define DRIVER_VERSION			"1.4.0"
+#define DRIVER_VERSION			"1.4.3"
 
 #ifdef CONFIG_BATTERY_BQ27541
 
@@ -103,11 +101,11 @@ extern int acer_board_type;
 #define CHARGING_FULL	TEGRA_GPIO_PW5
 
 struct i2c_client *bat_client;
-bool reach_low = false;
 bool AC_IN = false;
 int design_capacity = 0;
-int chg_stat = -1;
+int bat_temp = 0;
 int Capacity = 0;
+int old_rsoc = 0;
 int counter = 0;
 int gpio = 0;
 
@@ -137,12 +135,6 @@ static enum power_supply_property bq27541_battery_props[] = {
 	POWER_SUPPLY_PROP_CAPACITY,
 	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_HEALTH,
-	POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW,
-	POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG,
-	POWER_SUPPLY_PROP_TIME_TO_FULL_NOW,
-	POWER_SUPPLY_PROP_ENERGY_NOW,
-	POWER_SUPPLY_PROP_POWER_AVG,
-	POWER_SUPPLY_PROP_CYCLE_COUNT,
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_CHARGE_FULL_DESIGN,
 };
@@ -366,14 +358,14 @@ static ssize_t CheckSYHI_show(struct kobject *kobj, struct kobj_attribute *attr,
 	ret = i2c_smbus_write_byte_data(bat_client, 0x61, 0x00);	//BlockDataControl(): 0x61
 	s += sprintf(s, "0x61 = %d\n", ret);
 	msleep(200);
-	ret = i2c_smbus_write_byte_data(bat_client, 0x3e, 0x38);	//DataFlashClass(): 0x3e
+	ret = i2c_smbus_write_byte_data(bat_client, 0x3e, 0x53);	//DataFlashClass(): 0x3e
 	s += sprintf(s, "0x3e = %d\n", ret);
 	msleep(200);
 	ret = i2c_smbus_write_byte_data(bat_client, 0x3f, 0x00);	//DataFlashBlock(): 0x3f
 	s += sprintf(s, "0x3f = %d\n", ret);
 
-	ret = i2c_smbus_read_byte_data(bat_client, 0x44);
-	s += sprintf(s, "FIRMWARE = %x\n", ret);
+	ret = i2c_smbus_read_byte_data(bat_client, 0x40);
+	s += sprintf(s, "Chem ID = %x\n", ret);
 	msleep(50);
 
 	ret = i2c_smbus_write_byte_data(bat_client, 0x61, 0x00);	//BlockDataControl(): 0x61
@@ -1035,16 +1027,33 @@ static int bq27541_battery_temperature(struct bq27541_device_info *di)
 {
 	int ret;
 	int temp = 0;
+	int report = temp - 2731;
 
 	ret = bat_i2c_read(BQ27541_REG_TEMP, &temp, 0, di);
 	msleep(50);
 
+	report = temp - 2731;
+	bat_temp = report;
 	if (ret < 0) {
 		dev_err(di->dev, "error reading temperature\n");
 		return ret;
 	}
 
-	return temp - 2731;
+	if((report == 0) || (report > 680)){
+		dev_err(di->dev, "1st error temperature value\n");
+		ret = bat_i2c_read(BQ27541_REG_TEMP, &temp, 0, di);
+		msleep(200);
+		if((report == 0) || (report > 680)){
+			dev_err(di->dev, "2nd error temperature value\n");
+			bat_temp = 273;
+		}
+		else
+			bat_temp = temp - 2731;
+	}
+	else
+		bat_temp = temp - 2731;
+
+	return bat_temp;
 }
 
 /*
@@ -1107,6 +1116,20 @@ static int bq27541_battery_rsoc(struct bq27541_device_info *di)
 	}
 
 	Capacity = rsoc;
+	if((rsoc == 0) || (rsoc > 100)){
+		dev_err(di->dev, "1st error capacity value\n");
+		ret = bat_i2c_read(BQ27541_REG_SOC, &rsoc, 0, di);
+		msleep(200);
+		if((rsoc == 0) || (rsoc > 100)){
+			dev_err(di->dev, "2nd error capacity value\n");
+			Capacity = old_rsoc;
+		}
+		else
+			Capacity = rsoc;
+	}
+	else
+		Capacity = rsoc;
+
 	/* Capacity mapping for 5% preserved engrgy */
 	if (rsoc <= 23 && rsoc > 15)
 		return (Capacity - 2);
@@ -1213,80 +1236,6 @@ static int bq27541_battery_present(struct bq27541_device_info *di)
 	}
 }
 
-/*
- * Read a time register.
- * Return < 0 if something fails.
- */
-static int bq27541_battery_time(struct bq27541_device_info *di, int reg,
-				union power_supply_propval *val)
-{
-	int ret;
-	int tval = 0;
-
-	ret = bat_i2c_read(reg, &tval, 0, di);
-	msleep(50);
-
-	if (ret < 0) {
-		dev_err(di->dev, "error reading register %02x\n", reg);
-		return ret;
-	}
-
-	if (ret == 65535)
-		return -ENODATA;
-
-	val->intval = tval * 60;
-	return 0;
-}
-
-/*
- * energy now is the predicted charge or energy remaining in the
- * battery. The value is reported in units of 10mWh.
- */
-static int bq27541_battery_energy_now(struct bq27541_device_info *di)
-{
-	int ret;
-	int now = 0;
-
-	ret = bat_i2c_read(BQ27541_ENERGY_AVAIL, &now, 0, di);
-	msleep(50);
-
-	if (ret  < 0) {
-		dev_err(di->dev, "read energy failure\n");
-		return ret;
-	}
-	return now * (10 * 1000);
-}
-
-static int bq27541_battery_power_avg(struct bq27541_device_info *di)
-{
-	int ret;
-	int avg = 0;
-
-	ret = bat_i2c_read(BQ27541_POWER_AVG, &avg, 0, di);
-	msleep(50);
-
-	if (ret  < 0){
-		dev_err(di->dev, "read avg failure\n");
-		return ret;
-	}
-	return avg;
-}
-
-
-static int bq27541_battery_cycle_count(struct bq27541_device_info *di)
-{
-	int ret;
-	int count = 0;
-
-	ret = bat_i2c_read(BQ27541_CYCLE_COUNT, &count, 0, di);
-	msleep(50);
-
-	if (ret  < 0){
-		dev_err(di->dev, "read cycle failure\n");
-		return ret;
-	}
-	return count;
-}
 
 #define bat_to_bq27541_device_info(x) container_of((x), \
 				struct bq27541_device_info, bat);
@@ -1315,29 +1264,13 @@ static int bq27541_battery_get_property(struct power_supply *psy,
 		val->intval = bq27541_battery_current(di);
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-			val->intval = bq27541_battery_rsoc(di);
-			printk("AC_IN = %d, Capacity = %d, rsoc = %d\n", AC_IN, Capacity, bq27541_battery_check());
+		val->intval = bq27541_battery_rsoc(di);
+		old_rsoc = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = bq27541_battery_temperature(di);
-		break;
-	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW:
-		ret = bq27541_battery_time(di, BQ27541_REG_TTE, val);
-		break;
-	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_AVG:
-		ret = bq27541_battery_time(di, BQ27541_REG_TTECP, val);
-		break;
-	case POWER_SUPPLY_PROP_TIME_TO_FULL_NOW:
-		ret = bq27541_battery_time(di, BQ27541_REG_TTF, val);
-		break;
-	case POWER_SUPPLY_PROP_ENERGY_NOW:
-		val->intval = bq27541_battery_energy_now(di);
-		break;
-	case POWER_SUPPLY_PROP_POWER_AVG:
-		val->intval = bq27541_battery_power_avg(di);
-		break;
-	case POWER_SUPPLY_PROP_CYCLE_COUNT:
-		val->intval = bq27541_battery_cycle_count(di);
+		printk("AC_IN = %d, Capacity = %d, ROSC = %d, Temperature = %d\n",
+			AC_IN, Capacity, bq27541_battery_check(), val->intval);
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = bq27541_battery_health(di);
@@ -1365,10 +1298,7 @@ static char *ac_power_supplied_to[] = {
 
 static int bq27541_get_ac_status(void)
 {
-	int ACStatus;
-	ACStatus = gpio_get_value(gpio);
-
-	if(ACStatus)
+	if(gpio_get_value(gpio))
 		return ADAPTER_PLUG_IN;
 	else
 		return ADAPTER_PULL_OUT;
@@ -1598,9 +1528,10 @@ static int bq27541_battery_suspend(struct i2c_client *client,
 	pm_message_t state)
 {
 	struct bq27541_device_info *di = i2c_get_clientdata(client);
-	if(AC_IN)
+	if(gpio_get_value(gpio))
 		gpio_direction_output(CHARGING_FULL, 0);
 	del_timer_sync(&di->battery_poll_timer);
+	enable_irq_wake(client->irq);
 	return 0;
 }
 
@@ -1609,6 +1540,7 @@ static int bq27541_battery_resume(struct i2c_client *client)
 	struct bq27541_device_info *di = i2c_get_clientdata(client);
 	setup_timer(&di->battery_poll_timer, bq27541_poll_timer_func, (unsigned long) di);
 	mod_timer(&di->battery_poll_timer, jiffies + msecs_to_jiffies(BATTERY_FAST_POLL_PERIOD));
+	disable_irq_wake(client->irq);
 	return 0;
 }
 #endif
