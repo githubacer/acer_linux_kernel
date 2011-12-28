@@ -387,7 +387,7 @@ static ssize_t config_wakeup_gpio(void)
 		tegra_gpio_enable(a1026_data.pdata->gpio_a1026_wakeup);
 
 		/* config a1026 wakeup GPIO */
-		rc = gpio_request(a1026_data.pdata->gpio_a1026_wakeup, "a1026");
+		rc = gpio_request(a1026_data.pdata->gpio_a1026_wakeup, "a1026_wakeup");
 		if (rc < 0) {
 			pr_err("%s: gpio request wakeup pin failed\n", __func__);
 			goto err_gpio_request;
@@ -730,7 +730,7 @@ static int a1026_probe(struct i2c_client *client, const struct i2c_device_id *id
 	a1026_data.pdata = client->dev.platform_data;
 
 	/* config a1026 clock GPIO */
-	rc = gpio_request(a1026_data.pdata->gpio_a1026_clk, "a1026");
+	rc = gpio_request(a1026_data.pdata->gpio_a1026_clk, "a1026_clk");
 	if (rc < 0) {
 		control_a1026_clk = 0;
 		goto err_free_data;
@@ -744,7 +744,7 @@ static int a1026_probe(struct i2c_client *client, const struct i2c_device_id *id
 	}
 
 	/* config a1026 reset GPIO */
-	rc = gpio_request(a1026_data.pdata->gpio_a1026_reset, "a1026");
+	rc = gpio_request(a1026_data.pdata->gpio_a1026_reset, "a1026_reset");
 	if (rc < 0) {
 		pr_err("%s: gpio request reset pin failed\n", __func__);
 		goto err_free_gpio_clk;
