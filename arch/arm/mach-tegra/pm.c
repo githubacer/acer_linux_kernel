@@ -165,6 +165,12 @@ struct suspend_context tegra_sctx;
 #define CLK_RESET_SOURCE_CSITE	0x1d4
 
 #define CLK_RESET_CCLK_BURST_POLICY_SHIFT 28
+#if defined(CONFIG_ARCH_ACER_T20)
+#define CLK_RESET_CCLK_RUN_POLICY_SHIFT    4
+#define CLK_RESET_CCLK_IDLE_POLICY_SHIFT   0
+#define CLK_RESET_CCLK_IDLE_POLICY	   1
+#define CLK_RESET_CCLK_RUN_POLICY	   2
+#endif
 #define CLK_RESET_CCLK_BURST_POLICY_PLLM   3
 #define CLK_RESET_CCLK_BURST_POLICY_PLLX   8
 
@@ -369,27 +375,51 @@ static void set_power_timers(unsigned long us_on, unsigned long us_off,
 static void restore_cpu_complex(u32 mode)
 {
 	int cpu = smp_processor_id();
+#if defined(CONFIG_ARCH_ACER_T20)
+	unsigned int reg, policy;
+#else
 	unsigned int reg;
+#endif
 
 	BUG_ON(cpu != 0);
 
 	/* restore original PLL settings */
+#if !defined(CONFIG_ARCH_ACER_T20)
 	writel(tegra_sctx.pllx_misc, clk_rst + CLK_RESET_PLLX_MISC);
 	writel(tegra_sctx.pllx_base, clk_rst + CLK_RESET_PLLX_BASE);
 	writel(tegra_sctx.pllp_misc, clk_rst + CLK_RESET_PLLP_MISC);
 	writel(tegra_sctx.pllp_base, clk_rst + CLK_RESET_PLLP_BASE);
+#endif
 	writel(tegra_sctx.pllp_outa, clk_rst + CLK_RESET_PLLP_OUTA);
 	writel(tegra_sctx.pllp_outb, clk_rst + CLK_RESET_PLLP_OUTB);
 
 	/* Is CPU complex already running on PLLX? */
 	reg = readl(clk_rst + CLK_RESET_CCLK_BURST);
+#if !defined(CONFIG_ARCH_ACER_T20)
 	reg &= 0xF;
 	if (reg != 0x8) {
 		/* restore original burst policy setting; PLLX state restored
 		 * by CPU boot-up code - wait for PLL stabilization if PLLX
 		 * was enabled */
+#else
+	policy = (reg >> CLK_RESET_CCLK_BURST_POLICY_SHIFT) & 0xF;
 
+	if (policy == CLK_RESET_CCLK_IDLE_POLICY)
+		reg = (reg >> CLK_RESET_CCLK_IDLE_POLICY_SHIFT) & 0xF;
+	else if (policy == CLK_RESET_CCLK_RUN_POLICY)
+		reg = (reg >> CLK_RESET_CCLK_RUN_POLICY_SHIFT) & 0xF;
+	else
+		BUG();
+
+	if (reg != CLK_RESET_CCLK_BURST_POLICY_PLLX) {
+		/* restore PLLX settings if CPU is on different PLL */
+		writel(tegra_sctx.pllx_misc, clk_rst + CLK_RESET_PLLX_MISC);
+		writel(tegra_sctx.pllx_base, clk_rst + CLK_RESET_PLLX_BASE);
+
+		/* wait for PLL stabilization if PLLX was enabled */
+#endif
 		reg = readl(clk_rst + CLK_RESET_PLLX_BASE);
+
 		/* mask out bit 27 - not to check PLL lock bit */
 		BUG_ON((reg & (~(1 << 27))) !=
 				(tegra_sctx.pllx_base & (~(1 << 27))));
@@ -400,13 +430,19 @@ static void restore_cpu_complex(u32 mode)
 			reg = readl(clk_rst + CLK_RESET_PLLX_MISC);
 			reg |= 1<<18;
 			writel(reg, clk_rst + CLK_RESET_PLLX_MISC);
+#if defined(CONFIG_ARCH_ACER_T20)
+			while (!(readl(clk_rst + CLK_RESET_PLLX_BASE) &
+#else
 			while (!(readl(clk_rst + CLK_RESET_PLLX_BASE) &&
+#endif
 				 (1<<27)))
 				cpu_relax();
 #else
 			udelay(300);
 #endif
 		}
+
+		/* restore original burst policy setting */
 		writel(tegra_sctx.cclk_divider, clk_rst +
 		       CLK_RESET_CCLK_DIVIDER);
 		writel(tegra_sctx.cpu_burst, clk_rst +
