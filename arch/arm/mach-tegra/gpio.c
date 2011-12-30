@@ -995,7 +995,7 @@ static int __init tegra_gpio_debuginit(void)
 {
 	(void) debugfs_create_file("tegra_gpio", S_IRUGO,
 					NULL, NULL, &debug_fops);
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	(void) debugfs_create_file("acer_gpio_sleep_table", S_IRUGO,
 					NULL, NULL, &debug_sleep_fops);
 #endif
