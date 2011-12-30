@@ -143,7 +143,7 @@ static struct ov5640_reg mode_initial[] = {
 	{OV5640_WRITE_REG, 0x5188, 0x0E},
 	{OV5640_WRITE_REG, 0x5189, 0x7D},
 	{OV5640_WRITE_REG, 0x518A, 0x7D},
-	{OV5640_WRITE_REG, 0x518B, 0x88},
+	{OV5640_WRITE_REG, 0x518B, 0xC8},
 	{OV5640_WRITE_REG, 0x518C, 0x40},
 	{OV5640_WRITE_REG, 0x518D, 0x41},
 	{OV5640_WRITE_REG, 0x518E, 0x38},
@@ -539,11 +539,11 @@ static struct ov5640_reg WhiteBalance_Auto[] = {
 static struct ov5640_reg WhiteBalance_Incandescent[] = {
 	{OV5640_WRITE_REG, 0x3406, 0x01},
 	{OV5640_WRITE_REG, 0x3400, 0x04},
-	{OV5640_WRITE_REG, 0x3401, 0x10},
+	{OV5640_WRITE_REG, 0x3401, 0x26},
 	{OV5640_WRITE_REG, 0x3402, 0x04},
 	{OV5640_WRITE_REG, 0x3403, 0x00},
-	{OV5640_WRITE_REG, 0x3404, 0x08},
-	{OV5640_WRITE_REG, 0x3405, 0x40},
+	{OV5640_WRITE_REG, 0x3404, 0x09},
+	{OV5640_WRITE_REG, 0x3405, 0xE5},
 
 	{OV5640_TABLE_END, 0x0000, 0x00},
 };
@@ -574,7 +574,7 @@ static struct ov5640_reg WhiteBalance_Daylight[] = {
 
 static struct ov5640_reg WhiteBalance_CloudyDaylight[] = {
 	{OV5640_WRITE_REG, 0x3406, 0x01},
-	{OV5640_WRITE_REG, 0x3400, 0x06},
+	{OV5640_WRITE_REG, 0x3400, 0x07},
 	{OV5640_WRITE_REG, 0x3401, 0x48},
 	{OV5640_WRITE_REG, 0x3402, 0x04},
 	{OV5640_WRITE_REG, 0x3403, 0x00},
