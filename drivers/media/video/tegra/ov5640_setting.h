@@ -331,8 +331,7 @@ static struct ov5640_reg mode_initial[] = {
 	{OV5640_WRITE_REG, 0x4800, 0x34},
 	{OV5640_WRITE_REG, 0x4837, 0x09},
 	{OV5640_WRITE_REG, 0x3003, 0x01},
-	{OV5640_WRITE_REG, 0x4003, 0x81},
-	{OV5640_WRITE_REG, 0x4003, 0x08},
+	{OV5640_WRITE_REG, 0x4003, 0x82},
 
 	{OV5640_TABLE_END, 0x0000, 0x00},
 };
@@ -383,8 +382,7 @@ static struct ov5640_reg mode_1280x960[] = {
 	{OV5640_WRITE_REG, 0x3824, 0x01},
 	{OV5640_WRITE_REG, 0x3003, 0x03},
 	{OV5640_WRITE_REG, 0x3003, 0x01},
-	{OV5640_WRITE_REG, 0x4003, 0x81},
-	{OV5640_WRITE_REG, 0x4003, 0x08},
+	{OV5640_WRITE_REG, 0x4003, 0x82},
 	{OV5640_WRITE_REG, 0x4201, 0x00},  // start after 1 frame, workaround for take green picture
 	{OV5640_WRITE_REG, 0x4202, 0x01},  // start after 1 frame, workaround for take green picture
 
@@ -436,8 +434,7 @@ static struct ov5640_reg mode_2592x1944[] = {
 	{OV5640_WRITE_REG, 0x460B, 0x35},
 	{OV5640_WRITE_REG, 0x460C, 0x20},
 	{OV5640_WRITE_REG, 0x3824, 0x01},
-	{OV5640_WRITE_REG, 0x4003, 0x81},
-	{OV5640_WRITE_REG, 0x4003, 0x08},
+	{OV5640_WRITE_REG, 0x4003, 0x82},
 	{OV5640_WRITE_REG, 0x3003, 0x01},
 	{OV5640_WRITE_REG, 0x4201, 0x00},  // start after 1 frame, workaround for take green picture
 	{OV5640_WRITE_REG, 0x4202, 0x01},  // start after 1 frame, workaround for take green picture
@@ -488,7 +485,6 @@ static struct ov5640_reg mode_1920x1080[] = {
 	{OV5640_WRITE_REG, 0x3002, 0x1C},
 	{OV5640_WRITE_REG, 0x3006, 0xC3},
 	{OV5640_WRITE_REG, 0x4003, 0x82},
-	{OV5640_WRITE_REG, 0x4003, 0x08},
 	{OV5640_WRITE_REG, 0x4201, 0x00},  // start after 1 frame, workaround for take green picture
 	{OV5640_WRITE_REG, 0x4202, 0x01},  // start after 1 frame, workaround for take green picture
 
