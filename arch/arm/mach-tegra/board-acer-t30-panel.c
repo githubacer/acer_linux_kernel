@@ -312,7 +312,7 @@ static struct tegra_dc_sd_settings acer_sd_settings = {
 /* DISPLAY PICASSO 2 */
 static struct tegra_dc_mode acer_p2_panel_modes[] = {
 	{
-		.pclk = 152300000,
+		.pclk = 152000000,
 		.h_ref_to_sync = 11,
 		.v_ref_to_sync = 1,
 		.h_sync_width = 28,
@@ -339,7 +339,7 @@ static struct tegra_dc_out acer_p2_disp1_out = {
 	.order          = TEGRA_DC_ORDER_RED_BLUE,
 	.sd_settings    = &acer_sd_settings,
 	.type           = TEGRA_DC_OUT_RGB,
-	.parent_clk     = "pll_m",
+	.parent_clk     = "pll_d_out0",
 	.depth          = 24,
 	.dither         = TEGRA_DC_ORDERED_DITHER,
 	.modes          = acer_p2_panel_modes,
@@ -369,7 +369,7 @@ static struct nvhost_device acer_p2_disp1_device = {
 /* DISPLAY PICASSO M */
 static struct tegra_dc_mode acer_pm_panel_modes[] = {
 	{
-		.pclk = 71000000,
+		.pclk = 76000000,
 		.h_ref_to_sync = 0,
 		.v_ref_to_sync = 12,
 		.h_sync_width = 30,
@@ -396,7 +396,7 @@ static struct tegra_dc_out acer_pm_disp1_out = {
 	.order          = TEGRA_DC_ORDER_RED_BLUE,
 	.sd_settings    = &acer_sd_settings,
 	.type           = TEGRA_DC_OUT_RGB,
-	.parent_clk     = "pll_m",
+	.parent_clk     = "pll_d_out0",
 	.depth          = 18,
 	.dither         = TEGRA_DC_ORDERED_DITHER,
 	.modes          = acer_pm_panel_modes,
