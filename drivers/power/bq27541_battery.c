@@ -43,7 +43,7 @@ extern int acer_board_id;
 extern int acer_board_type;
 #endif
 
-#define DRIVER_VERSION			"1.4.3"
+#define DRIVER_VERSION			"1.4.6"
 
 #ifdef CONFIG_BATTERY_BQ27541
 
@@ -89,9 +89,14 @@ extern int acer_board_type;
 #define BATTERY_POLL_PERIOD		30000
 #define BATTERY_FAST_POLL_PERIOD	500
 
-/* Define low battery threshold */
-#define BATTERY_LOW_THRESHOLD		5
-#define BATTERY_LOW_VOLTAGE		3400
+/* Define AC_OUT delay time */
+#define DVT_DELAY	3500
+#define PVT_DELAY	1000
+
+/* Define low temperature threshold */
+#define TEMP_EQUAL_ZERO		0
+#define TEMP_UNDER_ZERO		1
+#define TEMP_UNDER_NAT_TEN		2
 
 /* Define charger report signal */
 #define ADAPTER_PLUG_IN		1
@@ -995,6 +1000,43 @@ static void bq27541_charger_reset(void)
 	gpio_direction_output(BATT_LEARN_GPIO, 0);
 }
 
+int bq27541_battery_check(void)
+{
+	int ret;
+	int rsoc = 0;
+
+	struct bq27541_device_info *di = i2c_get_clientdata(bat_client);
+	if (!bat_client)
+		dev_err(di->dev, "error getting bat_client\n");
+
+	ret = bat_i2c_read(BQ27541_REG_SOC, &rsoc, 0, di);
+	msleep(50);
+	return rsoc;
+}
+EXPORT_SYMBOL(bq27541_battery_check);
+
+int bq27541_low_temp_check(void)
+{
+	int ret, rsoc, temp;
+	struct bq27541_device_info *di = i2c_get_clientdata(bat_client);
+
+	if (!bat_client)
+		dev_err(di->dev, "error getting bat_client\n");
+
+	ret = bat_i2c_read(BQ27541_REG_SOC, &rsoc, 0, di);
+	msleep(50);
+	ret = bat_i2c_read(BQ27541_REG_TEMP, &temp, 0, di);
+	msleep(50);
+
+	if((rsoc < 60) && (temp < 2744) && (temp > 2647))
+		return TEMP_UNDER_ZERO;
+	else if((rsoc < 40) && (temp < 2647) && (temp > 2560))
+		return TEMP_UNDER_NAT_TEN;
+	else
+		return TEMP_EQUAL_ZERO;
+}
+EXPORT_SYMBOL(bq27541_low_temp_check);
+
 static int bq27541_battery_health(struct bq27541_device_info *di)
 {
 	int ret;
@@ -1130,35 +1172,26 @@ static int bq27541_battery_rsoc(struct bq27541_device_info *di)
 	else
 		Capacity = rsoc;
 
-	/* Capacity mapping for 5% preserved engrgy */
-	if (rsoc <= 23 && rsoc > 15)
-		return (Capacity - 2);
-	else if (rsoc <= 15 && rsoc > 11)
-		return (Capacity - 3);
-	else if (rsoc <= 11 && rsoc > 4)
-		return (Capacity - 4);
-	else if (rsoc <= 4){
-		Capacity = 0;
-		return 0;
-	}
+	if(bq27541_low_temp_check() > TEMP_EQUAL_ZERO)
+		return NULL;
 	else
-		return Capacity;
+	{
+		/* Capacity mapping for 5% preserved engrgy */
+		if (rsoc <= 23 && rsoc > 15)
+			return (Capacity - 2);
+		else if (rsoc <= 15 && rsoc > 11)
+			return (Capacity - 3);
+		else if (rsoc <= 11 && rsoc > 4)
+			return (Capacity - 4);
+		else if (rsoc <= 4){
+			Capacity = 0;
+			return 0;
+		}
+		else
+			return Capacity;
+	}
+
 }
-
-int bq27541_battery_check(void)
-{
-	int ret;
-	int rsoc = 0;
-
-	struct bq27541_device_info *di = i2c_get_clientdata(bat_client);
-	if (!bat_client)
-		dev_err(di->dev, "error getting bat_client\n");
-
-	ret = bat_i2c_read(BQ27541_REG_SOC, &rsoc, 0, di);
-	msleep(50);
-	return rsoc;
-}
-EXPORT_SYMBOL(bq27541_battery_check);
 
 static int bq27541_battery_status(struct bq27541_device_info *di)
 {
@@ -1181,27 +1214,29 @@ static int bq27541_battery_status(struct bq27541_device_info *di)
 		return ret;
 	}
 
-	AC_IN = gpio_get_value(gpio);
-
-	if(Capacity < 100)
-	{
-		if(AC_IN){
-			gpio_direction_output(CHARGING_FULL, 1);
-			status = POWER_SUPPLY_STATUS_CHARGING;
-		}
-		else
-			status = POWER_SUPPLY_STATUS_DISCHARGING;
-	}
+	if(bq27541_low_temp_check() > TEMP_EQUAL_ZERO)
+		status = POWER_SUPPLY_STATUS_UNKNOWN;
 	else
 	{
-		if(AC_IN){
-			gpio_direction_output(CHARGING_FULL, 1);
-			status = POWER_SUPPLY_STATUS_FULL;
+		if(Capacity < 100)
+		{
+			if(gpio_get_value(gpio)){
+				gpio_direction_output(CHARGING_FULL, 1);
+				status = POWER_SUPPLY_STATUS_CHARGING;
+			}
+			else
+				status = POWER_SUPPLY_STATUS_DISCHARGING;
 		}
 		else
-			status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+		{
+			if(gpio_get_value(gpio)){
+				gpio_direction_output(CHARGING_FULL, 1);
+				status = POWER_SUPPLY_STATUS_FULL;
+			}
+			else
+				status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+		}
 	}
-
 	return status;
 
 }
@@ -1345,29 +1380,30 @@ static int bq27541_read_i2c(u8 reg, int *rt_value, int b_single,
 			struct bq27541_device_info *di)
 {
 	struct i2c_client *client = di->client;
-	struct i2c_msg msg[1];
+	struct i2c_msg msg[2];
 	unsigned char data[2];
 	int err;
 
 	if (!client->adapter)
 		return -ENODEV;
 
-	msg->addr = client->addr;
-	msg->flags = 0;
-	msg->len = 1;
-	msg->buf = data;
+	msg[0].addr = client->addr;
+	msg[0].flags = 0;
+	msg[0].len = 1;
 
 	data[0] = reg;
-	err = i2c_transfer(client->adapter, msg, 1);
+	msg[0].buf = data;
 
-	if (err >= 0) {
+	msg[1].addr = client->addr;
+	msg[1].buf = data;
+
 		if (!b_single)
-			msg->len = 2;
+			msg[1].len = 2;
 		else
-			msg->len = 1;
+			msg[1].len = 1;
 
-		msg->flags = I2C_M_RD;
-		err = i2c_transfer(client->adapter, msg, 1);
+		msg[1].flags = I2C_M_RD;
+		err = i2c_transfer(client->adapter, msg, 2);
 		if (err >= 0) {
 			if (!b_single)
 				*rt_value = get_unaligned_le16(data);
@@ -1376,13 +1412,25 @@ static int bq27541_read_i2c(u8 reg, int *rt_value, int b_single,
 
 			return 0;
 		}
-	}
+
 	return err;
 }
+
 
 static irqreturn_t ac_present_irq(int irq, void *data)
 {
 	struct bq27541_device_info *di = data;
+#if defined(CONFIG_ARCH_ACER_T30)
+	if ( (acer_board_type == BOARD_PICASSO_2 || acer_board_type == BOARD_PICASSO_M ) &&
+		(acer_board_id == BOARD_EVT || acer_board_id == BOARD_DVT1 || acer_board_id == BOARD_DVT2)) {
+		if(!gpio_get_value(gpio))
+			msleep(DVT_DELAY);
+	}
+	else{
+		if(!gpio_get_value(gpio))
+			msleep(PVT_DELAY);
+	}
+#endif
 	power_supply_changed(&di->ac);
 	return IRQ_HANDLED;
 }
