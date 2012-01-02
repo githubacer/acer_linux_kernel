@@ -493,7 +493,13 @@ static int tegra_usb_resume(struct usb_hcd *hcd, bool is_dpd)
 		goto restart;
 
 	/* Force the phy to keep data lines in suspend state */
+#if defined(CONFIG_ARCH_ACER_T20)
+	if( tegra->phy->instance == 1) {
+		tegra_ehci_phy_restore_start(tegra->phy, tegra->port_speed);
+	}
+#else
 	tegra_ehci_phy_restore_start(tegra->phy, tegra->port_speed);
+#endif
 
 	if ((tegra->phy->usb_phy_type == TEGRA_USB_PHY_TYPE_UTMIP) &&
 		(tegra->ehci->has_hostpc)) {
@@ -516,6 +522,15 @@ static int tegra_usb_resume(struct usb_hcd *hcd, bool is_dpd)
 	val |= PORT_POWER;
 	writel(val, &hw->port_status[0]);
 	udelay(10);
+
+#if defined(CONFIG_ARCH_ACER_T20)
+	if( tegra->phy->instance == 2) {
+		if (tegra->ehci->has_hostpc)
+			tegra->port_speed = (readl(hcd->regs + HOSTPC_REG_OFFSET) >> 25) & 0x3;
+		else
+			tegra->port_speed = (readl(&hw->port_status[0]) >> 26) & 0x3;
+	}
+#endif
 
 	if ((tegra->phy->usb_phy_type == TEGRA_USB_PHY_TYPE_UTMIP) &&
 		(tegra->ehci->has_hostpc) && (tegra->phy->remote_wakeup)) {
