@@ -27,6 +27,7 @@
 #if defined(CONFIG_TEGRA_HDMI)
 #define HDMI_HPD           TEGRA_GPIO_PN7    /* (AN23/HDMI_INT/HDMI_DET_T30S) */
 #define HDMI_5V            TEGRA_GPIO_PI4    /* (L5/GMI_RST_N/EN_HDMI_5V0)    */
+#define HDMI_5V_ALWAYS_ON  1
 #endif
 
 #if defined(CONFIG_TEGRA_HDMI)
@@ -124,6 +125,7 @@ static int acer_panel_disable(void)
 }
 
 #if defined(CONFIG_TEGRA_HDMI)
+#if !HDMI_5V_ALWAYS_ON
 static int acer_hdmi_vddio_enable(void)
 {
 	int err;
@@ -143,6 +145,7 @@ static int acer_hdmi_vddio_disable(void)
 	}
 	return err;
 }
+#endif
 
 static int acer_hdmi_enable(void)
 {
@@ -472,8 +475,10 @@ static struct tegra_dc_out acer_disp2_out = {
 	.order          = TEGRA_DC_ORDER_RED_BLUE,
 	.enable         = acer_hdmi_enable,
 	.disable        = acer_hdmi_disable,
+#if !HDMI_5V_ALWAYS_ON
 	.postsuspend    = acer_hdmi_vddio_disable,
 	.hotplug_init   = acer_hdmi_vddio_enable,
+#endif
 };
 
 static struct tegra_dc_platform_data acer_disp2_pdata = {
@@ -594,7 +599,11 @@ int __init acer_panel_init(void)
 	if (err) {
 		pr_err("[HDMI] request 5V_enable failed\n");
 	}
+#if HDMI_5V_ALWAYS_ON
+	err = gpio_direction_output(HDMI_5V, 1);
+#else
 	err = gpio_direction_output(HDMI_5V, 0);
+#endif
 	if (err) {
 		pr_err("[HDMI] failed to set direction of hdmi_5V_enable\n");
 	}
