@@ -987,9 +987,11 @@ static int __devexit nct1008_remove(struct i2c_client *client)
 static int nct1008_suspend(struct i2c_client *client, pm_message_t state)
 {
 	int err;
+	struct nct1008_data *data = i2c_get_clientdata(client);
 
 	disable_irq(client->irq);
 	err = nct1008_disable(client);
+	nct1008_power_control(data, false);
 	return err;
 }
 
@@ -998,6 +1000,7 @@ static int nct1008_resume(struct i2c_client *client)
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	int err;
 
+	nct1008_power_control(data, true);
 	err = nct1008_enable(client);
 	if (err < 0) {
 		dev_err(&client->dev, "Error: %s, error=%d\n",
