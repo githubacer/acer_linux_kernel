@@ -1180,7 +1180,9 @@ static int tegra_ehci_resume(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_USB_HOTPLUG
+#if !defined(CONFIG_ARCH_ACER_T20)
 	clk_enable(tegra->clk);
+#endif
 #endif
 	return tegra_usb_resume(hcd, true);
 }
@@ -1203,7 +1205,9 @@ static int tegra_ehci_suspend(struct platform_device *pdev, pm_message_t state)
 
 	ret = tegra_usb_suspend(hcd, true);
 #ifdef CONFIG_USB_HOTPLUG
+#if !defined(CONFIG_ARCH_ACER_T20)
 	clk_disable(tegra->clk);
+#endif
 #endif
 	return ret;
 }
