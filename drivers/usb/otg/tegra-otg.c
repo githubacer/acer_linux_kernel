@@ -42,6 +42,7 @@
 #include <linux/wakelock.h>
 #include <linux/irq.h>
 static struct wake_lock usb_wake_lock;
+static bool wakeup_flag = false;
 #endif
 
 #define USB_PHY_WAKEUP		0x408
@@ -518,10 +519,13 @@ static int tegra_otg_suspend(struct device *dev)
 #if defined(CONFIG_ARCH_ACER_T30)
 	/* Disable wakeup function when OTG or Dock plug in */
 	val = readl(tegra_otg->regs + USB_PHY_WAKEUP);
-	if ((val & USB_ID_STATUS) && gpio_get_value(get_dock_gpio_pin()))
+	if ((val & USB_ID_STATUS) && gpio_get_value(get_dock_gpio_pin())){
 		enable_irq_wake(tegra_otg->irq);
+		wakeup_flag = true;
+	}
 #elif defined(CONFIG_ARCH_ACER_T20)
 	enable_irq_wake(tegra_otg->irq);
+	wakeup_flag = true;
 #endif
 	return 0;
 }
@@ -558,10 +562,16 @@ static void tegra_otg_resume(struct device *dev)
 	}
 
 #if defined(CONFIG_ARCH_ACER_T30)
-	if ((val & USB_ID_STATUS) && gpio_get_value(get_dock_gpio_pin()))
-		disable_irq_wake(tegra_otg->irq);
+	if (wakeup_flag){
+		if ((val & USB_ID_STATUS) && gpio_get_value(get_dock_gpio_pin()))
+			disable_irq_wake(tegra_otg->irq);
+			wakeup_flag = false;
+	}
 #elif defined(CONFIG_ARCH_ACER_T20)
-	disable_irq_wake(tegra_otg->irq);
+	if (wakeup_flag){
+		disable_irq_wake(tegra_otg->irq);
+		wakeup_flag = false;
+	}
 #endif
 	return;
 }
