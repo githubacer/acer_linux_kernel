@@ -30,8 +30,8 @@ static void func_simdet_late_resume(struct early_suspend *);
 static void func_simdet_early_suspend(struct early_suspend *);
 
 struct early_suspend simdet_early_suspend;
-static int sim_Status_after_resume;
-static struct simdet_switch_data *switch_data_priv;
+static int sim_Status_after_resume = 0;
+static struct simdet_switch_data *switch_data_priv = NULL;
 #endif
 
 struct simdet_switch_data {
@@ -44,6 +44,7 @@ struct simdet_switch_data {
 	ktime_t debounce_time;
 };
 
+static struct simdet_switch_data *switch_data = NULL;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void func_simdet_early_suspend(struct early_suspend *es)
@@ -133,7 +134,6 @@ static irqreturn_t simdet_interrupt(int irq, void *dev_id)
 static int simdet_switch_probe(struct platform_device *pdev)
 {
 	struct gpio_switch_platform_data *pdata = pdev->dev.platform_data;
-	struct simdet_switch_data *switch_data;
 	int ret = -EBUSY;
 
 	if (!pdata)
@@ -149,22 +149,29 @@ static int simdet_switch_probe(struct platform_device *pdev)
 	switch_data->sdev.name = DRIVER_NAME;
 	switch_data->sdev.print_name = switch_print_name;
 	ret = switch_dev_register(&switch_data->sdev);
-	if (ret < 0)
+	if (ret < 0) {
+		printk("simdetect: switch_dev_register failed");
 		goto err_register_switch;
+	}
 
 	tegra_gpio_enable(switch_data->gpio);
 
 	ret = gpio_request(switch_data->gpio, pdev->name);
-	if (ret < 0)
+	if (ret < 0) {
+		printk("simdetect: gpio_request failed");
 		goto err_request_gpio;
+	}
 
 	ret = gpio_direction_input(switch_data->gpio);
-	if (ret < 0)
+	if (ret < 0) {
+		printk("simdetect: gpio_direction_input");
 		goto err_set_gpio_input;
+	}
 
 	INIT_WORK(&switch_data->work, simdet_switch_work);
 
 	switch_data->irq = gpio_to_irq(switch_data->gpio);
+	printk("simdetect: irq is %d", switch_data->irq);
 	if (switch_data->irq < 0) {
 		ret = switch_data->irq;
 		goto err_detect_irq_num_failed;
@@ -177,7 +184,7 @@ static int simdet_switch_probe(struct platform_device *pdev)
 			"simdetect", switch_data);
 	if(ret)
 	{
-		printk("simdet_switch request irq failed\n");
+		printk("simdetect: simdet_switch request irq failed\n");
 		goto err_request_irq;
 	}
 
@@ -227,7 +234,6 @@ static int __devexit simdet_switch_remove(struct platform_device *pdev)
 static int simdet_switch_suspend(struct platform_device *pdev, pm_message_t state)
 {
 #if defined(CONFIG_ARCH_ACER_T30)
-	struct simdet_switch_data *switch_data = platform_get_drvdata(pdev);
 	enable_irq_wake(switch_data->irq);
 #endif
 	return 0;
@@ -236,7 +242,6 @@ static int simdet_switch_suspend(struct platform_device *pdev, pm_message_t stat
 static int simdet_switch_resume(struct platform_device *pdev)
 {
 #if defined(CONFIG_ARCH_ACER_T30)
-	struct simdet_switch_data *switch_data = platform_get_drvdata(pdev);
 	disable_irq_wake(switch_data->irq);
 #endif
 	return 0;
