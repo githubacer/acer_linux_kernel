@@ -439,7 +439,6 @@ static struct ov5640_reg mode_2592x1944[] = {
 	{OV5640_WRITE_REG, 0x4201, 0x00},  // start after 1 frame, workaround for take green picture
 	{OV5640_WRITE_REG, 0x4202, 0x01},  // start after 1 frame, workaround for take green picture
 
-	{OV5640_WAIT_MS,        0,  150},  // 150ms delay to prevent UV-reversed pictures
 	{OV5640_TABLE_END, 0x0000, 0x00},
 };
 
