@@ -442,6 +442,59 @@ int dhd_monitor_init(void *dhd_pub);
 int dhd_monitor_uninit(void);
 int dhd_start_xmit(struct sk_buff *skb, struct net_device *net);
 
+/*
+ * Txpower adjustment
+ */
+#if defined(CONFIG_MACH_PICASSO_M)
+#define WL_CFG80211_AUTO_TXPOWER_ADJ 1
+#ifdef WL_CFG80211_AUTO_TXPOWER_ADJ
+static int iw_link_state = 0;
+static int iw_link_state_changed = 0;
+static int default_tx_power = 0;
+#endif
+typedef enum wifi_link_mode {
+	WIFI_B_MODE = 1,
+	WIFI_G_MODE,
+	WIFI_N_MODE
+} wifi_link_mode_t;
+
+static int
+wl_iw_get_ch_info(struct net_device *dev, int *mode, int *channel)
+{
+	char bi_buf[256];
+	wl_bss_info_t *bi;
+	*(uint32*)bi_buf = htod32(WLC_IOCTL_SMLEN);
+	wldev_ioctl(dev, WLC_GET_BSS_INFO, bi_buf, 256, false);
+
+	bi = (wl_bss_info_t*)(bi_buf + 4);
+
+	if (dtoh32(bi->version) != WL_BSS_INFO_VERSION) {
+		WL_DBG(("can't get bi info!\n"));
+		return -1;
+	}
+
+	/* check the bss info */
+	/* get channel */
+	*channel = (bi->ctl_ch == 0) ? CHSPEC_CHANNEL(bi->chanspec) : bi->ctl_ch;
+	WL_DBG(("get channel = %d\n", *channel));
+
+	/* get mode b/g/n */
+	if (dtoh32(bi->rateset.count) <= 4) {
+		WL_DBG(("b only mode\n"));
+		*mode = WIFI_B_MODE;
+	} else if (bi->ctl_ch) {
+		WL_DBG(("n mode\n"));
+		*mode = WIFI_N_MODE;
+	} else {
+		WL_DBG(("g mode\n"));
+		*mode = WIFI_G_MODE;
+	}
+
+	return 0;
+}
+
+#endif
+
 #define CHECK_SYS_UP(wlpriv)							\
 do {									\
 	if (unlikely(!wl_get_drv_status(wlpriv, READY))) {	\
@@ -2863,7 +2916,48 @@ wl_cfg80211_get_station(struct wiphy *wiphy, struct net_device *dev,
 			sinfo->filled |= STATION_INFO_SIGNAL;
 			sinfo->signal = rssi;
 			WL_DBG(("RSSI %d dBm\n", rssi));
-
+#if defined(CONFIG_MACH_PICASSO_M)
+#ifdef WL_CFG80211_AUTO_TXPOWER_ADJ
+			/* get default tx power value */
+			if (!default_tx_power) {
+				wldev_iovar_getint(dev, "qtxpower", &default_tx_power);
+				WL_ERR(("default tx power is %d\n", default_tx_power));
+			}
+			if (iw_link_state_changed) {
+				int tw_power_set_value = default_tx_power;
+				int mode = 0;
+				int get_chan = 0;
+				/* check link up or link down */
+				if (iw_link_state == 0) {
+					/* link down, set tx power to default value */
+					tw_power_set_value = default_tx_power;
+				} else {
+					/* link up, check channel */
+					if (wl_iw_get_ch_info(dev, &mode, &get_chan) != 0)
+						goto end;
+#if defined(CONFIG_MACH_PICASSO_M)
+					if (mode == WIFI_B_MODE) {
+						WL_ERR(("---WIFI_B_MODE---\n"));
+						tw_power_set_value = 64;//16(dBm)=16*4(qdBm)
+					}
+					if (mode == WIFI_G_MODE) {
+						WL_ERR(("---WIFI_G_MODE---\n"));
+						tw_power_set_value = 56;//14(dBm)=14*4(qdBm)
+					}
+					if (mode == WIFI_N_MODE) {
+						WL_ERR(("---WIFI_N_MODE---\n"));
+						tw_power_set_value = 48;//12(dBm)=12*4(qdBm)
+					}
+#endif
+				}
+				WL_DBG(("Set tx power to 0x%x\n", tw_power_set_value));
+				tw_power_set_value |= WL_TXPWR_OVERRIDE;
+				wldev_iovar_setint(dev, "qtxpower", tw_power_set_value);
+			}
+end:
+			iw_link_state_changed = 0;
+#endif /* WL_CFG80211_AUTO_TXPOWER_ADJ */
+#endif
 get_station_err:
 		if (err) {
 			/* Disconnect due to zero BSSID or error to get RSSI */
@@ -6567,6 +6661,12 @@ static u32 wl_get_ielen(struct wl_priv *wl)
 
 static void wl_link_up(struct wl_priv *wl)
 {
+#if defined(CONFIG_MACH_PICASSO_M)
+#ifdef WL_CFG80211_AUTO_TXPOWER_ADJ
+	iw_link_state = 1;
+	iw_link_state_changed = 1;
+#endif
+#endif
 	wl->link_up = true;
 }
 
@@ -6575,6 +6675,12 @@ static void wl_link_down(struct wl_priv *wl)
 	struct wl_connect_info *conn_info = wl_to_conn(wl);
 
 	WL_DBG(("In\n"));
+#if defined(CONFIG_MACH_PICASSO_M)
+#ifdef WL_CFG80211_AUTO_TXPOWER_ADJ
+	iw_link_state = 0;
+	iw_link_state_changed = 0;
+#endif
+#endif
 	wl->link_up = false;
 	conn_info->req_ie_len = 0;
 	conn_info->resp_ie_len = 0;
