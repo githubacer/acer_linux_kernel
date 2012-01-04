@@ -2051,14 +2051,7 @@ int mmc_pm_notify(struct notifier_block *notify_block,
 		/*
 		* The Wi-Fi sdio card is not removeable when suspend.
 		*/
-#if defined(CONFIG_ARCH_ACER_T20)
-		if(strnicmp((char *)mmc_hostname(host), "mmc2", 4) != 0)
-			mmc_detect_change(host, 0);
-#else
-#if defined(CONFIG_ARCH_ACER_T30)
-		if(strnicmp((char *)mmc_hostname(host), "mmc1", 4) != 0)
-			mmc_detect_change(host, 0);
-#endif
+#if !(defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30))
 		mmc_detect_change(host, 0);
 #endif
 	}
