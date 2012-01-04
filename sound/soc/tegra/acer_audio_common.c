@@ -27,6 +27,8 @@
 #include <sound/tlv.h>
 
 #include <linux/gpio.h>
+#include <linux/notifier.h>
+#include <linux/reboot.h>
 
 #include "../codecs/wm8903.h"
 #include "acer_audio_common.h"
@@ -45,6 +47,14 @@ extern void start_stop_psensor(bool);
 #endif
 
 extern struct acer_audio_data audio_data;
+
+struct notifier_block notifier;
+
+static int acer_audio_notifier(struct notifier_block *this,
+				unsigned long code, void *dev)
+{
+	gpio_set_value_cansleep(audio_data.gpio.spkr_en, 0);
+}
 
 bool is_hp_plugged(void)
 {
@@ -188,6 +198,10 @@ static int __init acer_audio_common_init(void)
 		pr_err("[acer_audio_control_driver] failed to register!!\n");
 		return ret;
 	}
+
+	notifier.notifier_call = acer_audio_notifier;
+	register_reboot_notifier(&notifier);
+
 	return platform_device_register(&acer_audio_common_device);
 }
 
@@ -195,6 +209,7 @@ static void __exit acer_audio_common_exit(void)
 {
 	platform_device_unregister(&acer_audio_common_device);
 	platform_driver_unregister(&acer_audio_common_driver);
+	unregister_reboot_notifier(&acer_audio_notifier);
 }
 
 module_init(acer_audio_common_init);
