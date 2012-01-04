@@ -29,6 +29,7 @@
 #define SENSOR_IOCTL_SET_AF_MODE        _IOW('o', 6, __u8)
 #define SENSOR_IOCTL_GET_AF_STATUS      _IOW('o', 7, __u8)
 #define SENSOR_IOCTL_SET_EXPOSURE       _IOW('o', 8, int)
+#define SENSOR_IOCTL_GET_EXPOSURE_TIME  _IOW('o', 9, unsigned int)
 
 enum {
 	YUV_ColorEffect = 0,

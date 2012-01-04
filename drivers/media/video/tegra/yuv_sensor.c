@@ -246,6 +246,30 @@ static int sensor_set_mode(struct sensor_info *info, struct sensor_mode *mode)
 	return 0;
 }
 
+static int sensor_get_exposure_time(struct sensor_info *info, unsigned int *exposure_time_denominator)
+{
+	int err;
+	u16 val = 0;
+
+	err = sensor_write_reg(info->i2c_client, 0x098C, 0xA21B);
+	if (err)
+		return err;
+
+	err = sensor_read_reg(info->i2c_client, 0x0990, &val);
+	if (err)
+		return err;
+
+	// exposure time = 1/frame rate
+	// exposure_time_denominator = frame rate
+	// when val under 4, camera frame rate is always 30 fps
+	if(val < 4)
+		*exposure_time_denominator = 30;
+	else
+		*exposure_time_denominator = (unsigned int)(120/val);
+
+	return 0;
+}
+
 static long sensor_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	struct sensor_info *info = file->private_data;
@@ -349,6 +373,19 @@ static long sensor_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			}
 			if (err)
 				return err;
+			return 0;
+		}
+
+		case SENSOR_IOCTL_GET_EXPOSURE_TIME: {
+			unsigned int exposure_time_denominator;
+			sensor_get_exposure_time(info, &exposure_time_denominator);
+			if (copy_to_user((void __user *)arg,
+					&exposure_time_denominator,
+					sizeof(exposure_time_denominator)))
+				return -EFAULT;
+
+			pr_info("yuv %s: exposure time %d\n", __func__, exposure_time_denominator);
+
 			return 0;
 		}
 
