@@ -54,6 +54,7 @@ static int acer_audio_notifier(struct notifier_block *this,
 				unsigned long code, void *dev)
 {
 	gpio_set_value_cansleep(audio_data.gpio.spkr_en, 0);
+	return NOTIFY_DONE;
 }
 
 bool is_hp_plugged(void)
@@ -209,7 +210,7 @@ static void __exit acer_audio_common_exit(void)
 {
 	platform_device_unregister(&acer_audio_common_device);
 	platform_driver_unregister(&acer_audio_common_driver);
-	unregister_reboot_notifier(&acer_audio_notifier);
+	unregister_reboot_notifier(&notifier);
 }
 
 module_init(acer_audio_common_init);
