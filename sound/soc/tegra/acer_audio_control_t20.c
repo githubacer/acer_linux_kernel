@@ -311,6 +311,8 @@ static int switch_audio_table_single(int control_mode, bool fromAP)
 			case VOICE_RECOGNITION: /* For CTS */
 				if (state == BIT_HEADSET)
 					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
+				else if (state == BIT_HEADSET_NO_MIC)
+					audio_data.table.input = ACOUSTIC_CTS_VERIFIER_TABLE;
 				else
 					audio_data.table.input = ACOUSTIC_SPEECH_RECOGNITION_TABLE;
 				break;
