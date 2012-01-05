@@ -36,7 +36,8 @@
 #define DEBUG_DETAIL                          2
 #define DEBUG_BASIC                           1
 #define DEBUG_ERROR                           0
-#define NUM_FINGERS_SUPPORTED                 10
+/* The number of touches */
+#define NUM_FINGERS                           10
 
 #define TP_LDO_EN                             TEGRA_GPIO_PB0
 #define TP_RST                                TEGRA_GPIO_PI2
@@ -49,19 +50,25 @@ struct point_data {
 };
 
 static int debug = DEBUG_ERROR;
-static int LastUpdateID = 0;
-static u8 checksum[3] = {0};
+
+/* The information of firmware */
 static int Firmware_Info = 0;
 static u8 Firmware_Version = 0;
 static u8 Firmware_Build = 0;
+/* The caluculation of checksum */
+static u8 checksum[3] = {0};
 static bool ConfigChecksumError = 0;
-static int i2cfail_esd = 0;
 static int reenter_count = 0;
 static int reenter_times = 6;
+
+/* The record of sensitivity */
 static u8 sens_buf[8] = {0};
 static u8 sens_val[1] = {0};
 static u16 sens_addr = 0;
 static bool sencheck = 0;
+/* Other parameters for touch events */
+static int i2cfail_esd = 0;
+static int LastUpdateID = 0;
 
 u16 T05_OBJAddr; /* Message Processor Byte0 = ID, Byte1 = AddrL, Byte2 = AddrH */
 u16 T06_OBJAddr; /* Command Processor */
@@ -192,14 +199,12 @@ struct mxt_data
 {
 	struct i2c_client    *client;
 	struct input_dev     *input;
-	struct semaphore     sema;
-	struct delayed_work  dwork;
-	struct delayed_work  init_dwork;
-	struct delayed_work  touch_dwork;
+	struct work_struct   init_dwork;
+	struct work_struct   touch_dwork;
+	struct point_data    PointBuf[NUM_FINGERS];
 	int init_irq;
 	int touch_irq;
 	short irq_type;
-	struct point_data PointBuf[NUM_FINGERS_SUPPORTED];
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	struct early_suspend early_suspend;
 #endif
@@ -368,8 +373,8 @@ static void init_worker(struct work_struct *work)
 	u8 buffer[7] = {0};
 	int i;
 
-	mxt_debug(DEBUG_DETAIL, "init_worker reenter_count: %d\n", reenter_count);
-	mxt = container_of(work, struct mxt_data, init_dwork.work);
+	mxt_debug(DEBUG_ERROR, "mXT1386E: reenter_count: %d\n", reenter_count);
+	mxt = container_of(work, struct mxt_data, init_dwork);
 	disable_irq(mxt->init_irq);
 
 	if (mxt_read_block_wo_addr(mxt->client, 7, buffer) < 0) {
@@ -436,6 +441,10 @@ static void init_worker(struct work_struct *work)
 				mxt_debug(DEBUG_ERROR, "mXT1386E: ATMEL_Init_OBJ failed\n");
 				goto still_disable_irq;
 			}
+			if (ATMEL_ConfigRecovery(mxt) < 0) {
+				mxt_debug(DEBUG_ERROR, "mXT1386E: ATMEL_ConfigRecovery failed\n");
+				goto still_disable_irq;
+			}
 			if (ATMEL_Touch_Init(mxt) < 0) {
 				mxt_debug(DEBUG_ERROR, "mXT1386E: ATMEL_Touch_Init failed\n");
 				goto still_disable_irq;
@@ -459,10 +468,9 @@ static void touch_worker(struct work_struct *work)
 	u8 buffer[8] = {0};
 	u16 Buf = 0;
 	short ContactID = 0;
-	bool first_touch = 0;
 	int i;
 
-	mxt = container_of(work, struct mxt_data, touch_dwork.work);
+	mxt = container_of(work, struct mxt_data, touch_dwork);
 	disable_irq(mxt->touch_irq);
 
 	if (mxt_read_block_onetime(mxt->client, T05_OBJAddr, 8, buffer) < 0) {
@@ -476,7 +484,7 @@ static void touch_worker(struct work_struct *work)
 
 	if (i2cfail_esd == 1) {
 		/* ESD recovery */
-		for(i=0; i<NUM_FINGERS_SUPPORTED; i++) {
+		for(i=0; i<NUM_FINGERS; i++) {
 			mxt->PointBuf[i].X = 0;
 			mxt->PointBuf[i].Y = 0;
 			mxt->PointBuf[i].Status = -1;
@@ -485,7 +493,7 @@ static void touch_worker(struct work_struct *work)
 	}
 
 	/* touch id from firmware begins from 2 */
-	if (buffer[0] >= 2 && buffer[0] <= NUM_FINGERS_SUPPORTED+1) {
+	if (buffer[0] >= 2 && buffer[0] <= NUM_FINGERS+1) {
 		ContactID = buffer[0] - 2 ;
 		Buf = buffer[2];
 		Buf = (Buf << 4) | (buffer[4] >> 4);
@@ -502,23 +510,14 @@ static void touch_worker(struct work_struct *work)
 				mxt_debug(DEBUG_DETAIL, "buffer[%d]: 0x%x\n", i, buffer[i]);
 		}
 
-		if (mxt->PointBuf[ContactID].Status <= 0)
-			first_touch = 1;
-		else
-			first_touch = 0;
-
 		if (buffer[1] & 0x20) {
 			mxt->PointBuf[ContactID].Status = 0;
 			mxt_debug(DEBUG_DETAIL, "Finger Release!!\n");
 		} else if (buffer[1] & 0x80) {
-			mxt->PointBuf[ContactID].Status = (buffer[5] << 4);
+			mxt->PointBuf[ContactID].Status = buffer[5];
 			mxt_debug(DEBUG_DETAIL, "Finger Touch!!\n");
 		} else if (buffer[1] & 0x02) {
-			mxt_debug(DEBUG_ERROR, "Palm Release!!\n");
 			mxt->PointBuf[ContactID].Status = 0;
-			input_report_abs(mxt->input, ABS_MT_TOUCH_MAJOR, mxt->PointBuf[ContactID].Status);
-			input_sync(mxt->input);
-			ContactID = 255;
 			mxt_debug(DEBUG_DETAIL, "Palm Suppresion!!\n");
 		} else if (buffer[1] == 0x00) {
 			ContactID = 255;
@@ -540,23 +539,18 @@ static void touch_worker(struct work_struct *work)
 		mxt->PointBuf[ContactID].Status, mxt->PointBuf[ContactID].X, mxt->PointBuf[ContactID].Y);
 
 	/* Send point report to Android */
-	if ((mxt->PointBuf[ContactID].Status == 0) || (ContactID <= LastUpdateID) || first_touch) {
-		for(i=0; i<NUM_FINGERS_SUPPORTED; i++) {
-			if (mxt->PointBuf[i].Status >= 0) {
-				mxt_debug(DEBUG_BASIC, "Point[%2d] status: %2d X: %4d Y: %4d\n",
-					i, mxt->PointBuf[i].Status, mxt->PointBuf[i].X, mxt->PointBuf[i].Y);;
-				/* Report Message*/
-				input_report_abs(mxt->input, ABS_MT_TRACKING_ID, i);
-				input_report_abs(mxt->input, ABS_MT_TOUCH_MAJOR, mxt->PointBuf[i].Status);
-				input_report_abs(mxt->input, ABS_MT_POSITION_X, mxt->PointBuf[i].X);
-				input_report_abs(mxt->input, ABS_MT_POSITION_Y, mxt->PointBuf[i].Y);
-				input_report_abs(mxt->input, ABS_MT_PRESSURE, mxt->PointBuf[i].Status);
+	if ((ContactID <= LastUpdateID) || (mxt->PointBuf[i].Status >= 0)) {
+		for(i=0; i<NUM_FINGERS; i++) {
+			mxt_debug(DEBUG_BASIC, "Point[%2d] status: %2d X: %4d Y: %4d\n",
+				i, mxt->PointBuf[i].Status, mxt->PointBuf[i].X, mxt->PointBuf[i].Y);
+			/* Report Message*/
+			input_report_abs(mxt->input, ABS_MT_TRACKING_ID, i);
+			input_report_abs(mxt->input, ABS_MT_TOUCH_MAJOR, mxt->PointBuf[i].Status);
+			input_report_abs(mxt->input, ABS_MT_POSITION_X, mxt->PointBuf[i].X);
+			input_report_abs(mxt->input, ABS_MT_POSITION_Y, mxt->PointBuf[i].Y);
+			input_report_abs(mxt->input, ABS_MT_PRESSURE, mxt->PointBuf[i].Status);
 
-				input_mt_sync(mxt->input);
-
-				if (mxt->PointBuf[i].Status == 0)
-					mxt->PointBuf[i].Status--;
-			}
+			input_mt_sync(mxt->input);
 		}
 		input_sync(mxt->input);
 	}
@@ -574,7 +568,7 @@ static irqreturn_t init_irq_handler(int irq, void *init_mxt)
 
 	mxt_debug(DEBUG_DETAIL, "\ninit_irq_handler\n");
 
-	schedule_delayed_work(&mxt->init_dwork, 0);
+	schedule_work(&mxt->init_dwork);
 
 	return IRQ_HANDLED;
 }
@@ -585,7 +579,7 @@ static irqreturn_t touch_irq_handler(int irq, void *touch_mxt)
 
 	mxt_debug(DEBUG_DETAIL, "\ntouch_irq_handler\n");
 
-	schedule_delayed_work(&mxt->touch_dwork, 0);
+	schedule_work(&mxt->touch_dwork);
 
 	return IRQ_HANDLED;
 }
@@ -899,7 +893,7 @@ static void ATMEL_CalOBJ_ID_Addr(u8 Type, u8 *Table)
 			if (Type == T09) {
 				Table[1] = OBJTable[i][1];
 				Table[2] = OBJTable[i][2];
-				for(z = 0; z < NUM_FINGERS_SUPPORTED; z++) {
+				for(z = 0; z < NUM_FINGERS; z++) {
 					ID++;
 				}
 			} else if (Type == T24) {
@@ -1553,6 +1547,8 @@ static long ATMEL1386E_ioctl(struct file *file, unsigned int cmd, unsigned long 
 
 		case ATMEL1386E_FirmwareVersion:
 
+			/* Touch event should not be dealt when firmware is updating */
+			disable_irq(mxt->touch_irq);
 			if (copy_to_user((void*)argp, &Firmware_Info, sizeof(Firmware_Info)))
 				return -EFAULT;
 			break;
@@ -1637,8 +1633,8 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	mxt->init_irq = client->irq;
 	mxt->touch_irq = client->irq;
 
-	INIT_DELAYED_WORK(&mxt->init_dwork, init_worker);
-	INIT_DELAYED_WORK(&mxt->touch_dwork, touch_worker);
+	INIT_WORK(&mxt->init_dwork, init_worker);
+	INIT_WORK(&mxt->touch_dwork, touch_worker);
 
 	set_bit(EV_ABS, input->evbit);
 
@@ -1656,7 +1652,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	input_set_abs_params(input, ABS_MT_POSITION_X, X_MIN, X_MAX, 0, 0);
 	input_set_abs_params(input, ABS_MT_POSITION_Y, Y_MIN, Y_MAX, 0, 0);
 	input_set_abs_params(input, ABS_MT_TOUCH_MAJOR, 0, MXT_MAX_TOUCH_SIZE, 0, 0);
-	input_set_abs_params(input, ABS_MT_TRACKING_ID, 0, NUM_FINGERS_SUPPORTED,0, 0);
+	input_set_abs_params(input, ABS_MT_TRACKING_ID, 0, NUM_FINGERS,0, 0);
 	input_set_abs_params(input, ABS_MT_PRESSURE, 0, MXT_MAX_TOUCH_SIZE, 0, 0);
 
 	i2c_set_clientdata(client, mxt);
@@ -1673,7 +1669,7 @@ static int mxt_probe(struct i2c_client *client, const struct i2c_device_id *id)
 		goto err_register_device;
 	}
 
-	for(i=0;i<NUM_FINGERS_SUPPORTED;i++) {
+	for(i=0;i<NUM_FINGERS;i++) {
 		mxt->PointBuf[i].X = 0;
 		mxt->PointBuf[i].Y = 0;
 		mxt->PointBuf[i].Status = -1;
@@ -1728,7 +1724,7 @@ static int mxt_remove(struct i2c_client *client)
 		if (mxt->touch_irq)
 			free_irq(mxt->touch_irq, mxt);
 
-		cancel_delayed_work_sync(&mxt->dwork);
+		cancel_work_sync(&mxt->touch_dwork);
 		input_unregister_device(mxt->input);
 	}
 	kfree(mxt);
@@ -1745,7 +1741,7 @@ void mxt_early_suspend(struct early_suspend *h)
 	mxt_debug(DEBUG_ERROR, "mXT1386E: mxt_early_suspend\n");
 
 	disable_irq(data->touch_irq);
-	cancel_delayed_work_sync(&data->dwork);
+	cancel_work_sync(&data->touch_dwork);
 	/*
 	system will still go to suspend if i2c error,
 	but it will be blocked if sleep configs are not written to touch successfully
@@ -1764,7 +1760,7 @@ void mxt_late_resume(struct early_suspend *h)
 	int i, ret;
 	mxt_debug(DEBUG_ERROR, "mXT1386E: mxt_late_resume\n");
 
-	for(i=0;i<NUM_FINGERS_SUPPORTED;i++) {
+	for(i=0;i<NUM_FINGERS;i++) {
 		data->PointBuf[i].X = 0;
 		data->PointBuf[i].Y = 0;
 		data->PointBuf[i].Status = -1;
