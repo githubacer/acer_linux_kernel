@@ -104,6 +104,7 @@ bool handset_mic_detect(struct snd_soc_codec *codec)
 	int irq_mask;
 	int irq_val;
 	int CtrlReg = 0;
+	int is_recording = 0;
 
 	/* delay for avoiding pop noise when user plug in/out headset quickly */
 	msleep(1000);
@@ -124,6 +125,9 @@ bool handset_mic_detect(struct snd_soc_codec *codec)
 	irq_mask = WM8903_MICDET_EINT_MASK | WM8903_MICSHRT_EINT_MASK;
 	irq_val = WM8903_MICDET_EINT | WM8903_MICSHRT_EINT;
 	snd_soc_update_bits(codec, WM8903_INTERRUPT_STATUS_1_MASK, irq_mask, 0);
+
+	CtrlReg = snd_soc_read(codec, WM8903_MIC_BIAS_CONTROL_0);
+	is_recording = CtrlReg & WM8903_MICBIAS_ENA;
 
 	CtrlReg = WM8903_MICDET_ENA | WM8903_MICBIAS_ENA;
 	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, CtrlReg, CtrlReg);
@@ -148,8 +152,8 @@ bool handset_mic_detect(struct snd_soc_codec *codec)
 			snd_soc_update_bits(codec, WM8903_INTERRUPT_POLARITY_1, irq_mask, irq_val);
 	}
 
-	CtrlReg = WM8903_MICDET_ENA | WM8903_MICBIAS_ENA;
-	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, CtrlReg, 0);
+	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, WM8903_MICDET_ENA, 0);
+	snd_soc_update_bits(codec, WM8903_MIC_BIAS_CONTROL_0, WM8903_MICBIAS_ENA, is_recording);
 
 #if defined(CONFIG_ARCH_ACER_T20) && !defined(CONFIG_MACH_PICASSO_E)
 	start_stop_psensor(true);
