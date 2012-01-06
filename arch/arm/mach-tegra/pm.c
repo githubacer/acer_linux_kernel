@@ -384,35 +384,6 @@ static void restore_cpu_complex(u32 mode)
 	/* Is CPU complex already running on PLLX? */
 	reg = readl(clk_rst + CLK_RESET_CCLK_BURST);
 	reg &= 0xF;
-#ifdef CONFIG_ARCH_TEGRA_2x_SOC
-	/* restore original burst policy setting; PLLX state restored
-	 * by CPU boot-up code - wait for PLL stabilization if PLLX
-	 * was enabled */
-
-	reg = readl(clk_rst + CLK_RESET_PLLX_BASE);
-	/* mask out bit 27 - not to check PLL lock bit */
-	BUG_ON((reg & (~(1 << 27))) !=
-			(tegra_sctx.pllx_base & (~(1 << 27))));
-
-	if (tegra_sctx.pllx_base & (1<<30)) {
-#if USE_PLL_LOCK_BITS
-		/* Enable lock detector */
-		reg = readl(clk_rst + CLK_RESET_PLLX_MISC);
-		reg |= 1<<18;
-		writel(reg, clk_rst + CLK_RESET_PLLX_MISC);
-		while (!(readl(clk_rst + CLK_RESET_PLLX_BASE) &&
-			(1<<27)))
-			cpu_relax();
-
-#else
-		udelay(300);
-#endif
-		}
-		writel(tegra_sctx.cclk_divider, clk_rst +
-			CLK_RESET_CCLK_DIVIDER);
-		writel(tegra_sctx.cpu_burst, clk_rst +
-			CLK_RESET_CCLK_BURST);
-#else
 	if (reg != 0x8) {
 		/* restore original burst policy setting; PLLX state restored
 		 * by CPU boot-up code - wait for PLL stabilization if PLLX
@@ -441,7 +412,6 @@ static void restore_cpu_complex(u32 mode)
 		writel(tegra_sctx.cpu_burst, clk_rst +
 		       CLK_RESET_CCLK_BURST);
 	}
-#endif
 
 	writel(tegra_sctx.clk_csite_src, clk_rst + CLK_RESET_SOURCE_CSITE);
 
