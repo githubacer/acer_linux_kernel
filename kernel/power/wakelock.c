@@ -59,10 +59,6 @@ static struct wake_lock deleted_wake_locks;
 static ktime_t last_sleep_time_update;
 static int wait_for_wakeup;
 
-#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
-extern struct task_struct *suspend_thread_task;
-#endif
-
 int get_expired_time(struct wake_lock *lock, ktime_t *expire_time)
 {
 	struct timespec ts;
@@ -256,21 +252,10 @@ long has_wake_lock(int type)
 {
 	long ret;
 	unsigned long irqflags;
-#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
-	char name[256];
-
-	get_task_comm(name, current);
-#endif
-
 	spin_lock_irqsave(&list_lock, irqflags);
 	ret = has_wake_lock_locked(type);
-#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
-	if (ret && !strcmp(name, "suspend"))  // process name equals the kernel suspend thread - "suspend"
-		print_active_locks(WAKE_LOCK_SUSPEND);
-#else
 	if (ret && (debug_mask & DEBUG_SUSPEND) && type == WAKE_LOCK_SUSPEND)
 		print_active_locks(type);
-#endif
 	spin_unlock_irqrestore(&list_lock, irqflags);
 	return ret;
 }
@@ -292,7 +277,6 @@ static void suspend(struct work_struct *work)
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	pr_info("dvfs rail disable for vdd_core before suspend\n");
 	tegra_dvfs_rail_disable_by_name("vdd_core");
-	suspend_thread_task = current;
 #endif
 
 	entry_event_num = current_event_num;
@@ -324,10 +308,6 @@ static void suspend(struct work_struct *work)
 			pr_info("suspend: pm_suspend returned with no event\n");
 		wake_lock_timeout(&unknown_wakeup, HZ / 2);
 	}
-
-#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
-	suspend_thread_task = NULL;
-#endif
 }
 static DECLARE_WORK(suspend_work, suspend);
 

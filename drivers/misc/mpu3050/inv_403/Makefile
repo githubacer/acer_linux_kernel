@@ -34,8 +34,8 @@ $(INV_MODULE_NAME)-objs += $(MLLITE_DIR)compass/ak8975.o
 endif
 
 EXTRA_CFLAGS += -I$(M)/$(MLLITE_DIR) \
-                -I$(M)/../../include \
-                -Idrivers/misc/mpu3050 \
-                -Iinclude/linux
+		-I$(M)/../../include \
+		-Idrivers/misc/mpu3050/inv_403 \
+		-Iinclude/linux
 
 obj-$(CONFIG_MPU_SENSORS_TIMERIRQ)+= timerirq.o

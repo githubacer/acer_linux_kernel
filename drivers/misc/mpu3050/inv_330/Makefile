@@ -98,9 +98,9 @@ mpu3050-objs += $(MLLITE_DIR)pressure/bma085.o
 endif
 
 EXTRA_CFLAGS += -I$(M)/$(MLLITE_DIR) \
-                -I$(M)/../../include \
-		-Idrivers/misc/mpu3050 \
-                -Iinclude/linux
+		-I$(M)/../../include \
+		-Idrivers/misc/mpu3050/inv_330 \
+		-Iinclude/linux
 
 obj-$(CONFIG_MPU_SENSORS_MPU6000)+= mpu6000.o
 mpu6000-objs += mpuirq.o \

@@ -51,22 +51,10 @@
 
 #define AUDIO_CONTROL_DRIVER_NAME "acer-audio-control"
 
-/* Enable log or not */
-#if 1
-#define ACER_DBG(fmt, arg...) printk(KERN_INFO "[AudioControl](%d): " fmt "\n", __LINE__, ## arg)
-#else
-#define ACER_DBG(fmt, arg...) do {} while (0)
-#endif
-
 /* Module function */
 static int acer_audio_control_probe(struct platform_device *pdev);
 static int acer_audio_control_remove(struct platform_device *pdev);
-
-#ifdef CONFIG_ACER_FM_SINGLE_MIC
 static int switch_audio_table_single(int control_mode, bool fromAP);
-#else
-static int switch_audio_table_dual(int control_mode, bool fromAP);
-#endif
 
 /* extern */
 extern int getAudioTable(void);
@@ -129,139 +117,8 @@ int snd_soc_dapm_info_iconia_param(struct snd_kcontrol *kcontrol,
 }
 EXPORT_SYMBOL_GPL(snd_soc_dapm_info_iconia_param);
 
-void set_voip_hp_gain(struct snd_soc_codec* codec)
-{
-#ifdef CONFIG_ACER_FM_SINGLE_MIC
-	snd_soc_update_bits(audio_data.codec, WM8903_POWER_MANAGEMENT_3,
-					WM8903_INL_ENA_MASK, WM8903_INL_ENA);
-	snd_soc_update_bits(audio_data.codec, WM8903_POWER_MANAGEMENT_3,
-					WM8903_INR_ENA_MASK, WM8903_INR_ENA);
-
-	snd_soc_update_bits(audio_data.codec, WM8903_AUDIO_INTERFACE_0,
-					WM8903_DAC_BOOST_MASK, R24_DAC_BOOST_6dB << WM8903_DAC_BOOST_SHIFT);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_LEFT_INPUT_0,
-					WM8903_LIN_VOL_MASK, R44_HP_LRIN_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_RIGHT_INPUT_0,
-					WM8903_RIN_VOL_MASK, R44_HP_LRIN_VOL);
-#else
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_LEFT_INPUT_0,
-					WM8903_LIN_VOL_MASK, R44_SPK_LRIN_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_RIGHT_INPUT_0,
-					WM8903_RIN_VOL_MASK, R44_SPK_LRIN_VOL);
-#endif
-}
-
-void set_voip_spk_gain(struct snd_soc_codec* codec)
-{
-#ifdef CONFIG_ACER_FM_SINGLE_MIC
-	snd_soc_update_bits(audio_data.codec, WM8903_AUDIO_INTERFACE_0,
-					WM8903_DAC_BOOST_MASK, R24_DAC_BOOST_0dB << WM8903_DAC_BOOST_SHIFT);
-#endif
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_LEFT_INPUT_0,
-					WM8903_LIN_VOL_MASK, R44_SPK_LRIN_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_RIGHT_INPUT_0,
-					WM8903_RIN_VOL_MASK, R44_SPK_LRIN_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_OUT2_LEFT,
-					WM8903_LINEOUTL_VOL_MASK, R59_SPK_LINEOUT_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_OUT2_RIGHT,
-					WM8903_LINEOUTR_VOL_MASK, R59_SPK_LINEOUT_VOL);
-}
-
-void set_cts_spk_gain(struct snd_soc_codec* codec)
-{
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_LEFT_INPUT_0,
-					WM8903_LIN_VOL_MASK, R44_CTS_LRIN_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_RIGHT_INPUT_0,
-					WM8903_RIN_VOL_MASK, R44_CTS_LRIN_VOL);
-}
-
-void set_asr_spk_gain(struct snd_soc_codec* codec)
-{
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_LEFT_INPUT_0,
-					WM8903_LIN_VOL_MASK, R44_ASR_LRIN_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_RIGHT_INPUT_0,
-					WM8903_RIN_VOL_MASK, R44_ASR_LRIN_VOL);
-
-	snd_soc_update_bits(audio_data.codec, WM8903_DRC_2,
-					WM8903_DRC_R0_SLOPE_COMP_MASK,
-					R42_COMPRESSOR_SLOP_R0 << WM8903_DRC_R0_SLOPE_COMP_SHIFT);
-
-	snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
-					WM8903_DRC_THRESH_COMP_MASK,
-					R43_COMPRESSOR_THRESSHOLD_T << WM8903_DRC_THRESH_COMP_SHIFT);
-	snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
-					WM8903_DRC_AMP_COMP_MASK,
-					R43_COMPRESSOR_THRESSHOLD_YT << WM8903_DRC_AMP_COMP_SHIFT);
-}
-
-void set_drc_gain(struct snd_soc_codec* codec)
-{
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_LEFT_INPUT_0,
-					WM8903_LIN_VOL_MASK, R44_SPK_LRIN_VOL);
-	snd_soc_update_bits(audio_data.codec, WM8903_ANALOGUE_RIGHT_INPUT_0,
-					WM8903_RIN_VOL_MASK, R44_SPK_LRIN_VOL);
-
-	snd_soc_update_bits(audio_data.codec, WM8903_DRC_2,
-					WM8903_DRC_R0_SLOPE_COMP_MASK,
-					R42_COMPRESSOR_SLOP_R0 << WM8903_DRC_R0_SLOPE_COMP_SHIFT);
-
-	snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
-					WM8903_DRC_THRESH_COMP_MASK,
-					R43_COMPRESSOR_THRESSHOLD_T << WM8903_DRC_THRESH_COMP_SHIFT);
-	snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
-					WM8903_DRC_AMP_COMP_MASK,
-					R43_COMPRESSOR_THRESSHOLD_YT << WM8903_DRC_AMP_COMP_SHIFT);
-}
-
-int tune_codec_setting(int control_mode)
-{
-	int state = get_headset_state();
-	audio_data.mode.control = control_mode;
-
-	switch (audio_data.mode.control) {
-		case VOICE_COMMUNICATION: /* For VOIP */
-			if (state == BIT_HEADSET)
-				set_voip_hp_gain(audio_data.codec);
-			else
-				set_voip_spk_gain(audio_data.codec);
-			break;
-
-		case VOICE_RECOGNITION: /* For CTS */
-			if (state == BIT_HEADSET_NO_MIC)
-				set_cts_spk_gain(audio_data.codec);
-			else
-				set_asr_spk_gain(audio_data.codec);
-			break;
-
-		case CAMCORDER:
-			set_drc_gain(audio_data.codec);
-			break;
-
-		case MIC: /* For RECORD */
-		case DEFAULT:
-			set_drc_gain(audio_data.codec);
-			break;
-	}
-
-	return 1;
-}
-
-#ifdef CONFIG_ACER_FM_SINGLE_MIC
 void set_int_mic_state(bool state)
 {
-#ifdef CONFIG_MACH_PICASSO_E
-	/*
-	 * Add for solve that recording has high frequency noise.
-	 * When internal MIC is on, disable CABC.
-	 * When internal MIC is off, enable CABC.
-	 */
-	if (state) {
-		setAudioCABC(0);
-	} else {
-		setAudioCABC(1);
-	}
-#endif
-
 	audio_data.state.int_mic = state;
 }
 
@@ -276,8 +133,6 @@ static void fm2018_switch(struct tegra_wm8903_platform_data *pdata)
 		gpio_set_value_cansleep(pdata->gpio_int_mic_en, 0);
 	else
 		gpio_set_value_cansleep(pdata->gpio_int_mic_en, 1);
-
-	ACER_DBG("FM2018_EN = %d", gpio_get_value_cansleep(audio_data.gpio.int_mic_en));
 }
 
 void mic_switch(struct tegra_wm8903_platform_data *pdata)
@@ -301,22 +156,6 @@ static int switch_audio_table_single(int control_mode, bool fromAP)
 
 	if (!audio_data.AP_Lock && !fromAP) {
 		switch (audio_data.mode.control) {
-			case VOICE_COMMUNICATION: /* For VOIP */
-				if (state == BIT_HEADSET)
-					audio_data.table.input = ACOUSTIC_HEADSET_MIC_VOIP_TABLE;
-				else
-					audio_data.table.input = ACOUSTIC_DEVICE_MIC_VOIP_TABLE;
-				break;
-
-			case VOICE_RECOGNITION: /* For CTS */
-				if (state == BIT_HEADSET)
-					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
-				else if (state == BIT_HEADSET_NO_MIC)
-					audio_data.table.input = ACOUSTIC_CTS_VERIFIER_TABLE;
-				else
-					audio_data.table.input = ACOUSTIC_SPEECH_RECOGNITION_TABLE;
-				break;
-
 			case CAMCORDER:
 				if (state == BIT_HEADSET)
 					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
@@ -338,21 +177,7 @@ static int switch_audio_table_single(int control_mode, bool fromAP)
 		audio_data.mode.ap_control = control_mode;
 
 		switch (control_mode) {
-			case ACOUSTIC_DEVICE_MIC_MUSIC_RECOGNITION_TABLE: /* For MusicA or SoundHound music recognition */
-				if (state == BIT_HEADSET)
-					audio_data.table.input = ACOUSTIC_HEADSET_MIC_MUSIC_RECOGNITION_TABLE;
-				else
-					audio_data.table.input = control_mode;
-				break;
-
 			case ACOUSTIC_CAMCORDER_RECORDER_TABLE: /* For Recorder */
-				if (state == BIT_HEADSET)
-					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
-				else
-					audio_data.table.input = control_mode;
-				break;
-
-			case ACOUSTIC_SPEECH_RECOGNITION_TABLE: /* For MusicA or SoundHound voice recognition */
 				if (state == BIT_HEADSET)
 					audio_data.table.input = ACOUSTIC_HEADSET_MIC_RECORDING_TABLE;
 				else
@@ -361,7 +186,6 @@ static int switch_audio_table_single(int control_mode, bool fromAP)
 
 			default:
 				audio_data.table.input = control_mode;
-				ACER_DBG("Do not re-assign audio table!");
 				break;
 		}
 
@@ -372,92 +196,19 @@ static int switch_audio_table_single(int control_mode, bool fromAP)
 	}
 
 	if (audio_data.state.int_mic || audio_data.state.ext_mic) {
-		ACER_DBG("audio source = %d, pre_table = %d, cur_table %d!",
-				audio_data.mode.input_source,
-				getAudioTable(), audio_data.table.input);
 		setAudioTable(audio_data.table.input);
 	}
 
 	return 1;
 }
-#else
-static int switch_audio_table_dual(int control_mode, bool fromAP)
-{
-	audio_data.mode.control = control_mode;
-
-	switch (audio_data.mode.control) {
-		case VOICE_COMMUNICATION: /* For VOIP */
-			audio_data.table.input = ACOUSTIC_DEVICE_MIC_VOIP_TABLE;
-			break;
-
-		case VOICE_RECOGNITION: /* For CTS */
-			audio_data.table.input = ACOUSTIC_SPEECH_RECOGNITION_TABLE;
-			break;
-
-		case CAMCORDER:
-			audio_data.table.input = ACOUSTIC_REAR_CAMCORDER_TABLE;
-			break;
-
-		case MIC: /* For RECORD */
-		case DEFAULT:
-		default:
-			audio_data.table.input = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
-	}
-
-	if (audio_data.state.int_mic || audio_data.state.ext_mic) {
-		ACER_DBG("audio source = %d, pre_table = %d, cur_table %d!",
-				audio_data.mode.input_source,
-				getAudioTable(), audio_data.table.input);
-		setAudioTable(audio_data.table.input);
-	}
-	return 1;
-}
-#endif
 
 int switch_audio_table(int control_mode, bool fromAP)
 {
 	if (!fromAP) {
 		audio_data.mode.input_source = control_mode;
 	}
-	tune_codec_setting(control_mode);
 
-#ifdef CONFIG_ACER_FM_SINGLE_MIC
 	return switch_audio_table_single(control_mode, fromAP);
-#else
-	return switch_audio_table_dual(control_mode, fromAP);
-#endif
-}
-
-void acer_volume_setting(struct snd_soc_codec *codec, struct snd_pcm_substream *substream)
-{
-	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
-		snd_soc_write(codec, WM8903_ANALOGUE_OUT1_LEFT, HPOUT_VOL);
-		snd_soc_write(codec, WM8903_ANALOGUE_OUT1_RIGHT, HPOUT_VOL);
-
-		snd_soc_write(codec, WM8903_ANALOGUE_OUT2_LEFT, LINEOUT_VOL);
-		snd_soc_write(codec, WM8903_ANALOGUE_OUT2_RIGHT, LINEOUT_VOL);
-
-#ifdef CONFIG_ACER_FM_SINGLE_MIC
-		snd_soc_update_bits(codec, WM8903_AUDIO_INTERFACE_0,
-						WM8903_DAC_BOOST_MASK, R24_DAC_BOOST_0dB << WM8903_DAC_BOOST_SHIFT);
-#endif
-	}
-
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
-		snd_soc_update_bits(codec, WM8903_DRC_1,
-						WM8903_DRC_MAXGAIN_MASK, R41_DRC_MAXGAIN_38dB << WM8903_DRC_MAXGAIN_SHIFT);
-
-		snd_soc_update_bits(audio_data.codec, WM8903_DRC_2,
-						WM8903_DRC_R0_SLOPE_COMP_MASK,
-						R42_COMPRESSOR_SLOP_DEFAULT_R0 << WM8903_DRC_R0_SLOPE_COMP_SHIFT);
-
-		snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
-						WM8903_DRC_THRESH_COMP_MASK,
-						R43_COMPRESSOR_THRESSHOLD_DEFAULT_T << WM8903_DRC_THRESH_COMP_SHIFT);
-		snd_soc_update_bits(audio_data.codec, WM8903_DRC_3,
-						WM8903_DRC_AMP_COMP_MASK,
-						R43_COMPRESSOR_THRESSHOLD_DEFAULT_YT << WM8903_DRC_AMP_COMP_SHIFT);
-	}
 }
 
 /* platform driver register */
@@ -484,20 +235,17 @@ static int acer_audio_control_probe(struct platform_device *pdev)
 	audio_data.state.old = BIT_NO_HEADSET;
 	audio_data.mode.ap_control = ACOUSTIC_DEVICE_MIC_RECORDING_TABLE;
 	audio_data.AP_Lock = false;
-	pr_info("[AudioControl] probe done.\n");
 	return 0;
 }
 
 static int acer_audio_control_remove(struct platform_device *pdev)
 {
-	ACER_DBG("%s\n", __func__);
 	return 0;
 }
 
 static int __init acer_audio_control_init(void)
 {
 	int ret;
-	ACER_DBG("%s\n", __func__);
 	ret = platform_driver_register(&acer_audio_control_driver);
 	if (ret) {
 		pr_err("[acer_audio_control_driver] failed to register!!\n");

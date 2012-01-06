@@ -185,6 +185,9 @@ struct suspend_context tegra_sctx;
 struct dvfs_rail *tegra_cpu_rail;
 static struct dvfs_rail *tegra_core_rail;
 static struct clk *tegra_pclk;
+#if defined(CONFIG_ARCH_ACER_T20)
+static struct clk *cpu_clk;
+#endif
 static const struct tegra_suspend_platform_data *pdata;
 static enum tegra_suspend_mode current_suspend_mode = TEGRA_SUSPEND_NONE;
 #if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
@@ -450,6 +453,16 @@ static void restore_cpu_complex(u32 mode)
 	}
 
 	writel(tegra_sctx.clk_csite_src, clk_rst + CLK_RESET_SOURCE_CSITE);
+
+#if defined(CONFIG_ARCH_ACER_T20)
+	if (!clk_set_parent(cpu_clk->parent, cpu_clk->u.cpu.main)) {
+		writel(tegra_sctx.pllp_misc, clk_rst + CLK_RESET_PLLP_MISC);
+		writel(tegra_sctx.pllp_base, clk_rst + CLK_RESET_PLLP_BASE);
+	}
+	else {
+		pr_err("[PM] Switch cpu parent to pllx failed.\r\n");
+	}
+#endif
 
 	/* Do not power-gate CPU 0 when flow controlled */
 	reg = readl(FLOW_CTRL_CPU_CSR(cpu));
@@ -1066,6 +1079,10 @@ void __init tegra_init_suspend(struct tegra_suspend_platform_data *plat)
 	tegra_core_rail = tegra_dvfs_get_rail_by_name("vdd_core");
 	tegra_pclk = clk_get_sys(NULL, "pclk");
 	BUG_ON(IS_ERR(tegra_pclk));
+#if defined(CONFIG_ARCH_ACER_T20)
+	cpu_clk = tegra_get_clock_by_name("cpu");
+	BUG_ON(IS_ERR(cpu_clk));
+#endif
 	pdata = plat;
 	(void)reg;
 	(void)mode;

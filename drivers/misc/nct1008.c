@@ -716,6 +716,32 @@ static int __devinit nct1008_configure_sensor(struct nct1008_data* data)
 	if (err < 0)
 		goto error;
 
+#if defined(CONFIG_ARCH_ACER_T20)
+	value = temperature_to_value(pdata->ext_range, pdata->throttling_ext_limit);
+
+	/*External Temperature Throttling limit */
+	err = i2c_smbus_write_byte_data(client, EXT_TEMP_HI_LIMIT_HI_BYTE_WR, value);
+	if (err < 0)
+		goto error;
+
+	/* Local Temperature Throttling limit */
+	err = i2c_smbus_write_byte_data(client, LOCAL_TEMP_HI_LIMIT_WR, value);
+	if (err < 0)
+		goto error;
+
+	value = temperature_to_value(pdata->ext_range, pdata->shutdown_ext_limit);
+	/*External Temperature Shutdown limit */
+	err = i2c_smbus_write_byte_data(client, EXT_THERM_LIMIT_WR, value);
+	if (err < 0)
+		goto error;
+
+	value = temperature_to_value(pdata->ext_range, pdata->shutdown_local_limit);
+	/* Local Temperature Shutdown limit */
+	err = i2c_smbus_write_byte_data(client, LOCAL_THERM_LIMIT_WR, value);
+	if (err < 0)
+		goto error;
+#endif
+
 #if defined(CONFIG_ARCH_ACER_T30)
 	value = temperature_to_value(pdata->ext_range, pdata->throttling_ext_limit);
 
