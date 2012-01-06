@@ -415,7 +415,8 @@ static void restore_cpu_complex(u32 mode)
 		/* restore PLLX settings if CPU is on different PLL */
 		writel(tegra_sctx.pllx_misc, clk_rst + CLK_RESET_PLLX_MISC);
 		writel(tegra_sctx.pllx_base, clk_rst + CLK_RESET_PLLX_BASE);
-
+		writel(tegra_sctx.pllp_misc, clk_rst + CLK_RESET_PLLP_MISC);
+		writel(tegra_sctx.pllp_base, clk_rst + CLK_RESET_PLLP_BASE);
 		/* wait for PLL stabilization if PLLX was enabled */
 #endif
 		reg = readl(clk_rst + CLK_RESET_PLLX_BASE);
