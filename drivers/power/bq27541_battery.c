@@ -43,7 +43,7 @@ extern int acer_board_id;
 extern int acer_board_type;
 #endif
 
-#define DRIVER_VERSION			"1.4.6"
+#define DRIVER_VERSION			"1.4.7"
 
 #ifdef CONFIG_BATTERY_BQ27541
 
@@ -90,6 +90,7 @@ extern int acer_board_type;
 #define BATTERY_FAST_POLL_PERIOD	500
 
 /* Define AC_OUT delay time */
+#define DEBOUNCE	80
 #define DVT_DELAY	3500
 #define PVT_DELAY	1000
 
@@ -1000,7 +1001,7 @@ static void bq27541_charger_reset(void)
 	gpio_direction_output(BATT_LEARN_GPIO, 0);
 }
 
-int bq27541_battery_check(void)
+int bq27541_battery_check(int arg)
 {
 	int ret;
 	int rsoc = 0;
@@ -1011,7 +1012,31 @@ int bq27541_battery_check(void)
 
 	ret = bat_i2c_read(BQ27541_REG_SOC, &rsoc, 0, di);
 	msleep(50);
-	return rsoc;
+
+	switch (arg) {
+	case 1:
+		return rsoc;
+		break;
+	case 2:
+		if(rsoc < 100)
+		{
+			if(gpio_get_value(gpio))
+				return POWER_SUPPLY_STATUS_CHARGING;
+			else
+				return POWER_SUPPLY_STATUS_DISCHARGING;
+		}
+		else
+		{
+			if(gpio_get_value(gpio))
+				return POWER_SUPPLY_STATUS_FULL;
+			else
+				return POWER_SUPPLY_STATUS_NOT_CHARGING;
+		}
+		break;
+	default:
+		return -EINVAL;
+	}
+
 }
 EXPORT_SYMBOL(bq27541_battery_check);
 
@@ -1305,7 +1330,7 @@ static int bq27541_battery_get_property(struct power_supply *psy,
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = bq27541_battery_temperature(di);
 		printk("AC_IN = %d, Capacity = %d, ROSC = %d, Temperature = %d\n",
-			AC_IN, Capacity, bq27541_battery_check(), val->intval);
+			gpio_get_value(gpio), old_rsoc, bq27541_battery_check(1), val->intval);
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = bq27541_battery_health(di);
@@ -1420,17 +1445,8 @@ static int bq27541_read_i2c(u8 reg, int *rt_value, int b_single,
 static irqreturn_t ac_present_irq(int irq, void *data)
 {
 	struct bq27541_device_info *di = data;
-#if defined(CONFIG_ARCH_ACER_T30)
-	if ( (acer_board_type == BOARD_PICASSO_2 || acer_board_type == BOARD_PICASSO_M ) &&
-		(acer_board_id == BOARD_EVT || acer_board_id == BOARD_DVT1 || acer_board_id == BOARD_DVT2)) {
-		if(!gpio_get_value(gpio))
-			msleep(DVT_DELAY);
-	}
-	else{
-		if(!gpio_get_value(gpio))
-			msleep(PVT_DELAY);
-	}
-#endif
+	/* Debounce with 80ms to block abnormal interrupt when AC plug out */
+	mdelay(DEBOUNCE);
 	power_supply_changed(&di->ac);
 	return IRQ_HANDLED;
 }
