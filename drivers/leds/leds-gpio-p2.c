@@ -10,6 +10,7 @@
 #include <linux/jiffies.h>
 #include <linux/leds.h>
 #include <linux/leds-gpio-p2.h>
+#include <linux/power_supply.h>
 
 static int __init gpio_led_init(void);
 static int gpio_led_probe(struct platform_device *pdev);
@@ -17,38 +18,81 @@ static int gpio_led_remove(struct platform_device *pdev);
 static void gpio_led_work_func(struct work_struct *work);
 static struct delayed_work gpio_led_wq;
 static struct gpio_led_data *pdata;
+static int already_LED_ON = 0;
 
 #define LED_DELAY_TIME 5000
+#define BATTERY_LEVEL	1
+#define BATTERY_STATUS	2
+
+extern int bq27541_battery_check(int);
 
 static void gpio_led_early_suspend(struct early_suspend *h)
 {
-	gpio_direction_output(pdata->gpio,0);
+	int battery_status;
+
+	battery_status = bq27541_battery_check(BATTERY_STATUS);
+
+	if (battery_status == POWER_SUPPLY_STATUS_FULL) {
+		if (already_LED_ON == 0) {
+			gpio_direction_output(pdata->gpio, 1);
+			already_LED_ON = 1;
+			pr_info("[LED] driver LED_ON\n");
+		}
+	} else {
+		gpio_direction_output(pdata->gpio, 0);
+		already_LED_ON = 0;
+		pr_info("[LED] driver LED_OFF\n");
+	}
 }
 
-static void gpio_led_early_resume(struct early_suspend *h)
+static void gpio_led_late_resume(struct early_suspend *h)
 {
-	cancel_delayed_work(&gpio_led_wq);
-	gpio_direction_output(pdata->gpio,1);
-	schedule_delayed_work(&gpio_led_wq, msecs_to_jiffies(LED_DELAY_TIME));
+	if (already_LED_ON == 0) {
+		cancel_delayed_work(&gpio_led_wq);
+		gpio_direction_output(pdata->gpio,1);
+		already_LED_ON = 1;
+		pr_info("[LED] driver LED_ON\n");
+		schedule_delayed_work(&gpio_led_wq, msecs_to_jiffies(LED_DELAY_TIME));
+	}
 }
 
 static void gpio_led_work_func(struct work_struct *work)
 {
-	gpio_direction_output(pdata->gpio,0);
+	int battery_status;
+
+	battery_status = bq27541_battery_check(BATTERY_STATUS);
+
+	if (battery_status == POWER_SUPPLY_STATUS_FULL) {
+		if (already_LED_ON == 0) {
+			gpio_direction_output(pdata->gpio, 1);
+			already_LED_ON = 1;
+			pr_info("[LED] driver LED_ON\n");
+		}
+	} else {
+		gpio_direction_output(pdata->gpio, 0);
+		already_LED_ON = 0;
+		pr_info("[LED] driver LED_OFF\n");
+	}
 }
 
 static struct early_suspend gpio_led_early_suspend_handler = {
 	.suspend = gpio_led_early_suspend,
-	.resume = gpio_led_early_resume,
+	.resume = gpio_led_late_resume,
 };
 
 static void gpio_whiteled_set(struct led_classdev *led_dev,
                               enum led_brightness value)
 {
 	if (value) {
-		gpio_direction_output(pdata->gpio,1);
+		if (already_LED_ON == 0) {
+			gpio_direction_output(pdata->gpio,1);
+			already_LED_ON = 1;
+			pr_info("[LED] driver & sysfs LED_ON\n");
+		}
 	} else {
 		gpio_direction_output(pdata->gpio,0);
+		already_LED_ON = 0;
+		pr_info("[LED] driver & sysfs LED_OFF\n");
 	}
 }
 
