@@ -89,14 +89,15 @@ struct tegra_wm8903 {
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 struct acer_audio_data audio_data;
 
-#if defined(CONFIG_ARCH_ACER_T30)
 void acer_set_bypass_switch(int state)
 {
+	if (!audio_data.gpio.bypass_en)
+		return;
+
 	gpio_set_value(audio_data.gpio.bypass_en, state);
 	pr_info("audio: acer audio bypass switch state = %d \n",
 			gpio_get_value(audio_data.gpio.bypass_en));
 }
-#endif
 #endif
 
 static int tegra_wm8903_hw_params(struct snd_pcm_substream *substream,
@@ -492,15 +493,10 @@ static int tegra_wm8903_event_hp(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
-#ifdef CONFIG_ARCH_ACER_T30
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 static int tegra_wm8903_event_dock_hp(struct snd_soc_dapm_widget *w,
 					struct snd_kcontrol *k, int event)
 {
-	struct snd_soc_dapm_context *dapm = w->dapm;
-	struct snd_soc_card *card = dapm->card;
-	struct tegra_wm8903 *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_wm8903_platform_data *pdata = machine->pdata;
-
 	wm8903_event_printf(__func__, event);
 
 	return 0;
@@ -570,18 +566,25 @@ static int tegra_wm8903_event_ext_mic(struct snd_soc_dapm_widget *w,
 	return 0;
 }
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 static const struct snd_soc_dapm_widget cardhu_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Int Spk", tegra_wm8903_event_int_spk),
 	SND_SOC_DAPM_HP("Headphone Jack", tegra_wm8903_event_hp),
-#ifdef CONFIG_ARCH_ACER_T30
-	SND_SOC_DAPM_LINE("Line Out", tegra_wm8903_event_dock_hp),
+	SND_SOC_DAPM_LINE("LineOut", tegra_wm8903_event_dock_hp),
+	SND_SOC_DAPM_MIC("Mic Jack", tegra_wm8903_event_ext_mic),
+	SND_SOC_DAPM_MIC("Int Mic", tegra_wm8903_event_int_mic),
+	SND_SOC_DAPM_LINE("LineIn", NULL),
+};
 #else
+static const struct snd_soc_dapm_widget cardhu_dapm_widgets[] = {
+	SND_SOC_DAPM_SPK("Int Spk", tegra_wm8903_event_int_spk),
+	SND_SOC_DAPM_HP("Headphone Jack", tegra_wm8903_event_hp),
 	SND_SOC_DAPM_LINE("Line Out", NULL),
-#endif
 	SND_SOC_DAPM_MIC("Mic Jack", tegra_wm8903_event_ext_mic),
 	SND_SOC_DAPM_MIC("Int Mic", tegra_wm8903_event_int_mic),
 	SND_SOC_DAPM_LINE("Line In", NULL),
 };
+#endif
 
 static const struct snd_soc_dapm_widget tegra_wm8903_default_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("Int Spk", tegra_wm8903_event_int_spk),
@@ -604,10 +607,10 @@ static const struct snd_soc_dapm_route harmony_audio_map[] = {
 static const struct snd_soc_dapm_route cardhu_audio_map[] = {
 	{"Headphone Jack", NULL, "HPOUTR"},
 	{"Headphone Jack", NULL, "HPOUTL"},
-	{"Line Out", NULL, "ROP"},
-	{"Line Out", NULL, "RON"},
-	{"Line Out", NULL, "LOP"},
-	{"Line Out", NULL, "LON"},
+	{"LineOut", NULL, "ROP"},
+	{"LineOut", NULL, "RON"},
+	{"LineOut", NULL, "LOP"},
+	{"LineOut", NULL, "LON"},
 	{"Int Spk", NULL, "LINEOUTL"},
 	{"Int Spk", NULL, "LINEOUTR"},
 	{"Mic Bias", NULL, "Mic Jack"},
@@ -621,8 +624,8 @@ static const struct snd_soc_dapm_route cardhu_audio_map[] = {
 	{"Mic Bias", NULL, "Int Mic"},
 	{"IN1L", NULL, "Int Mic"},
 	{"IN1R", NULL, "Int Mic"},
-	{"IN3L", NULL, "Line In"},
-	{"IN3R", NULL, "Line In"},
+	{"IN3L", NULL, "LineIn"},
+	{"IN3R", NULL, "LineIn"},
 };
 #elif defined(CONFIG_ARCH_ACER_T30)
 static const struct snd_soc_dapm_route cardhu_audio_map[] = {
@@ -632,9 +635,8 @@ static const struct snd_soc_dapm_route cardhu_audio_map[] = {
 	{"Int Spk", NULL, "RON"},
 	{"Int Spk", NULL, "LOP"},
 	{"Int Spk", NULL, "LON"},
-	{"LineOut", NULL, "Line Out"},
-	{"Line Out", NULL, "LINEOUTL"},
-	{"Line Out", NULL, "LINEOUTR"},
+	{"LineOut", NULL, "LINEOUTL"},
+	{"LineOut", NULL, "LINEOUTR"},
 	{"Mic Bias", NULL, "Mic Jack"},
 	{"IN1L", NULL, "Mic Jack"},
 	{"IN1L", NULL, "Mic Jack"},
@@ -880,19 +882,18 @@ static int tegra_wm8903_init(struct snd_soc_pcm_runtime *rtd)
 #if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	snd_soc_dapm_disable_pin(dapm, "Int Spk");
 	snd_soc_dapm_disable_pin(dapm, "Headphone Jack");
-	snd_soc_dapm_disable_pin(dapm, "Line Out");
+	snd_soc_dapm_disable_pin(dapm, "LineOut");
 
 	snd_soc_dapm_disable_pin(dapm, "Mic Jack");
 	snd_soc_dapm_disable_pin(dapm, "Int Mic");
-	snd_soc_dapm_disable_pin(dapm, "Line In");
+#if !defined(CONFIG_ARCH_ACER_T30)
+	snd_soc_dapm_disable_pin(dapm, "LineIn");
+#endif
 
 	audio_data.codec = codec;
 	audio_data.gpio.spkr_en = pdata->gpio_spkr_en;
-#if defined(CONFIG_ARCH_ACER_T20)
 	audio_data.gpio.int_mic_en = pdata->gpio_int_mic_en;
-#elif defined(CONFIG_ARCH_ACER_T30)
 	audio_data.gpio.bypass_en = pdata->gpio_bypass_switch_en;
-#endif
 #else
 	/* FIXME: Calculate automatically based on DAPM routes? */
 	if (!machine_is_harmony() && !machine_is_ventana() &&
