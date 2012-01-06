@@ -29,6 +29,7 @@ static ssize_t power_store(struct kobject *kobj, struct kobj_attribute *attr, co
 	if(n == 2 && (*buf == 0x30 || *buf == 0x31)){
 		i = (int)(*buf) - 0x30;
 		gpio_set_value(en_modem_3v3_gpio, i);
+		printk(KERN_INFO "modem_power: power enable = %d\n ", i);
 	}else{
 		printk(KERN_INFO "modem_power: invalid args, n = %d, *buf = %d\n", n, *buf);
 	}
