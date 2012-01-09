@@ -10,7 +10,9 @@
 #include <linux/jiffies.h>
 #include <linux/leds.h>
 #include <linux/leds-gpio-p2.h>
+#if defined(CONFIG_ARCH_ACER_T30)
 #include <linux/power_supply.h>
+#endif
 
 static int __init gpio_led_init(void);
 static int gpio_led_probe(struct platform_device *pdev);
@@ -18,16 +20,21 @@ static int gpio_led_remove(struct platform_device *pdev);
 static void gpio_led_work_func(struct work_struct *work);
 static struct delayed_work gpio_led_wq;
 static struct gpio_led_data *pdata;
+#if defined(CONFIG_ARCH_ACER_T30)
 static int already_LED_ON = 0;
+#endif
 
 #define LED_DELAY_TIME 5000
+#if defined(CONFIG_ARCH_ACER_T30)
 #define BATTERY_LEVEL	1
 #define BATTERY_STATUS	2
 
 extern int bq27541_battery_check(int);
+#endif
 
 static void gpio_led_early_suspend(struct early_suspend *h)
 {
+#if defined(CONFIG_ARCH_ACER_T30)
 	int battery_status;
 
 	battery_status = bq27541_battery_check(BATTERY_STATUS);
@@ -43,10 +50,14 @@ static void gpio_led_early_suspend(struct early_suspend *h)
 		already_LED_ON = 0;
 		pr_info("[LED] driver LED_OFF\n");
 	}
+#else
+	gpio_direction_output(pdata->gpio,0);
+#endif
 }
 
 static void gpio_led_late_resume(struct early_suspend *h)
 {
+#if defined(CONFIG_ARCH_ACER_T30)
 	if (already_LED_ON == 0) {
 		cancel_delayed_work(&gpio_led_wq);
 		gpio_direction_output(pdata->gpio,1);
@@ -54,10 +65,16 @@ static void gpio_led_late_resume(struct early_suspend *h)
 		pr_info("[LED] driver LED_ON\n");
 		schedule_delayed_work(&gpio_led_wq, msecs_to_jiffies(LED_DELAY_TIME));
 	}
+#else
+	cancel_delayed_work(&gpio_led_wq);
+	gpio_direction_output(pdata->gpio,1);
+	schedule_delayed_work(&gpio_led_wq, msecs_to_jiffies(LED_DELAY_TIME));
+#endif
 }
 
 static void gpio_led_work_func(struct work_struct *work)
 {
+#if defined(CONFIG_ARCH_ACER_T30)
 	int battery_status;
 
 	battery_status = bq27541_battery_check(BATTERY_STATUS);
@@ -73,6 +90,9 @@ static void gpio_led_work_func(struct work_struct *work)
 		already_LED_ON = 0;
 		pr_info("[LED] driver LED_OFF\n");
 	}
+#else
+	gpio_direction_output(pdata->gpio,0);
+#endif
 }
 
 static struct early_suspend gpio_led_early_suspend_handler = {
@@ -83,6 +103,7 @@ static struct early_suspend gpio_led_early_suspend_handler = {
 static void gpio_whiteled_set(struct led_classdev *led_dev,
                               enum led_brightness value)
 {
+#if defined(CONFIG_ARCH_ACER_T30)
 	if (value) {
 		if (already_LED_ON == 0) {
 			gpio_direction_output(pdata->gpio,1);
@@ -94,6 +115,14 @@ static void gpio_whiteled_set(struct led_classdev *led_dev,
 		already_LED_ON = 0;
 		pr_info("[LED] driver & sysfs LED_OFF\n");
 	}
+#else
+	if (value) {
+		gpio_direction_output(pdata->gpio,1);
+	} else {
+		gpio_direction_output(pdata->gpio,0);
+	}
+
+#endif
 }
 
 static struct led_classdev whiteled = {
