@@ -95,9 +95,10 @@ extern int acer_board_type;
 #define PVT_DELAY	1000
 
 /* Define low temperature threshold */
-#define TEMP_EQUAL_ZERO		0
+#define REPORT_NORMAL_VAL		0
 #define TEMP_UNDER_ZERO		1
 #define TEMP_UNDER_NAT_TEN		2
+#define RSOC_NOT_QUALIFY		3
 
 /* Define charger report signal */
 #define ADAPTER_PLUG_IN		1
@@ -1053,12 +1054,16 @@ int bq27541_low_temp_check(void)
 	ret = bat_i2c_read(BQ27541_REG_TEMP, &temp, 0, di);
 	msleep(50);
 
-	if((rsoc < 60) && (temp < 2744) && (temp > 2647))
+	if((rsoc > 60) && (temp < 2744) && (temp > 2647))
+		return RSOC_NOT_QUALIFY;
+	else if((rsoc < 60) && (temp < 2744) && (temp > 2647))
 		return TEMP_UNDER_ZERO;
+	else if((rsoc > 40) && (temp < 2647) && (temp > 2560))
+		return RSOC_NOT_QUALIFY;
 	else if((rsoc < 40) && (temp < 2647) && (temp > 2560))
 		return TEMP_UNDER_NAT_TEN;
 	else
-		return TEMP_EQUAL_ZERO;
+		return REPORT_NORMAL_VAL;
 }
 EXPORT_SYMBOL(bq27541_low_temp_check);
 
@@ -1197,7 +1202,9 @@ static int bq27541_battery_rsoc(struct bq27541_device_info *di)
 	else
 		Capacity = rsoc;
 
-	if(bq27541_low_temp_check() > TEMP_EQUAL_ZERO)
+	if((bq27541_low_temp_check() == TEMP_UNDER_ZERO) || (bq27541_low_temp_check() == TEMP_UNDER_NAT_TEN))
+		return 0;
+	else if(bq27541_low_temp_check() == RSOC_NOT_QUALIFY)
 		return NULL;
 	else
 	{
@@ -1239,7 +1246,7 @@ static int bq27541_battery_status(struct bq27541_device_info *di)
 		return ret;
 	}
 
-	if(bq27541_low_temp_check() > TEMP_EQUAL_ZERO)
+	if(bq27541_low_temp_check() == RSOC_NOT_QUALIFY)
 		status = POWER_SUPPLY_STATUS_UNKNOWN;
 	else
 	{
@@ -1329,8 +1336,8 @@ static int bq27541_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = bq27541_battery_temperature(di);
-		printk("AC_IN = %d, Capacity = %d, ROSC = %d, Temperature = %d\n",
-			gpio_get_value(gpio), old_rsoc, bq27541_battery_check(1), val->intval);
+		printk("AC_IN = %d, Capacity = %d, ROSC = %d, Temperature = %d, LT_Check = %d\n",
+			gpio_get_value(gpio), old_rsoc, bq27541_battery_check(1), val->intval, bq27541_low_temp_check());
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = bq27541_battery_health(di);
