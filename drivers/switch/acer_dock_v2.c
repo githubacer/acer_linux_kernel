@@ -10,6 +10,7 @@
 #include <linux/input.h>
 #include <linux/earlysuspend.h>
 #include <linux/platform_data/tegra_usb.h>
+#include <linux/delay.h>
 #include "../../../arch/arm/mach-tegra/devices.h"
 #include "../../../arch/arm/mach-tegra/gpio-names.h"
 
@@ -25,6 +26,8 @@ static bool is_ir_wake = false;
 static bool is_ir_irq_enable = false;
 static struct platform_device *tegra_ehci3_platform_device = NULL;
 static bool usb3_enabled = false;
+static bool is_cursor_mode = false;
+static int cursor_speed = 16;  //pixels per press
 
 enum {
 	NO_DEVICE = 0,
@@ -89,17 +92,13 @@ struct dock_switch_data {
 	struct switch_dev sdev;
 	unsigned det_gpio;
 	unsigned det_irq;
-	struct work_struct work;
-	struct hrtimer timer;
-	ktime_t debounce_time;
+	struct delayed_work work;
 	unsigned ir_gpio;
 	unsigned ir_irq;
+	struct work_struct ir_work;
 	unsigned hs_gpio;
 	unsigned hs_irq;
-	struct work_struct hs_work;
-	struct work_struct ir_work;
-	struct hrtimer hs_timer;
-	ktime_t hs_debounce_time;
+	struct delayed_work hs_work;
 };
 
 static int atoi(const char *a)
@@ -213,6 +212,14 @@ static ssize_t dock_store(struct kobject* kobj, struct kobj_attribute* kobj_attr
 		input_sync(input_dock);
 		input_report_key(input_dock, KEY_F2, 0);
 		input_sync(input_dock);
+		is_cursor_mode = !is_cursor_mode;
+		pr_info("%s mode", is_cursor_mode?"cursor":"key");
+		if (is_cursor_mode) {
+			input_report_rel(input_dock, REL_X, -1);
+			input_sync(input_dock);
+			input_report_rel(input_dock, REL_X, 1);
+			input_sync(input_dock);
+		}
 		break;
 	case DOCK_KEY_VOLUMEUP:
 		input_report_key(input_dock, KEY_VOLUMEUP, 1);
@@ -263,34 +270,61 @@ static ssize_t dock_store(struct kobject* kobj, struct kobj_attribute* kobj_attr
 		input_sync(input_dock);
 		break;
 	case DOCK_KEY_LEFT:
-		input_report_key(input_dock, KEY_LEFT, 1);
-		input_sync(input_dock);
-		input_report_key(input_dock, KEY_LEFT, 0);
-		input_sync(input_dock);
+		if (is_cursor_mode) {
+			input_report_rel(input_dock, REL_X, -cursor_speed);
+			input_sync(input_dock);
+		} else {
+			input_report_key(input_dock, KEY_LEFT, 1);
+			input_sync(input_dock);
+			input_report_key(input_dock, KEY_LEFT, 0);
+			input_sync(input_dock);
+		}
 		break;
 	case DOCK_KEY_RIGHT:
-		input_report_key(input_dock, KEY_RIGHT, 1);
-		input_sync(input_dock);
-		input_report_key(input_dock, KEY_RIGHT, 0);
-		input_sync(input_dock);
+		if (is_cursor_mode) {
+			input_report_rel(input_dock, REL_X, cursor_speed);
+			input_sync(input_dock);
+		} else {
+			input_report_key(input_dock, KEY_RIGHT, 1);
+			input_sync(input_dock);
+			input_report_key(input_dock, KEY_RIGHT, 0);
+			input_sync(input_dock);
+		}
 		break;
 	case DOCK_KEY_UP:
-		input_report_key(input_dock, KEY_UP, 1);
-		input_sync(input_dock);
-		input_report_key(input_dock, KEY_UP, 0);
-		input_sync(input_dock);
+		if (is_cursor_mode) {
+			input_report_rel(input_dock, REL_Y, -cursor_speed);
+			input_sync(input_dock);
+		} else {
+			input_report_key(input_dock, KEY_UP, 1);
+			input_sync(input_dock);
+			input_report_key(input_dock, KEY_UP, 0);
+			input_sync(input_dock);
+		}
 		break;
 	case DOCK_KEY_DOWN:
-		input_report_key(input_dock, KEY_DOWN, 1);
-		input_sync(input_dock);
-		input_report_key(input_dock, KEY_DOWN, 0);
-		input_sync(input_dock);
+		if (is_cursor_mode) {
+			input_report_rel(input_dock, REL_Y, cursor_speed);
+			input_sync(input_dock);
+		} else {
+			input_report_key(input_dock, KEY_DOWN, 1);
+			input_sync(input_dock);
+			input_report_key(input_dock, KEY_DOWN, 0);
+			input_sync(input_dock);
+		}
 		break;
 	case DOCK_KEY_ENTER:
-		input_report_key(input_dock, KEY_ENTER, 1);
-		input_sync(input_dock);
-		input_report_key(input_dock, KEY_ENTER, 0);
-		input_sync(input_dock);
+		if (is_cursor_mode) {
+			input_report_key(input_dock, BTN_LEFT, 1);
+			input_sync(input_dock);
+			input_report_key(input_dock, BTN_LEFT, 0);
+			input_sync(input_dock);
+		} else {
+			input_report_key(input_dock, KEY_ENTER, 1);
+			input_sync(input_dock);
+			input_report_key(input_dock, KEY_ENTER, 0);
+			input_sync(input_dock);
+		}
 		break;
 	}
 
@@ -326,7 +360,7 @@ static ssize_t vbus_store(struct kobject* kobj, struct kobj_attribute* kobj_attr
 		pr_debug("Get value failed!!\n");
 	}
 
-	return 0;
+	return n;
 }
 
 static void dock_switch_early_suspend(struct early_suspend *h)
@@ -382,20 +416,12 @@ static void dock_hs_switch_work(struct work_struct *work)
 	}
 }
 
-static enum hrtimer_restart hs_detect_event_timer_func(struct hrtimer *data)
-{
-	struct dock_switch_data *pSwitch = switch_data;
-
-	schedule_work(&pSwitch->hs_work);
-	return HRTIMER_NORESTART;
-}
-
 static irqreturn_t dock_hs_interrupt(int irq, void *dev_id)
 {
 	struct dock_switch_data *pSwitch = switch_data;
 
-	pr_info("HS Interrupt!!!\n");
-	hrtimer_start(&pSwitch->hs_timer, pSwitch->hs_debounce_time, HRTIMER_MODE_REL);
+	schedule_delayed_work(&pSwitch->hs_work,
+						round_jiffies_relative(msecs_to_jiffies(300)));
 	return IRQ_HANDLED;
 }
 /* Dock Headset */
@@ -409,7 +435,8 @@ static void dock_ir_switch_work(struct work_struct *work)
 	state = gpio_get_value(pSwitch->det_gpio);
 	if (!state) {
 		switch_set_state(&pSwitch->sdev, DOCK_IR_WAKE);
-		hrtimer_start(&pSwitch->hs_timer, pSwitch->hs_debounce_time, HRTIMER_MODE_REL);
+		schedule_delayed_work(&pSwitch->hs_work,
+						round_jiffies_relative(msecs_to_jiffies(300)));
 	}
 }
 
@@ -443,31 +470,24 @@ static void dock_switch_work(struct work_struct *work)
 		tegra_usb3_host_unregister(tegra_ehci3_platform_device);
 		usb3_enabled = false;
 	}
-
+	msleep(100);
 	switch_set_state(&pSwitch->sdev, !state);
 	if (state) {
 		pr_info("Disable HS IRQ\n");
-		disable_irq(switch_data->hs_irq);
+		disable_irq(pSwitch->hs_irq);
 	} else {
 		pr_info("Enable HS IRQ\n");
-		enable_irq(switch_data->hs_irq);
+		enable_irq(pSwitch->hs_irq);
 	}
-	hrtimer_start(&pSwitch->hs_timer, pSwitch->hs_debounce_time, HRTIMER_MODE_REL);
-}
-
-static enum hrtimer_restart detect_event_timer_func(struct hrtimer *data)
-{
-	struct dock_switch_data *pSwitch = switch_data;
-
-	schedule_work(&pSwitch->work);
-	return HRTIMER_NORESTART;
+	dock_hs_switch_work(&pSwitch->hs_work.work);
 }
 
 static irqreturn_t dock_interrupt(int irq, void *dev_id)
 {
 	struct dock_switch_data *pSwitch = switch_data;
 
-	hrtimer_start(&pSwitch->timer, pSwitch->debounce_time, HRTIMER_MODE_REL);
+	schedule_delayed_work(&pSwitch->work,
+						round_jiffies_relative(msecs_to_jiffies(300)));
 
 	return IRQ_HANDLED;
 }
@@ -476,7 +496,7 @@ static irqreturn_t dock_interrupt(int irq, void *dev_id)
 static int __init dock_register_input(struct input_dev *input)
 {
 	input->name = DRIVER_NAME;
-	input->evbit[0] = BIT_MASK(EV_SYN)|BIT_MASK(EV_KEY);
+	input->evbit[0] = BIT_MASK(EV_SYN) | BIT_MASK(EV_KEY) | BIT_MASK(EV_REL);
 	input->keybit[BIT_WORD(KEY_F1)] |= BIT_MASK(KEY_F1);
 	input->keybit[BIT_WORD(KEY_F2)] |= BIT_MASK(KEY_F2);
 	input->keybit[BIT_WORD(KEY_VOLUMEUP)] |= BIT_MASK(KEY_VOLUMEUP);
@@ -492,6 +512,9 @@ static int __init dock_register_input(struct input_dev *input)
 	input->keybit[BIT_WORD(KEY_LEFT)] |= BIT_MASK(KEY_LEFT);
 	input->keybit[BIT_WORD(KEY_RIGHT)] |= BIT_MASK(KEY_RIGHT);
 	input->keybit[BIT_WORD(KEY_ENTER)] |= BIT_MASK(KEY_ENTER);
+	input->keybit[BIT_WORD(BTN_MOUSE)] = BIT_MASK(BTN_LEFT) |
+										BIT_MASK(BTN_RIGHT);
+	input->relbit[BIT_WORD(REL_X)] = BIT_MASK(REL_X) | BIT_MASK(REL_Y);
 
 	return input_register_device(input);
 }
@@ -524,13 +547,8 @@ static int dock_switch_probe(struct platform_device *pdev)
 		goto err_register_switch;
 
 	/* Dock Detection */
-	INIT_WORK(&switch_data->work, dock_switch_work);
-	switch_data->debounce_time = ktime_set(0, 300000000); //300 ms
-	hrtimer_init(&switch_data->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	switch_data->timer.function = detect_event_timer_func;
-
+	INIT_DELAYED_WORK(&switch_data->work, dock_switch_work);
 	ret = gpio_request(switch_data->det_gpio, "dock_det");
-
 	if (ret) {
 		pr_err("dock_switch request det_gpio failed\n");
 		goto err_request_det_gpio;
@@ -572,11 +590,7 @@ static int dock_switch_probe(struct platform_device *pdev)
 	}
 
 	/* Dock Headset */
-	INIT_WORK(&switch_data->hs_work, dock_hs_switch_work);
-	switch_data->hs_debounce_time = ktime_set(0, 250000000);
-	hrtimer_init(&switch_data->hs_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	switch_data->hs_timer.function = hs_detect_event_timer_func;
-
+	INIT_DELAYED_WORK(&switch_data->hs_work, dock_hs_switch_work);
 	ret = gpio_request(switch_data->hs_gpio, "dock_hs_det");
 	if (ret) {
 		pr_err("dock_switch request hs_det_gpio failed\n");
@@ -603,7 +617,7 @@ static int dock_switch_probe(struct platform_device *pdev)
 	register_early_suspend(&dock_switch_early_suspend_handler);
 
 	// set current status
-	dock_switch_work(&switch_data->work);
+	dock_switch_work(&switch_data->work.work);
 
 	printk(KERN_INFO "Dock switch driver probe done!\n");
 	return 0;
@@ -630,7 +644,7 @@ err_register_switch:
 static int __devexit dock_switch_remove(struct platform_device *pdev)
 {
 	unregister_early_suspend(&dock_switch_early_suspend_handler);
-	cancel_work_sync(&switch_data->work);
+	cancel_work_sync(&switch_data->work.work);
 	switch_dev_unregister(&switch_data->sdev);
 	kfree(switch_data);
 
