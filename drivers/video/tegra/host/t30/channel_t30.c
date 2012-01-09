@@ -22,15 +22,16 @@
 
 #include <linux/mutex.h>
 #include <mach/powergate.h>
+
+#include "../gr3d/gr3d_t30.h"
+#include "../gr3d/scale3d.h"
+
 #include "../dev.h"
 #include "../t20/channel_t20.h"
-#include "../t20/hardware_t20.h"
 #include "../t20/t20.h"
 #include "../t20/syncpt_t20.h"
-#include "../3dctx_common.h"
-#include "3dctx_t30.h"
-#include "../t20/mpectx_t20.h"
-#include "scale3d.h"
+#include "../gr3d/gr3d.h"
+#include "../mpe/mpe.h"
 
 #define NVMODMUTEX_2D_FULL   (1)
 #define NVMODMUTEX_2D_SIMPLE (2)
@@ -41,7 +42,6 @@
 #define NVMODMUTEX_DISPLAYB  (7)
 #define NVMODMUTEX_VI        (8)
 #define NVMODMUTEX_DSI       (9)
-#define NV_FIFO_READ_TIMEOUT 200000
 
 #ifndef TEGRA_POWERGATE_3D1
 #define TEGRA_POWERGATE_3D1 -1
@@ -69,7 +69,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.modulemutexes = BIT(NVMODMUTEX_3D),
 	.class	       = NV_GRAPHICS_3D_CLASS_ID,
 	.module        = {
-			.prepare_poweroff = nvhost_3dctx_prepare_power_off,
+			.prepare_poweroff = nvhost_gr3d_prepare_power_off,
 			.busy = nvhost_scale3d_notify_busy,
 			.idle = nvhost_scale3d_notify_idle,
 			.init = nvhost_scale3d_init,
@@ -133,7 +133,7 @@ const struct nvhost_channeldesc nvhost_t30_channelmap[] = {
 	.waitbasesync  = true,
 	.keepalive     = true,
 	.module        = {
-			.prepare_poweroff = nvhost_mpectx_prepare_power_off,
+			.prepare_poweroff = nvhost_mpe_prepare_power_off,
 			.clocks = {{"mpe", UINT_MAX}, {"emc", UINT_MAX}, {} },
 			.powergate_ids  = {TEGRA_POWERGATE_MPE, -1},
 			NVHOST_DEFAULT_CLOCKGATE_DELAY,
@@ -159,9 +159,9 @@ static inline int t30_nvhost_hwctx_handler_init(
 	const char *module)
 {
 	if (strcmp(module, "gr3d") == 0)
-		return t30_nvhost_3dctx_handler_init(h);
+		return nvhost_gr3d_t30_ctxhandler_init(h);
 	else if (strcmp(module, "mpe") == 0)
-		return t20_nvhost_mpectx_handler_init(h);
+		return nvhost_mpe_ctxhandler_init(h);
 
 	return 0;
 }

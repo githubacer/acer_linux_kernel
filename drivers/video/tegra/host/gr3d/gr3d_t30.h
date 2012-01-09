@@ -1,7 +1,7 @@
 /*
- * drivers/video/tegra/host/t30/3dctx_t30.h
+ * drivers/video/tegra/host/gr3d/gr3d_t30.h
  *
- * Tegra Graphics Host Context Switching for Tegra3
+ * Tegra Graphics Host 3D for Tegra3
  *
  * Copyright (c) 2011, NVIDIA Corporation.
  *
@@ -20,11 +20,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#ifndef __NVHOST_3DCTX_T30_H
-#define __NVHOST_3DCTX_T30_H
+#ifndef __NVHOST_GR3D_GR3D_T30_H
+#define __NVHOST_GR3D_GR3D_T30_H
 
 struct nvhost_hwctx_handler;
 
-int t30_nvhost_3dctx_handler_init(struct nvhost_hwctx_handler *h);
+int nvhost_gr3d_t30_ctxhandler_init(struct nvhost_hwctx_handler *h);
 
 #endif

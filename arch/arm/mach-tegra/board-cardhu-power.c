@@ -700,8 +700,8 @@ static int disable_load_switch_rail(
 /* common to most of boards*/
 GREG_INIT(0, en_5v_cp,		en_5v_cp,	NULL,			1,	0,	TPS6591X_GPIO_0,	false,	1,	0,	0,	0);
 GREG_INIT(1, en_5v0,		en_5v0,		NULL,			0,      0,      TPS6591X_GPIO_2,	false,	0,	0,	0,	0);
-GREG_INIT(2, en_ddr,		en_ddr,		NULL,			0,      0,      TPS6591X_GPIO_6,	false,	0,	0,	0,	0);
-GREG_INIT(3, en_3v3_sys,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_7,	false,	0,	0,	0,	0);
+GREG_INIT(2, en_ddr,		en_ddr,		NULL,			1,      0,      TPS6591X_GPIO_6,	false,	1,	0,	0,	0);
+GREG_INIT(3, en_3v3_sys,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_7,	false,	1,	0,	0,	0);
 GREG_INIT(4, en_vdd_bl,		en_vdd_bl,	NULL,			0,      0,      TEGRA_GPIO_PK3,		false,	1,	0,	0,	0);
 GREG_INIT(5, en_3v3_modem,	en_3v3_modem,	NULL,			1,      0,      TEGRA_GPIO_PD6,		false,	1,	0,	0,	0);
 GREG_INIT(6, en_vdd_pnl1,	en_vdd_pnl1,	"vdd_3v3_devices",	0,      0,      TEGRA_GPIO_PL4,		false,	1,	0,	0,	0);
@@ -715,8 +715,8 @@ GREG_INIT(13, en_1v8_cam,	en_1v8_cam,	"vdd_gen1v8",		0,      0,      TEGRA_GPIO_
 
 /* E1291-A04/A05 specific */
 GREG_INIT(1, en_5v0_a04,	en_5v0,		NULL,			0,      0,      TPS6591X_GPIO_8,	false,	0,	0,	0,	0);
-GREG_INIT(2, en_ddr_a04,	en_ddr,		NULL,			0,      0,      TPS6591X_GPIO_7,	false,	0,	0,	0,	0);
-GREG_INIT(3, en_3v3_sys_a04,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_6,	false,	0,	0,	0,	0);
+GREG_INIT(2, en_ddr_a04,	en_ddr,		NULL,			1,      0,      TPS6591X_GPIO_7,	false,	1,	0,	0,	0);
+GREG_INIT(3, en_3v3_sys_a04,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_6,	false,	1,	0,	0,	0);
 
 
 /*Specific to pm269*/
@@ -731,6 +731,14 @@ GREG_INIT(12, en_3v3_pex_hvdd_pm269,	en_3v3_pex_hvdd,	"hvdd_pex_pmu",
 GREG_INIT(17, en_vddio_vid_oc_pm269,	en_vddio_vid_oc,	"master_5v_switch",
 	0,      0,      TEGRA_GPIO_PP2,	false,	0,	TEGRA_PINGROUP_DAP3_DOUT,
 	enable_load_switch_rail, disable_load_switch_rail);
+
+/* Specific to pm311 */
+GREG_INIT(15, en_usb1_vbus_oc_pm311,	en_usb1_vbus_oc,	"master_5v_switch",
+		0,      0,      TEGRA_GPIO_PCC7,		false,	0,	TEGRA_PINGROUP_GMI_RST_N,
+		enable_load_switch_rail, disable_load_switch_rail);
+GREG_INIT(16, en_usb3_vbus_oc_pm311,	en_usb3_vbus_oc,	"master_5v_switch",
+		0,      0,      TEGRA_GPIO_PCC6,		false,	0,	TEGRA_PINGROUP_GMI_AD15,
+		enable_load_switch_rail, disable_load_switch_rail);
 
 /* Specific to E1187/E1186/E1256 */
 GREG_INIT(14, dis_5v_switch_e118x,	dis_5v_switch,		"vdd_5v0_sys",
@@ -833,6 +841,25 @@ GREG_INIT(6, en_vdd_pnl1_pm313,     en_vdd_pnl1,        "vdd_3v3_devices",
 	ADD_GPIO_REG(en_usb3_vbus_oc_e118x),	\
 	ADD_GPIO_REG(en_vddio_vid_oc_pm269),
 
+#define PM311_GPIO_REG \
+	ADD_GPIO_REG(en_5v_cp),			\
+	ADD_GPIO_REG(en_5v0),			\
+	ADD_GPIO_REG(en_ddr),			\
+	ADD_GPIO_REG(en_3v3_sys),		\
+	ADD_GPIO_REG(en_3v3_modem),		\
+	ADD_GPIO_REG(cam1_ldo_en),		\
+	ADD_GPIO_REG(cam2_ldo_en),		\
+	ADD_GPIO_REG(cam3_ldo_en),		\
+	ADD_GPIO_REG(en_vdd_com),		\
+	ADD_GPIO_REG(en_3v3_fuse_pm269),	\
+	ADD_GPIO_REG(en_3v3_emmc),		\
+	ADD_GPIO_REG(en_3v3_pex_hvdd_pm269),	\
+	ADD_GPIO_REG(en_1v8_cam),		\
+	ADD_GPIO_REG(dis_5v_switch_e118x),	\
+	ADD_GPIO_REG(en_usb1_vbus_oc_pm311),	\
+	ADD_GPIO_REG(en_usb3_vbus_oc_pm311),	\
+	ADD_GPIO_REG(en_vddio_vid_oc_pm269),
+
 #define E1247_DISPLAY_GPIO_REG		\
 	ADD_GPIO_REG(en_vdd_bl_pm269),	\
 	ADD_GPIO_REG(en_vdd_pnl1_pm269),
@@ -930,6 +957,18 @@ static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_pm269_pm313[] =
 	PM313_DISPLAY_GPIO_REG
 };
 
+/* Gpio switch regulator platform data for PM311*/
+static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_pm311[] = {
+	PM311_GPIO_REG
+	E1247_DISPLAY_GPIO_REG
+};
+
+/* Gpio switch regulator platform data for PM11*/
+static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_pm311_pm313[] = {
+	PM311_GPIO_REG
+	PM313_DISPLAY_GPIO_REG
+};
+
 /* Gpio switch regulator platform data for E1291 A03*/
 static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_e1291_a03[] = {
 	COMMON_GPIO_REG
@@ -999,9 +1038,17 @@ int __init cardhu_gpio_switch_regulator_init(void)
 		}
 		break;
 
-	case BOARD_PM269:
-	case BOARD_PM305:
 	case BOARD_PM311:
+	case BOARD_PM305:
+		gswitch_pdata.num_subdevs = ARRAY_SIZE(gswitch_subdevs_pm311);
+		gswitch_pdata.subdevs = gswitch_subdevs_pm311;
+		if (display_board_info.board_id == BOARD_DISPLAY_PM313) {
+			gswitch_pdata.num_subdevs = ARRAY_SIZE(gswitch_subdevs_pm311_pm313);
+			gswitch_pdata.subdevs = gswitch_subdevs_pm311_pm313;
+		}
+		break;
+
+	case BOARD_PM269:
 	case BOARD_E1257:
 		gswitch_pdata.num_subdevs = ARRAY_SIZE(gswitch_subdevs_pm269);
 		gswitch_pdata.subdevs = gswitch_subdevs_pm269;
