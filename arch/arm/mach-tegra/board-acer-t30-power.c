@@ -582,7 +582,7 @@ static int disable_load_switch_rail(
 	}
 
 GREG_INIT(0, en_5v_cp,		en_5v_cp,	NULL,			1,	0,	TPS6591X_GPIO_0,	false,	1,	0,	0,	0);
-GREG_INIT(1, en_5v0,		en_5v0,		NULL,			0,      0,      TPS6591X_GPIO_8,	false,	1,	0,	0,	0);
+GREG_INIT(1, en_5v0,		en_5v0,		NULL,			1,      0,      TPS6591X_GPIO_8,	false,	1,	0,	0,	0);
 GREG_INIT(2, en_ddr,		en_ddr,		NULL,			0,      0,      TPS6591X_GPIO_7,	false,	1,	0,	0,	0);
 GREG_INIT(3, en_3v3_sys,	en_3v3_sys,	NULL,			0,      0,      TPS6591X_GPIO_6,	false,	1,	0,	0,	0);
 GREG_INIT(4, en_vdd_gps,	en_vdd_gps,	NULL,			0,      0,      TEGRA_GPIO_PY2,		false,	0,	0,	0,	0);
@@ -605,10 +605,7 @@ GREG_INIT(15, en_usb1_vbus_oc,		en_usb1_vbus_oc,	"vdd_5v0_sys",
 #define ACER_T30_GPIO_REG	\
 	ADD_GPIO_REG(en_5v_cp),			\
 	ADD_GPIO_REG(en_5v0),			\
-	ADD_GPIO_REG(en_ddr),			\
 	ADD_GPIO_REG(en_3v3_sys),		\
-	ADD_GPIO_REG(en_vdd_pnl1),		\
-	ADD_GPIO_REG(en_vdd_bl),
 
 /* Gpio switch regulator platform data  for ACER T30*/
 static struct gpio_switch_regulator_subdev_data *gswitch_subdevs_acer_t30[] = {
