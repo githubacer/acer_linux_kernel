@@ -1014,6 +1014,9 @@ static int ATMEL_CheckOBJTableCRC(struct mxt_data *mxt)
 	ATMEL_CalOBJ_ID_Addr(T25, T25OBJInf);
 	CalculateAddr16bits(T25OBJInf[2], T25OBJInf[1], &T25_OBJAddr, 0);
 
+	ATMEL_CalOBJ_ID_Addr(T27, T27OBJInf);
+	CalculateAddr16bits(T27OBJInf[2], T27OBJInf[1], &T27_OBJAddr, 0);
+
 	ATMEL_CalOBJ_ID_Addr(T38, T38OBJInf);
 	CalculateAddr16bits(T38OBJInf[2], T38OBJInf[1], &T38_OBJAddr, 0);
 
@@ -1040,6 +1043,14 @@ static int ATMEL_CheckOBJTableCRC(struct mxt_data *mxt)
 
 	if (debug == DEBUG_DETAIL) {
 		mxt_debug(DEBUG_DETAIL, "Seperate Table\n");
+
+		mxt_debug(DEBUG_DETAIL, "T05\n");
+		mxt_debug(DEBUG_DETAIL, "T05[2]:0x%x, T05[1]:0x%x,  T05[0]:0x%x, T05 is 0x%x\n",
+				T05OBJInf[2], T05OBJInf[1], T05OBJInf[0], T05_OBJAddr);
+
+		mxt_debug(DEBUG_DETAIL, "T06\n");
+		mxt_debug(DEBUG_DETAIL, "T06[2]:0x%x, T06[1]:0x%x,  T06[0]:0x%x, T06 is 0x%x\n",
+				T06OBJInf[2], T06OBJInf[1], T06OBJInf[0], T06_OBJAddr);
 
 		mxt_debug(DEBUG_DETAIL, "T07\n");
 		mxt_debug(DEBUG_DETAIL, "T07[2]:0x%x, T07[1]:0x%x,  T07[0]:0x%x, T07 is 0x%x\n",
@@ -1073,6 +1084,10 @@ static int ATMEL_CheckOBJTableCRC(struct mxt_data *mxt)
 		mxt_debug(DEBUG_DETAIL, "T25[2]:0x%x, T25[1]:0x%x, T25[0]:0x%x T25:0x%x\n",
 				T25OBJInf[2], T25OBJInf[1], T25OBJInf[0], T25_OBJAddr);
 
+		mxt_debug(DEBUG_DETAIL, "T27\n");
+		mxt_debug(DEBUG_DETAIL, "T27[2]:0x%x, T27[1]:0x%x, T27[0]:0x%x T27:0x%x\n",
+				T27OBJInf[2], T27OBJInf[1], T27OBJInf[0], T27_OBJAddr);
+
 		mxt_debug(DEBUG_DETAIL, "T38\n");
 		mxt_debug(DEBUG_DETAIL, "T38[2]:0x%x, T38[1]:0x%x, T38[0]:0x%x T38:0x%x\n",
 				T38OBJInf[2], T38OBJInf[1], T38OBJInf[0], T38_OBJAddr);
@@ -1101,22 +1116,9 @@ static int ATMEL_CheckOBJTableCRC(struct mxt_data *mxt)
 		mxt_debug(DEBUG_DETAIL, "T48[2]:0x%x, T48[1]:0x%x, T48[0]:0x%x T48:0x%x\n",
 				T48OBJInf[2], T48OBJInf[1], T48OBJInf[0], T48_OBJAddr);
 
-		mxt_debug(DEBUG_DETAIL, "T52\n");
-		mxt_debug(DEBUG_DETAIL, "T52[2]:0x%x, T52[1]:0x%x, T52[0]:0x%x T52:0x%x\n",
-				T52OBJInf[2], T52OBJInf[1], T52OBJInf[0], T52_OBJAddr);
-
-		mxt_debug(DEBUG_DETAIL, "T55\n");
-		mxt_debug(DEBUG_DETAIL, "T55[2]:0x%x, T55[1]:0x%x, T55[0]:0x%x T55:0x%x\n",
-				T55OBJInf[2], T55OBJInf[1], T55OBJInf[0], T55_OBJAddr);
-
 		mxt_debug(DEBUG_DETAIL, "T56\n");
 		mxt_debug(DEBUG_DETAIL, "T56[2]:0x%x, T56[1]:0x%x, T56[0]:0x%x T56:0x%x\n",
 				T56OBJInf[2], T56OBJInf[1], T56OBJInf[0], T56_OBJAddr);
-
-		mxt_debug(DEBUG_DETAIL, "T57\n");
-		mxt_debug(DEBUG_DETAIL, "T57[2]:0x%x, T57[1]:0x%x, T57[0]:0x%x T57:0x%x\n",
-				T57OBJInf[2], T57OBJInf[1], T57OBJInf[0], T57_OBJAddr);
-
 
 		if (mxt_read_block(mxt->client, T07_OBJAddr, 3, T07_VAL) < 0)
 			mxt_debug(DEBUG_ERROR, "mXT1386E: mxt_read_block failed\n");

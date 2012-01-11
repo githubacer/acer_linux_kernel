@@ -16,10 +16,10 @@ extern int acer_board_type;
 #define MXT_MAX_TOUCH_SIZE                    255
 
 #define Firmware_Number                       4099
-#define ConfigChecksum                        4651120 /* 46F870 */
+#define ConfigChecksum                        9736378 /* 9490BA */
 #define Chip_Vendor                           "AT"
 #define Reseved_Chip_Vendor                   "0"
-#define ConfigVersion                         1118504 /* 111128 */
+#define ConfigVersion                         1179922 /* 120112 */
 #define Reseved_Firmware_Info                 0
 #define Reseved_ConfigVersion                 0
 #define Reservedinfo                          0
@@ -41,13 +41,13 @@ enum {
 u8 T07OBJ[3]  = {  50, 255,  10};
 
 /* GEN_ACQUISITIONCONFIG_T8 INSTANCE 0 */
-u8 T08OBJ[10] = {  30,   0,  10,  10,   0,   0,   5,  30,  15, 0};
+u8 T08OBJ[10] = {  30,   0,  10,  10,   0,   0,   5,  17,  15,   0};
 
 /* TOUCH_MULTITOUCHSCREEN_T9 INSTATNCE 0 */
-u8 T09OBJ[35] = { 131,   0,   0,  30,  42,   0,  16,  60,   1,   5,
-                   10,   5,   2,   0,  10,  20,  20,  10,  31,   3,
+u8 T09OBJ[35] = { 131,   0,   0,  30,  42,   0,  16,  80,   1,   5,
+                   10,   5,   2,   0,  10,  15,  15,  10,  31,   3,
                   255,   4,   0,   0,   0,   0,   0,   0,  64,   0,
-                   10,  15,   0,   0,   0};
+                   15,  25,   0,   0,   0};
 
 /* SPT_COMMSCONFIG_T18 INSTANCE 0 */
 u8 T18OBJ[2]  = {   0,   0};
@@ -75,34 +75,34 @@ u8 T38OBJ[64] = {   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
 u8 T40OBJ[5]  = {   0,   0,   0,   0,   0};
 
 /* PROCI_TOUCHSUPPRESSION_T42 INSTATNCE 0 */
-u8 T42OBJ[10] = {  35,  20,  20,  35,   0,   3,   0,   0,   6,   3};
+u8 T42OBJ[10] = {  33,  15,  55,  55,   0,   3,   0,   0,  10,   3};
 
 /* SPT_DIGITIZER_T43 INSTANCE 0 */
 u8 T43OBJ[7]  = {   0,   0,   0,   0,   0,   0,   0};
 
 /* SPT_CTECONFIG_T46 INSTANCE 0 */
-u8 T46OBJ[9]  = {  68,   0,   8,   8,   0,   0,   1,   0,   0};
+u8 T46OBJ[9]  = {  64,   0,   8,  16,   0,   0,   1,   0,   0};
 
 /* SPT_CTECONFIG_T46 INSTANCE 0 */
-u8 T46OBJ_0[9]= {   4,   0,   8,   8,   0,   0,   1,   0,   0};
+u8 T46OBJ_0[9]= {   4,   0,   8,  16,   0,   0,   1,   0,   0};
 
 /* PROCI_STYLUS_T47 INSTATNCE 0 */
 u8 T47OBJ[10] = {   0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
 
 /* PROCG_NOISESUPPRESSION_T48 INSTATNCE 0 */
-u8 T48OBJ[54] = {   1,  64,   2,   0,   0,   0,   0,   0,   0,   0,
-                   16,  36,   0,   6,  48,   0,   0,  10,  20,   0,
-                   10,   0,  20,   0,   0,   0,   0,   0,   0,   0,
-                    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-                    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
-                    0,   0,   0,   0};
+u8 T48OBJ[54]  = {   1, 128,   2,   0,   0,   0,   0,   0,   0,   0,
+                    16,  60,   0,  16,   0,   0,   0,  32,   0,   0,
+                    10,   0,  20,   0,   0,   0,   0,  16,   0,   0,
+                     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+                     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
+                     0,   0,   0,   0};
 
 /* PROCI_SHIELDLESS_T56 INSTATNCE 0  */
-u8 T56OBJ[43] = {   1,   0,   1,  48,  24,  24,  24,  24,  24,  24,
-                   24,  24,  24,  24,  24,  24,  24,  21,  21,  21,
-                   21,  24,  24,  24,  24,  24,  24,  24,  24,  24,
-                   24,  24,  24,  24,   0,   0,   0,   0,   0,   1,
-                    2,   6,   4};
+u8 T56OBJ[43] = {   1,   0,   1,  48,  21,  21,  21,  21,  21,  21,
+                   21,  21,  21,  21,  21,  21,  21,  21,  21,  21,
+                   21,  21,  21,  21,  21,  21,  21,  21,  21,  21,
+                   21,  21,  21,  21,   0,   0,   0,   2,  10,   1,
+                    1,   6,   6};
 
 struct sensitivity_mapping {
 	int symbol;
