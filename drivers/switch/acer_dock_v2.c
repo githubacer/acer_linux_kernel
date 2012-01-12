@@ -25,7 +25,7 @@ struct input_dev *input_dock;
 static bool is_ir_wake = false;
 static bool is_ir_irq_enable = false;
 static struct platform_device *tegra_ehci3_platform_device = NULL;
-static bool usb3_enabled = false;
+bool usb3_enabled = false;
 static bool is_cursor_mode = false;
 static int cursor_speed = 16;  //pixels per press
 

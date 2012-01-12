@@ -56,6 +56,7 @@
 #include <linux/gpio.h>
 extern int acer_board_type;
 extern int acer_board_id;
+extern bool usb3_enabled;
 #endif
 
 #include "fsl_usb2_udc.h"
@@ -3030,7 +3031,7 @@ static int fsl_udc_resume(struct platform_device *pdev)
 			fsl_udc_clk_disable();
 			return 0;
 #if defined(CONFIG_ARCH_ACER_T30)
-		} else if (!gpio_get_value(get_dock_gpio_pin())) {
+		} else if (!gpio_get_value(get_dock_gpio_pin()) || usb3_enabled) {
 			/* if there is dock attached then power down the clocks and return */
 			fsl_udc_clk_disable();
 			return 0;
