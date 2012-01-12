@@ -344,7 +344,7 @@ static void gpio_keys_report_event(struct gpio_button_data *bdata)
 #else
 	int state = (gpio_get_value(button->gpio) ? 1 : 0) ^ button->active_low;
 #endif
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	pr_info("%s: button->code = %d, state = %d\n", __func__, button->code, !!state);
 #endif
 	input_event(input, type, button->code, !!state);
@@ -371,7 +371,7 @@ static irqreturn_t gpio_keys_isr(int irq, void *dev_id)
 	struct gpio_button_data *bdata = dev_id;
 	struct gpio_keys_button *button = bdata->button;
 
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	pr_info("%s: button->gpio = %d\n", __func__, button->gpio);
 #endif
 	BUG_ON(irq != gpio_to_irq(button->gpio));
