@@ -495,6 +495,13 @@ static int __exit tegra_otg_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if defined(CONFIG_ARCH_ACER_T30)
+static int is_dock_insert_in_suspend = false;
+static int is_dock_insert_in_resume = false;
+static int is_otg_cable_insert_in_suspend = false;
+static int is_otg_cable_insert_in_resume = false;
+#endif
+
 #ifdef CONFIG_PM
 static int tegra_otg_suspend(struct device *dev)
 {
@@ -523,6 +530,9 @@ static int tegra_otg_suspend(struct device *dev)
 		enable_irq_wake(tegra_otg->irq);
 		wakeup_flag = true;
 	}
+
+	is_dock_insert_in_suspend = !gpio_get_value(get_dock_gpio_pin());
+	is_otg_cable_insert_in_suspend = !(val & USB_ID_STATUS);
 #elif defined(CONFIG_ARCH_ACER_T20)
 	enable_irq_wake(tegra_otg->irq);
 	wakeup_flag = true;
@@ -562,10 +572,16 @@ static void tegra_otg_resume(struct device *dev)
 	}
 
 #if defined(CONFIG_ARCH_ACER_T30)
+	is_dock_insert_in_resume = !gpio_get_value(get_dock_gpio_pin());
+	is_otg_cable_insert_in_resume = !(val & USB_ID_STATUS);
+
 	if (wakeup_flag){
-		if ((val & USB_ID_STATUS) && gpio_get_value(get_dock_gpio_pin()))
+		if (((val & USB_ID_STATUS) && gpio_get_value(get_dock_gpio_pin())) ||
+				(is_dock_insert_in_suspend == false && is_dock_insert_in_resume == true) ||
+				(is_otg_cable_insert_in_suspend == false && is_otg_cable_insert_in_resume == true)){
 			disable_irq_wake(tegra_otg->irq);
-			wakeup_flag = false;
+		}
+		wakeup_flag = false;
 	}
 #elif defined(CONFIG_ARCH_ACER_T20)
 	if (wakeup_flag){
