@@ -36,6 +36,7 @@
 #include <linux/debugfs.h>
 #include <linux/timer.h>
 #include <linux/irq.h>
+#include <linux/wakelock.h>
 #include "../../arch/arm/mach-tegra/gpio-names.h"
 #if defined(CONFIG_ARCH_ACER_T30)
 #include "../../arch/arm/mach-tegra/board-acer-t30.h"
@@ -43,7 +44,7 @@ extern int acer_board_id;
 extern int acer_board_type;
 #endif
 
-#define DRIVER_VERSION			"1.4.7"
+#define DRIVER_VERSION			"1.4.9"
 
 #ifdef CONFIG_BATTERY_BQ27541
 
@@ -91,8 +92,6 @@ extern int acer_board_type;
 
 /* Define AC_OUT delay time */
 #define DEBOUNCE	80
-#define DVT_DELAY	3500
-#define PVT_DELAY	1000
 
 /* Define low temperature threshold */
 #define REPORT_NORMAL_VAL		0
@@ -107,6 +106,7 @@ extern int acer_board_type;
 #define BATT_LEARN_GPIO	TEGRA_GPIO_PX6
 #define CHARGING_FULL	TEGRA_GPIO_PW5
 
+static struct wake_lock ac_wake_lock;
 struct i2c_client *bat_client;
 bool AC_IN = false;
 int design_capacity = 0;
@@ -995,8 +995,6 @@ static void bq27541_disable_hibernate(void)
 
 static void bq27541_charger_reset(void)
 {
-	tegra_gpio_enable(BATT_LEARN_GPIO);
-	gpio_request(BATT_LEARN_GPIO, "batt_learn");
 	gpio_direction_output(BATT_LEARN_GPIO, 1);
 	msleep(100);
 	gpio_direction_output(BATT_LEARN_GPIO, 0);
@@ -1054,13 +1052,13 @@ int bq27541_low_temp_check(void)
 	ret = bat_i2c_read(BQ27541_REG_TEMP, &temp, 0, di);
 	msleep(50);
 
-	if((rsoc > 60) && (temp < 2744) && (temp > 2647))
+	if((rsoc > 40) && (temp < 2744) && (temp > 2647))
 		return RSOC_NOT_QUALIFY;
-	else if((rsoc < 60) && (temp < 2744) && (temp > 2647))
+	else if((rsoc < 40) && (temp < 2744) && (temp > 2647))
 		return TEMP_UNDER_ZERO;
-	else if((rsoc > 40) && (temp < 2647) && (temp > 2560))
+	else if((rsoc > 60) && (temp < 2647))
 		return RSOC_NOT_QUALIFY;
-	else if((rsoc < 40) && (temp < 2647) && (temp > 2560))
+	else if((rsoc < 60) && (temp < 2647))
 		return TEMP_UNDER_NAT_TEN;
 	else
 		return REPORT_NORMAL_VAL;
@@ -1176,7 +1174,7 @@ static int bq27541_battery_current(struct bq27541_device_info *di)
  */
 static int bq27541_battery_rsoc(struct bq27541_device_info *di)
 {
-	int ret;
+	int ret, LTcheck;
 	int rsoc = 0;
 
 	ret = bat_i2c_read(BQ27541_REG_SOC, &rsoc, 0, di);
@@ -1202,9 +1200,10 @@ static int bq27541_battery_rsoc(struct bq27541_device_info *di)
 	else
 		Capacity = rsoc;
 
-	if((bq27541_low_temp_check() == TEMP_UNDER_ZERO) || (bq27541_low_temp_check() == TEMP_UNDER_NAT_TEN))
+	LTcheck = bq27541_low_temp_check();
+	if((LTcheck == TEMP_UNDER_ZERO) || (LTcheck == TEMP_UNDER_NAT_TEN))
 		return 0;
-	else if(bq27541_low_temp_check() == RSOC_NOT_QUALIFY)
+	else if(LTcheck == RSOC_NOT_QUALIFY)
 		return NULL;
 	else
 	{
@@ -1235,15 +1234,16 @@ static int bq27541_battery_status(struct bq27541_device_info *di)
 
 	if (ret < 0) {
 		dev_err(di->dev, "error reading flags\n");
-		return ret;
+		return 0;
 	}
 
 	ret = bat_i2c_read(BQ27541_REG_SOC, &Capacity, 0, di);
 	msleep(50);
 
+	/* Query to judge AC status, not report to uevent. */
 	if (ret < 0) {
 		dev_err(di->dev, "error reading capacity\n");
-		return ret;
+		return 0;
 	}
 
 	if(bq27541_low_temp_check() == RSOC_NOT_QUALIFY)
@@ -1279,7 +1279,7 @@ static int bq27541_battery_present(struct bq27541_device_info *di)
 	int present = 0;
 
 	/* Calculate counter for limitation of 10.5hr charger reset */
-	if(counter <= 120){
+	if(counter <= 240){
 		if(gpio_get_value(gpio))
 			counter += 1;
 		else
@@ -1336,8 +1336,9 @@ static int bq27541_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = bq27541_battery_temperature(di);
-		printk("AC_IN = %d, Capacity = %d, ROSC = %d, Temperature = %d, LT_Check = %d\n",
-			gpio_get_value(gpio), old_rsoc, bq27541_battery_check(1), val->intval, bq27541_low_temp_check());
+		printk("AC_IN = %d, Capacity = %d, ROSC = %d, Temperature = %d, LT_Check = %d, Charging_count = %d\n",
+			gpio_get_value(gpio), old_rsoc, bq27541_battery_check(1), val->intval, bq27541_low_temp_check(),
+			counter);
 		break;
 	case POWER_SUPPLY_PROP_HEALTH:
 		val->intval = bq27541_battery_health(di);
@@ -1452,6 +1453,7 @@ static int bq27541_read_i2c(u8 reg, int *rt_value, int b_single,
 static irqreturn_t ac_present_irq(int irq, void *data)
 {
 	struct bq27541_device_info *di = data;
+	wake_lock_timeout(&ac_wake_lock, 3*HZ);
 	/* Debounce with 80ms to block abnormal interrupt when AC plug out */
 	mdelay(DEBOUNCE);
 	power_supply_changed(&di->ac);
@@ -1494,7 +1496,16 @@ static int bq27541_battery_probe(struct i2c_client *client,
 	di->irq = client->irq;
 
 	tegra_gpio_enable(CHARGING_FULL);
-	gpio_request(CHARGING_FULL, "full_half_chg");
+	retval = gpio_request(CHARGING_FULL, "full_half_chg");
+	if (retval < 0)
+		printk(KERN_INFO "%s: gpio_request failed for gpio-%d\n",__func__, TEGRA_GPIO_PW5);
+	mdelay(10);
+
+	gpio_free(BATT_LEARN_GPIO);
+	tegra_gpio_enable(BATT_LEARN_GPIO);
+	retval = gpio_request(BATT_LEARN_GPIO, "batt_learn");
+	if (retval < 0)
+		printk(KERN_INFO "%s: gpio_request failed for gpio-%d\n",__func__, TEGRA_GPIO_PX6);
 
 	if (client->dev.platform_data) {
 		di->plat_data = kzalloc(sizeof(struct bq27541_platform_data), GFP_KERNEL);
@@ -1552,6 +1563,7 @@ static int bq27541_battery_probe(struct i2c_client *client,
 		dev_err(&di->client->dev,"%s: sysfs_create_group failed, %d\n", __FUNCTION__, __LINE__);
 	}
 
+	wake_lock_init(&ac_wake_lock, WAKE_LOCK_SUSPEND, "t30-ac");
 	dev_info(&client->dev, "support ver. %s enabled\n", DRIVER_VERSION);
 
 #if defined(CONFIG_ARCH_ACER_T30)
@@ -1583,6 +1595,8 @@ static int bq27541_battery_remove(struct i2c_client *client)
 	struct bq27541_device_info *di = i2c_get_clientdata(client);
 
 	free_irq(di->irq, di);
+	gpio_free(CHARGING_FULL);
+	gpio_free(BATT_LEARN_GPIO);
 	power_supply_unregister(&di->ac);
 	power_supply_unregister(&di->bat);
 	del_timer_sync(&di->battery_poll_timer);
