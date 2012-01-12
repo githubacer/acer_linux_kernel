@@ -2052,7 +2052,6 @@ int sdhci_resume_host(struct sdhci_host *host)
 			host->card_present = (gpio_get_value(plat->cd_gpio) == plat->cd_gpio_polarity);
 			gpio_set_value(plat->power_gpio, 1);
 		}
-		tasklet_schedule(&host->card_tasklet);
 	}
 #elif defined(CONFIG_ARCH_ACER_T30)
 	if (ret) {
@@ -2068,7 +2067,6 @@ int sdhci_resume_host(struct sdhci_host *host)
 			regulator_enable(tegra_host->vdd_slot_reg);
 			host->regulator_count++;
 		}
-		tasklet_schedule(&host->card_tasklet);
 	}
 #endif
 	sdhci_enable_card_detection(host);
