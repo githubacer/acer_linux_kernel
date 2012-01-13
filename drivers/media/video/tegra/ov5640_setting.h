@@ -338,7 +338,6 @@ static struct ov5640_reg mode_initial[] = {
 
 static struct ov5640_reg mode_1280x960[] = {
 	{OV5640_WRITE_REG, 0x4201, 0x01},  // stop after 1 frame, workaround for take green picture
-	{OV5640_WRITE_REG, 0x3503, 0x00},
 	{OV5640_WRITE_REG, 0x3036, 0x38},
 	{OV5640_WRITE_REG, 0x3C07, 0x08},
 	{OV5640_WRITE_REG, 0x3820, 0x40},
@@ -383,6 +382,16 @@ static struct ov5640_reg mode_1280x960[] = {
 	{OV5640_WRITE_REG, 0x3003, 0x03},
 	{OV5640_WRITE_REG, 0x3003, 0x01},
 	{OV5640_WRITE_REG, 0x4003, 0x82},
+
+	// group write for AEC in case of unstable exposure after capture
+	{OV5640_WRITE_REG, 0x3004, 0xDF},  // disable MCU clock
+	{OV5640_WRITE_REG, 0x3212, 0x00},  // group access
+	{OV5640_WRITE_REG, 0x3503, 0x00},
+	{OV5640_WRITE_REG, 0x3004, 0xFF},  // enable MCU clock here in case group write failed
+	{OV5640_WRITE_REG, 0x3022, 0x12},  // relaunch focus zone after MCU clock on in case AF failed
+	{OV5640_WRITE_REG, 0x3212, 0x10},  // group hold end
+	{OV5640_WRITE_REG, 0x3212, 0xA0},  // group launch enable and group launch
+
 	{OV5640_WRITE_REG, 0x4201, 0x00},  // start after 1 frame, workaround for take green picture
 	{OV5640_WRITE_REG, 0x4202, 0x01},  // start after 1 frame, workaround for take green picture
 
