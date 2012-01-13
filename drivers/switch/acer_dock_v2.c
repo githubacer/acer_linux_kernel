@@ -19,10 +19,11 @@
 #define DOCK_HS_GPIO    TEGRA_GPIO_PS6  //Dock headset
 #define DOCK_IR_INT     TEGRA_GPIO_PU5  //Dock IR
 #define USB_HOST_EN     TEGRA_GPIO_PN1  //USB Vbus
+#define AC_DETECT_GPIO  TEGRA_GPIO_PO4  //AC detection
 
 struct dock_switch_data *switch_data;
 struct input_dev *input_dock;
-static bool is_ir_wake = false;
+static bool is_ir_wake = true;
 static bool is_ir_irq_enable = false;
 static struct platform_device *tegra_ehci3_platform_device = NULL;
 bool usb3_enabled = false;
@@ -435,8 +436,7 @@ static void dock_ir_switch_work(struct work_struct *work)
 	state = gpio_get_value(pSwitch->det_gpio);
 	if (!state) {
 		switch_set_state(&pSwitch->sdev, DOCK_IR_WAKE);
-		schedule_delayed_work(&pSwitch->hs_work,
-						round_jiffies_relative(msecs_to_jiffies(300)));
+		dock_hs_switch_work(&pSwitch->hs_work.work);
 	}
 }
 
@@ -470,8 +470,9 @@ static void dock_switch_work(struct work_struct *work)
 		tegra_usb3_host_unregister(tegra_ehci3_platform_device);
 		usb3_enabled = false;
 	}
-	msleep(100);
 	switch_set_state(&pSwitch->sdev, !state);
+	msleep(50);
+	dock_hs_switch_work(&pSwitch->hs_work.work);
 	if (state) {
 		pr_info("Disable HS IRQ\n");
 		disable_irq(pSwitch->hs_irq);
@@ -479,7 +480,6 @@ static void dock_switch_work(struct work_struct *work)
 		pr_info("Enable HS IRQ\n");
 		enable_irq(pSwitch->hs_irq);
 	}
-	dock_hs_switch_work(&pSwitch->hs_work.work);
 }
 
 static irqreturn_t dock_interrupt(int irq, void *dev_id)
@@ -653,12 +653,10 @@ static int __devexit dock_switch_remove(struct platform_device *pdev)
 
 static int dock_switch_suspend(struct platform_device *pdev, pm_message_t state)
 {
-	int det;
-	det = gpio_get_value(switch_data->det_gpio);
-	if (!det) {
-		pr_info("[ACER-DOCK] enable ir irq wake\n");
+	if (!gpio_get_value(switch_data->det_gpio)) {
 		enable_irq(switch_data->ir_irq);
 		enable_irq_wake(switch_data->ir_irq);
+		pr_info("[ACER-DOCK] Enable ir irq wake\n");
 		is_ir_wake = false;
 		is_ir_irq_enable = true;
 	}
@@ -668,11 +666,18 @@ static int dock_switch_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int dock_switch_resume(struct platform_device *pdev)
 {
-	if (is_ir_irq_enable) {
-		pr_info("[ACER-DOCK] disable ir irq wake\n");
+	if (is_ir_irq_enable) {  //Dock is present before suspend
 		disable_irq_wake(switch_data->ir_irq);
 		disable_irq(switch_data->ir_irq);
+		pr_info("[ACER-DOCK] Disable ir irq wake\n");
 		is_ir_irq_enable = false;
+	} else {  //There is no dock before suspend
+		if (!gpio_get_value(switch_data->det_gpio) &&
+					gpio_get_value(AC_DETECT_GPIO)) {
+			pr_info("[ACER-DOCK] Waked up by dock with AC\n");
+			schedule_delayed_work(&switch_data->work,
+						round_jiffies_relative(msecs_to_jiffies(300)));
+		}
 	}
 	disable_irq_wake(switch_data->det_irq);
 	return 0;
