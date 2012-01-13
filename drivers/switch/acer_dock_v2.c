@@ -25,6 +25,7 @@ struct dock_switch_data *switch_data;
 struct input_dev *input_dock;
 static bool is_ir_wake = true;
 static bool is_ir_irq_enable = false;
+static bool is_det_irq_wake_enable = false;
 static struct platform_device *tegra_ehci3_platform_device = NULL;
 bool usb3_enabled = false;
 static bool is_cursor_mode = false;
@@ -466,7 +467,7 @@ static void dock_switch_work(struct work_struct *work)
 	if (!state && !usb3_enabled) {
 		tegra_ehci3_platform_device = tegra_usb3_host_register(&tegra_ehci3_device, tegra_ehci3_device.dev.platform_data);
 		usb3_enabled = true;
-	} else if (usb3_enabled) {
+	} else if (state && usb3_enabled) {
 		tegra_usb3_host_unregister(tegra_ehci3_platform_device);
 		usb3_enabled = false;
 	}
@@ -660,13 +661,31 @@ static int dock_switch_suspend(struct platform_device *pdev, pm_message_t state)
 		is_ir_wake = false;
 		is_ir_irq_enable = true;
 	}
-	enable_irq_wake(switch_data->det_irq);
+
+	if (!gpio_get_value(AC_DETECT_GPIO)) {  //No AC present
+		enable_irq_wake(switch_data->det_irq);
+		pr_info("[ACER-DOCK] Enable det irq wake\n");
+		is_det_irq_wake_enable = true;
+	}
 	return 0;
 }
 
 static int dock_switch_resume(struct platform_device *pdev)
 {
-	if (is_ir_irq_enable) {  //Dock is present before suspend
+	if (is_det_irq_wake_enable) {
+		disable_irq_wake(switch_data->det_irq);
+		pr_info("[ACER-DOCK] Disable det irq wake\n");
+		is_det_irq_wake_enable = false;
+	} else {  //AC is preseted before suspend
+		if (gpio_get_value(switch_data->det_gpio) &&
+			!gpio_get_value(AC_DETECT_GPIO) && is_ir_irq_enable) {
+			pr_info("[ACER-DOCK] Waked up by removing dock with AC\n");
+			schedule_delayed_work(&switch_data->work,
+						round_jiffies_relative(msecs_to_jiffies(100)));
+		}
+	}
+
+	if (is_ir_irq_enable) {  //Dock is presented before suspend
 		disable_irq_wake(switch_data->ir_irq);
 		disable_irq(switch_data->ir_irq);
 		pr_info("[ACER-DOCK] Disable ir irq wake\n");
@@ -674,12 +693,11 @@ static int dock_switch_resume(struct platform_device *pdev)
 	} else {  //There is no dock before suspend
 		if (!gpio_get_value(switch_data->det_gpio) &&
 					gpio_get_value(AC_DETECT_GPIO)) {
-			pr_info("[ACER-DOCK] Waked up by dock with AC\n");
+			pr_info("[ACER-DOCK] Waked up by inserting dock with AC\n");
 			schedule_delayed_work(&switch_data->work,
 						round_jiffies_relative(msecs_to_jiffies(300)));
 		}
 	}
-	disable_irq_wake(switch_data->det_irq);
 	return 0;
 }
 
