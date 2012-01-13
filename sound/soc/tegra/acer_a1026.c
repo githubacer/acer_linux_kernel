@@ -326,6 +326,7 @@ int execute_cmdmsg(unsigned int msg)
 				retries);
 			rc = -EBUSY;
 		} else {
+			pr_info("ack buf=0x%02x 0x%02x 0x%02x 0x%02x \n\n\n",msgbuf[0],msgbuf[1],msgbuf[2],msgbuf[3]);
 			pr_info("%s: cmd/ack mismatch: (%d retries left)\n",
 				__func__,
 				retries);
@@ -344,7 +345,7 @@ int execute_cmdmsg(unsigned int msg)
 
 ssize_t chk_wakeup_a1026(void)
 {
-	int rc = 0, retry = 3;
+	int rc = 0, retry = POLLING_RETRY_CNT;
 
 	if (a1026_suspended == 1) {
 		/* Enable A1026 clock */
@@ -354,17 +355,21 @@ ssize_t chk_wakeup_a1026(void)
 		}
 
 		gpio_set_value(a1026_data.pdata->gpio_a1026_wakeup, 0);
-		msleep(120);
+		msleep(50);
 
 		do {
 			rc = execute_cmdmsg(A1026_msg_Sync);
 		} while ((rc < 0) && --retry);
 
+		if (rc < 0) {
+			pr_err("%s: failed (%d)\n", __func__, rc);
+			goto wakeup_sync_err;
+		}
+
 		do {
-			rc = execute_cmdmsg(PassThrotuh_Disable);
+			rc = execute_cmdmsg(PassThrough_Disable);
 		} while ((rc < 0) && --retry);
 
-		gpio_set_value(a1026_data.pdata->gpio_a1026_wakeup, 1);
 		if (rc < 0) {
 			pr_err("%s: failed (%d)\n", __func__, rc);
 			goto wakeup_sync_err;
@@ -373,6 +378,7 @@ ssize_t chk_wakeup_a1026(void)
 		a1026_suspended = 0;
 	}
 wakeup_sync_err:
+	gpio_set_value(a1026_data.pdata->gpio_a1026_wakeup, 1);
 	return rc;
 }
 
@@ -606,7 +612,7 @@ static ssize_t a1026_suspend_es305(void)
 	int rc = 0;
 
 	/* pass throgh From Port A to Port C */
-	rc = execute_cmdmsg(PassThrotuh_A_to_C);
+	rc = execute_cmdmsg(PassThrough_A_to_C);
 	if (rc) {
 		pr_err("%s: pass through command error\n", __func__);
 		goto set_bypass_err;
@@ -622,7 +628,7 @@ static ssize_t a1026_suspend_es305(void)
 	a1026_suspended = 1;
 	a1026_current_config = A1026_TABLE_SUSPEND;
 
-	msleep(120);
+	msleep(50);
 	/* Disable A1026 clock */
 	if (control_a1026_clk)
 		gpio_set_value(a1026_data.pdata->gpio_a1026_clk, 0);

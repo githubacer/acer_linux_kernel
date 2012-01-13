@@ -54,8 +54,8 @@ struct a1026_platform_data {
 #define POLLING_RETRY_CNT           3
 
 /* PassThrough */
-#define PassThrotuh_Disable         0x80520000
-#define PassThrotuh_A_to_C          0x80520048
+#define PassThrough_Disable         0x80520000
+#define PassThrough_A_to_C          0x80520048
 
 enum A1026_TableID {
 	A1026_TABLE_VOIP_INTMIC,
