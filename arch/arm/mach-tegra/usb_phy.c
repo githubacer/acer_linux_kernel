@@ -271,7 +271,11 @@
 #define   UTMIP_XCVR_SETUP_MSB(x)		(((x) & 0x7) << 22)
 #define   UTMIP_XCVR_HSSLEW_MSB(x)		(((x) & 0x7f) << 25)
 
+#if defined(CONFIG_ARCH_ACER_T30)
+#define UTMIP_XCVR_MAX_OFFSET		2
+#else
 #define UTMIP_XCVR_MAX_OFFSET		5
+#endif
 #define UTMIP_XCVR_SETUP_MAX_VALUE	0x7f
 #define XCVR_SETUP_MSB_CALIB(x)	((x) >> 4)
 
@@ -942,7 +946,11 @@ static void vbus_disable(struct tegra_usb_phy *phy)
 static void utmip_phy_enable_trking_data(struct tegra_usb_phy *phy)
 {
 	void __iomem *base = phy->pad_regs;
+#if defined(CONFIG_ARCH_ACER_T30)
+	void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
+#else
 	void __iomem *pmc_base = IO_ADDRESS(TEGRA_USB_BASE);
+#endif
 	static bool init_done = false;
 	u32 val;
 
@@ -1342,7 +1350,11 @@ static void utmip_setup_pmc_wake_detect(struct tegra_usb_phy *phy)
 	writel(val, pmc_base + PMC_USB_AO);
 
 	/* Add small delay before usb detectors provide stable line values */
+#if defined(CONFIG_ARCH_ACER_T30)
+	mdelay(1);
+#else
 	udelay(1);
+#endif
 
 	/* Program thermally encoded RCTRL_VAL, TCTRL_VAL into PMC space */
 	val = readl(pmc_base + PMC_UTMIP_TERM_PAD_CFG);
