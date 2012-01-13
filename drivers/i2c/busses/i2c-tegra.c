@@ -1087,11 +1087,23 @@ static int tegra_i2c_suspend_noirq(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_i2c_dev *i2c_dev = platform_get_drvdata(pdev);
-
 #ifdef CONFIG_I2C_ACER_ENABLE
+	bool flag = false;
+	ktime_t t0,t1;
+	s64 usecs64;
+	int usecs;
+
 	atomic_set(&during_suspend, 1);
 	while(!atomic_read(&finished))
+	{
+		if(!flag)
+		{
+			pr_warn("[I2C] Enter the loop that wait the i2c transfer done in suspend.\n");
+			t0 = ktime_get();
+			flag = true;
+		}
 		msleep(1);
+	}
 #endif
 
 	rt_mutex_lock(&i2c_dev->dev_lock);
@@ -1101,6 +1113,19 @@ static int tegra_i2c_suspend_noirq(struct device *dev)
 		pm_runtime_allow(i2c_dev->dev);
 
 	rt_mutex_unlock(&i2c_dev->dev_lock);
+
+#ifdef CONFIG_I2C_ACER_ENABLE
+	if(flag)
+	{
+		t1 = ktime_get();
+		usecs64 = ktime_to_ns(ktime_sub(t1, t0));
+		do_div(usecs64, NSEC_PER_USEC);
+		usecs = usecs64;
+		if (usecs == 0)
+			usecs = 1;
+		pr_warn("[I2C] Leave the loop that wait the i2c transfer done in suspend, msec=%ld.%03ld\n", usecs / USEC_PER_MSEC, usecs % USEC_PER_MSEC);
+	}
+#endif
 
 	return 0;
 }
