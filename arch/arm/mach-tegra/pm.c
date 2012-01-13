@@ -165,7 +165,7 @@ struct suspend_context tegra_sctx;
 #define CLK_RESET_SOURCE_CSITE	0x1d4
 
 #define CLK_RESET_CCLK_BURST_POLICY_SHIFT 28
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 #define CLK_RESET_CCLK_RUN_POLICY_SHIFT    4
 #define CLK_RESET_CCLK_IDLE_POLICY_SHIFT   0
 #define CLK_RESET_CCLK_IDLE_POLICY	   1
@@ -182,10 +182,14 @@ struct suspend_context tegra_sctx;
 #define MC_SECURITY_SIZE	0x70
 #define MC_SECURITY_CFG2	0x7c
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+extern int clk_set_parent2(struct clk *c, struct clk *parent);
+#endif
+
 struct dvfs_rail *tegra_cpu_rail;
 static struct dvfs_rail *tegra_core_rail;
 static struct clk *tegra_pclk;
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 static struct clk *cpu_clk;
 #endif
 static const struct tegra_suspend_platform_data *pdata;
@@ -378,16 +382,17 @@ static void set_power_timers(unsigned long us_on, unsigned long us_off,
 static void restore_cpu_complex(u32 mode)
 {
 	int cpu = smp_processor_id();
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	unsigned int reg, policy;
 #else
 	unsigned int reg;
 #endif
 
 	BUG_ON(cpu != 0);
+	BUG_ON(tegra_sctx.pllp_base != readl(clk_rst + CLK_RESET_PLLP_BASE));
 
 	/* restore original PLL settings */
-#if !defined(CONFIG_ARCH_ACER_T20)
+#if !defined(CONFIG_ARCH_ACER_T20) && !defined(CONFIG_ARCH_ACER_T30)
 	writel(tegra_sctx.pllx_misc, clk_rst + CLK_RESET_PLLX_MISC);
 	writel(tegra_sctx.pllx_base, clk_rst + CLK_RESET_PLLX_BASE);
 	writel(tegra_sctx.pllp_misc, clk_rst + CLK_RESET_PLLP_MISC);
@@ -398,7 +403,7 @@ static void restore_cpu_complex(u32 mode)
 
 	/* Is CPU complex already running on PLLX? */
 	reg = readl(clk_rst + CLK_RESET_CCLK_BURST);
-#if !defined(CONFIG_ARCH_ACER_T20)
+#if !defined(CONFIG_ARCH_ACER_T20) && !defined(CONFIG_ARCH_ACER_T30)
 	reg &= 0xF;
 	if (reg != 0x8) {
 		/* restore original burst policy setting; PLLX state restored
@@ -433,11 +438,7 @@ static void restore_cpu_complex(u32 mode)
 			reg = readl(clk_rst + CLK_RESET_PLLX_MISC);
 			reg |= 1<<18;
 			writel(reg, clk_rst + CLK_RESET_PLLX_MISC);
-#if defined(CONFIG_ARCH_ACER_T20)
 			while (!(readl(clk_rst + CLK_RESET_PLLX_BASE) &
-#else
-			while (!(readl(clk_rst + CLK_RESET_PLLX_BASE) &&
-#endif
 				 (1<<27)))
 				cpu_relax();
 #else
@@ -455,12 +456,25 @@ static void restore_cpu_complex(u32 mode)
 	writel(tegra_sctx.clk_csite_src, clk_rst + CLK_RESET_SOURCE_CSITE);
 
 #if defined(CONFIG_ARCH_ACER_T20)
-	if (!clk_set_parent(cpu_clk->parent, cpu_clk->u.cpu.main)) {
-		writel(tegra_sctx.pllp_misc, clk_rst + CLK_RESET_PLLP_MISC);
-		writel(tegra_sctx.pllp_base, clk_rst + CLK_RESET_PLLP_BASE);
+	if (mode == 0) {
+		if (!clk_set_parent2(cpu_clk->parent, cpu_clk->u.cpu.main)) {
+			writel(tegra_sctx.pllp_misc, clk_rst + CLK_RESET_PLLP_MISC);
+			writel(tegra_sctx.pllp_base, clk_rst + CLK_RESET_PLLP_BASE);
+		}
+		else {
+			pr_err("[PM] Switch cpu parent to pllx failed.\r\n");
+		}
 	}
-	else {
-		pr_err("[PM] Switch cpu parent to pllx failed.\r\n");
+#endif
+#if defined(CONFIG_ARCH_ACER_T30)
+	if (mode == 0) {
+		if (cpu_clk->parent && !clk_set_parent2(cpu_clk->parent->parent, cpu_clk->parent->u.cpu.main)) {
+			writel(tegra_sctx.pllp_misc, clk_rst + CLK_RESET_PLLP_MISC);
+			writel(tegra_sctx.pllp_base, clk_rst + CLK_RESET_PLLP_BASE);
+		}
+		else {
+			pr_err("[PM] Switch cpu parent to pllx failed.\r\n");
+		}
 	}
 #endif
 
@@ -1079,7 +1093,7 @@ void __init tegra_init_suspend(struct tegra_suspend_platform_data *plat)
 	tegra_core_rail = tegra_dvfs_get_rail_by_name("vdd_core");
 	tegra_pclk = clk_get_sys(NULL, "pclk");
 	BUG_ON(IS_ERR(tegra_pclk));
-#if defined(CONFIG_ARCH_ACER_T20)
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
 	cpu_clk = tegra_get_clock_by_name("cpu");
 	BUG_ON(IS_ERR(cpu_clk));
 #endif

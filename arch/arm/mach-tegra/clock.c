@@ -409,6 +409,18 @@ int clk_set_parent(struct clk *c, struct clk *parent)
 }
 EXPORT_SYMBOL(clk_set_parent);
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+int clk_set_parent2(struct clk *c, struct clk *parent)
+{
+	int ret = 0;
+
+	ret = clk_set_parent_locked(c, parent);
+
+	return ret;
+}
+EXPORT_SYMBOL(clk_set_parent2);
+#endif
+
 struct clk *clk_get_parent(struct clk *c)
 {
 	return c->parent;
