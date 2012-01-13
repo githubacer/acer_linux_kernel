@@ -261,7 +261,13 @@ static void irq_work(struct work_struct *work)
 			 }
 		} else if (to == OTG_STATE_A_HOST) {
 			if (from == OTG_STATE_A_SUSPEND)
-			tegra_start_host(tegra);
+				tegra_start_host(tegra);
+			else if (from == OTG_STATE_B_PERIPHERAL) {
+				usb_gadget_vbus_disconnect(otg->gadget);
+				wake_lock_timeout(&usb_wake_lock, 3*HZ);
+				printk(KERN_INFO "vbus disconnected, unlock wakelock\n");
+				tegra_start_host(tegra);
+			}
 		}
 #else
 		if (to == OTG_STATE_A_SUSPEND) {
