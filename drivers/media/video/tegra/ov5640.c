@@ -660,6 +660,12 @@ static int ov5640_initialize(struct ov5640_info *info)
 		return err;
 	info->mode = OV5640_MODE_1280x960;
 
+	// fill AWB gain control registers with default values
+	// in case preview shows green in a flash in the first time launch
+	err = ov5640_write_table(info, WhiteBalance_Fluorescent);
+	if (err)
+		return err;
+
 	// write AF firmware code
 	ov5640_write_table(info, af_firmware_code);
 	ov5640_read_reg(info->i2c_client, OV5640_AF_FW_STATUS, &fw_status);
