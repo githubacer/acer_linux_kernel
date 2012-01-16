@@ -37,6 +37,7 @@ static void gpio_led_early_suspend(struct early_suspend *h)
 #if defined(CONFIG_ARCH_ACER_T30)
 	int battery_status;
 
+	cancel_delayed_work(&gpio_led_wq);
 	battery_status = bq27541_battery_check(BATTERY_STATUS);
 
 	if (battery_status == POWER_SUPPLY_STATUS_FULL) {
@@ -59,14 +60,12 @@ static void gpio_led_late_resume(struct early_suspend *h)
 {
 #if defined(CONFIG_ARCH_ACER_T30)
 	if (already_LED_ON == 0) {
-		cancel_delayed_work(&gpio_led_wq);
 		gpio_direction_output(pdata->gpio,1);
 		already_LED_ON = 1;
 		pr_info("[LED] driver LED_ON\n");
 		schedule_delayed_work(&gpio_led_wq, msecs_to_jiffies(LED_DELAY_TIME));
 	}
 #else
-	cancel_delayed_work(&gpio_led_wq);
 	gpio_direction_output(pdata->gpio,1);
 	schedule_delayed_work(&gpio_led_wq, msecs_to_jiffies(LED_DELAY_TIME));
 #endif
