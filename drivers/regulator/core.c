@@ -1376,7 +1376,11 @@ int regulator_enable(struct regulator *regulator)
 	ret = _regulator_enable(rdev);
 	mutex_unlock(&rdev->mutex);
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if (ret != 0 && rdev->supply)
+#else
 	if (ret != 0)
+#endif
 		regulator_disable(rdev->supply);
 
 	return ret;
