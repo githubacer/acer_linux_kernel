@@ -16,10 +16,10 @@ extern int acer_board_type;
 #define MXT_MAX_TOUCH_SIZE                    255
 
 #define Firmware_Number                       4099
-#define ConfigChecksum                        9736378 /* 9490BA */
+#define ConfigChecksum                        3979405 /* 3CB88D */
 #define Chip_Vendor                           "AT"
 #define Reseved_Chip_Vendor                   "0"
-#define ConfigVersion                         1179922 /* 120112 */
+#define ConfigVersion                         1179927 /* 120117 */
 #define Reseved_Firmware_Info                 0
 #define Reseved_ConfigVersion                 0
 #define Reservedinfo                          0
@@ -91,7 +91,7 @@ u8 T47OBJ[10] = {   0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
 
 /* PROCG_NOISESUPPRESSION_T48 INSTATNCE 0 */
 u8 T48OBJ[54]  = {   1, 128,   2,   0,   0,   0,   0,   0,   0,   0,
-                    16,  60,   0,  16,   0,   0,   0,  32,   0,   0,
+                    16,  60,   0,  10,   0,   0,   0,  32,   0,   0,
                     10,   0,  20,   0,   0,   0,   0,  16,   0,   0,
                      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
                      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
@@ -101,7 +101,7 @@ u8 T48OBJ[54]  = {   1, 128,   2,   0,   0,   0,   0,   0,   0,   0,
 u8 T56OBJ[43] = {   1,   0,   1,  48,  21,  21,  21,  21,  21,  21,
                    21,  21,  21,  21,  21,  21,  21,  21,  21,  21,
                    21,  21,  21,  21,  21,  21,  21,  21,  21,  21,
-                   21,  21,  21,  21,   0,   0,   0,   2,  10,   1,
+                   21,  21,  21,  21,   0,   0,   0,   0,   0,   1,
                     1,   6,   6};
 
 struct sensitivity_mapping {
