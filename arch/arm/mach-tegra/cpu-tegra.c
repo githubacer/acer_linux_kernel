@@ -575,6 +575,14 @@ static int tegra_target(struct cpufreq_policy *policy,
 
 	mutex_lock(&tegra_cpu_lock);
 
+#if defined(CONFIG_ARCH_ACER_T30)
+	if (policy->cpu < 0 || policy->cpu > NR_CPUS - 1 || !cpu_online(policy->cpu)) {
+		pr_err("[tegra_target] CPU#%d was dead for updating freq.\r\n", policy->cpu);
+		mutex_unlock(&tegra_cpu_lock);
+		return -EBUSY;
+	}
+#endif
+
 	cpufreq_frequency_table_target(policy, freq_table, target_freq,
 		relation, &idx);
 

@@ -377,6 +377,17 @@ exit:
 	return;
 }
 
+#if defined(CONFIG_ARCH_ACER_T30)
+int is_cpu_in_tegra_idle(unsigned int cpu)
+{
+	struct cpufreq_interactive_cpuinfo *pcpu =
+		&per_cpu(cpuinfo, cpu);
+
+	return pcpu->idling;
+}
+EXPORT_SYMBOL(is_cpu_in_tegra_idle);
+#endif
+
 static void cpufreq_interactive_idle(void)
 {
 	struct cpufreq_interactive_cpuinfo *pcpu =
