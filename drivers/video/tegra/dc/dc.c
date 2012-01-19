@@ -991,6 +991,7 @@ static void tegra_dc_program_bandwidth(struct tegra_dc *dc)
 
 static int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 {
+	const unsigned long threshold = 102000000;
 	unsigned long new_rate;
 	struct tegra_dc *dc;
 
@@ -1002,6 +1003,11 @@ static int tegra_dc_set_dynamic_emc(struct tegra_dc_win *windows[], int n)
 	/* calculate the new rate based on this POST */
 	new_rate = tegra_dc_get_bandwidth(windows, n);
 	new_rate = EMC_BW_TO_FREQ(new_rate);
+
+	/* if the frequency was less than threshold, it maybe occur underflow. */
+	if (new_rate < threshold) {
+		new_rate = threshold;
+	}
 
 	if (tegra_dc_has_multiple_dc())
 		new_rate = ULONG_MAX;
