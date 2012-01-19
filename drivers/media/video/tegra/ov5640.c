@@ -192,11 +192,13 @@ static int ov5640_write_table(struct ov5640_info *info, const struct ov5640_reg 
 
 static inline void ov5640_writegroup_enter(struct ov5640_info *info, u8 reg_group)
 {
+	ov5640_write_reg(info->i2c_client, 0x3004, 0xDF);  // disable MCU clock
 	ov5640_write_reg(info->i2c_client, OV5640_REG_SRM_GROUP_ACCESS, reg_group);
 }
 
 static inline void ov5640_writegroup_exit(struct ov5640_info *info, u8 reg_group)
 {
+	ov5640_write_reg(info->i2c_client, 0x3004, 0xFF);  // enable MCU clock here in case group write failed
 	ov5640_write_reg(info->i2c_client, OV5640_REG_SRM_GROUP_ACCESS,
 			(reg_group | OV5640_SRM_GROUP_END_HOLD));
 }
@@ -393,7 +395,7 @@ static int ov5640_set_white_balance(struct ov5640_info *info, int white_balance)
 
 static int ov5640_set_color_effect(struct ov5640_info *info, int color_effect)
 {
-	int err;
+	int err = 0;
 
 	pr_info("%s: color_effect = %d\n", __func__, color_effect);
 
@@ -468,7 +470,7 @@ static int ov5640_set_color_effect(struct ov5640_info *info, int color_effect)
 
 static int ov5640_set_exposure(struct ov5640_info *info, int exposure)
 {
-	int err;
+	int err = 0;
 
 	pr_info("%s: exposure = %d\n", __func__, exposure);
 
