@@ -107,7 +107,7 @@ static int atoi(const char *a)
 	return s;
 }
 
-static int usb3_vbus_enabled = 0;
+int usb3_vbus_enabled = 0;
 static void host_vbus_enable(int enable)
 {
 	int gpio_status;
