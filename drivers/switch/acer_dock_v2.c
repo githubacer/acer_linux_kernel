@@ -27,7 +27,7 @@ static bool is_ir_wake = true;
 static bool is_ir_irq_enable = false;
 static bool is_det_irq_wake_enable = false;
 static struct platform_device *tegra_ehci3_platform_device = NULL;
-bool usb3_enabled = false;
+static bool usb3_enabled = false;
 static bool is_cursor_mode = false;
 static int cursor_speed = 16;  //pixels per press
 
