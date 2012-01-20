@@ -271,6 +271,11 @@ static int mmc_read_ext_csd(struct mmc_card *card)
 		}
 	}
 
+#if defined(CONFIG_ARCH_ACER_T30)
+	if (card->cid.manfid == SANDISK_X3_CID_MID) {
+		ext_csd[EXT_CSD_CARD_TYPE] = EXT_CSD_CARD_TYPE_26 | EXT_CSD_CARD_TYPE_52;
+	}
+#endif
 	switch (ext_csd[EXT_CSD_CARD_TYPE] & EXT_CSD_CARD_TYPE_MASK) {
 	case EXT_CSD_CARD_TYPE_DDR_52 | EXT_CSD_CARD_TYPE_52 |
 	     EXT_CSD_CARD_TYPE_26:
