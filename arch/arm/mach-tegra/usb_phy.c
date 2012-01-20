@@ -2489,7 +2489,11 @@ struct tegra_usb_phy *tegra_usb_phy_open(int instance, void __iomem *regs,
 			(IO_ADDRESS(TEGRA_PMC_BASE) + TEGRA_PMC_USB_AO));
 	}
 #endif
+#if defined(CONFIG_ARCH_ACER_T30)
+	if ((instance == 0) &&
+#else
 	if (((instance == 2) || (instance == 0)) &&
+#endif
 		(phy->mode == TEGRA_USB_PHY_MODE_HOST)) {
 			vbus_enable(phy);
 	}

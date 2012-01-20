@@ -1103,8 +1103,8 @@ static void cardhu_usb_init(void)
 		platform_device_register(&tegra_ehci2_device);
 	}
 
-	/* Move ehci3 registeration to dock driver */
 	tegra_ehci3_device.dev.platform_data = &tegra_ehci_pdata[2];
+	platform_device_register(&tegra_ehci3_device);
 }
 #else
 static void cardhu_usb_init(void) { }

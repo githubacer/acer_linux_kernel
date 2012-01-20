@@ -9,9 +9,7 @@
 #include <linux/interrupt.h>
 #include <linux/input.h>
 #include <linux/earlysuspend.h>
-#include <linux/platform_data/tegra_usb.h>
 #include <linux/delay.h>
-#include "../../../arch/arm/mach-tegra/devices.h"
 #include "../../../arch/arm/mach-tegra/gpio-names.h"
 
 #define DRIVER_NAME             "acer-dock"
@@ -26,8 +24,6 @@ struct input_dev *input_dock;
 static bool is_ir_wake = true;
 static bool is_ir_irq_enable = false;
 static bool is_det_irq_wake_enable = false;
-static struct platform_device *tegra_ehci3_platform_device = NULL;
-static bool usb3_enabled = false;
 static bool is_cursor_mode = false;
 static int cursor_speed = 16;  //pixels per press
 
@@ -139,55 +135,6 @@ static void host_vbus_enable(int enable)
 	} else {
 		printk(KERN_INFO "skip, dock is not attached\n");
 	}
-}
-
-static struct platform_device *
-tegra_usb3_host_register(struct platform_device *ehci_device,
-                           struct tegra_ehci_platform_data *pdata)
-{
-	struct platform_device *pdev;
-	void *platform_data;
-	int val;
-
-	pdev = platform_device_alloc(ehci_device->name, ehci_device->id);
-	if (!pdev)
-		return NULL;
-
-	val = platform_device_add_resources(pdev, ehci_device->resource,
-							ehci_device->num_resources);
-	if (val)
-		goto error;
-
-	pdev->dev.dma_mask =  ehci_device->dev.dma_mask;
-	pdev->dev.coherent_dma_mask = ehci_device->dev.coherent_dma_mask;
-
-	platform_data = kmalloc(sizeof(struct tegra_ehci_platform_data),
-		GFP_KERNEL);
-	if (!platform_data)
-		goto error;
-
-	memcpy(platform_data, pdata, sizeof(struct tegra_ehci_platform_data));
-	pdev->dev.platform_data = platform_data;
-
-	val = platform_device_add(pdev);
-	if (val)
-		goto error_add;
-
-	return pdev;
-
-error_add:
-	kfree(platform_data);
-error:
-	pr_err("%s: failed to add the host controller device\n", __func__);
-	platform_device_put(pdev);
-	return NULL;
-}
-
-static void tegra_usb3_host_unregister(struct platform_device *pdev)
-{
-	kfree(pdev->dev.platform_data);
-	pdev->dev.platform_data = NULL;
-	platform_device_unregister(pdev);
 }
 
 static ssize_t dock_show(struct kobject *kobj, struct kobj_attribute *attr, char * buf)
@@ -464,13 +411,8 @@ static void dock_switch_work(struct work_struct *work)
 	printk("dock_switch det_gpio=%d\n",state);
 
 	/* vbus enable if dock is detected , */
-	if (!state && !usb3_enabled) {
-		tegra_ehci3_platform_device = tegra_usb3_host_register(&tegra_ehci3_device, tegra_ehci3_device.dev.platform_data);
-		usb3_enabled = true;
-	} else if (state && usb3_enabled) {
-		tegra_usb3_host_unregister(tegra_ehci3_platform_device);
-		usb3_enabled = false;
-	}
+	host_vbus_enable(state^1);
+
 	switch_set_state(&pSwitch->sdev, !state);
 	msleep(50);
 	dock_hs_switch_work(&pSwitch->hs_work.work);
