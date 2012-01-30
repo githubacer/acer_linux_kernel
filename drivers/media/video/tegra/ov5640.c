@@ -533,10 +533,10 @@ static int ov5640_get_exposure_time(struct ov5640_info *info, struct ov5640_rati
 	ov5640_read_reg(info->i2c_client, 0x3502, &reg_3502);
 
 	// exposure_time = sec_per_line * exposure_lines
-	// sec_per_line = 1 sec / (30 frames * 984 VTS per frame)
+	// sec_per_line = 1 sec / (24 frames * 984 VTS per frame)
 	// exposure_lines = 0x3500 bit[3:0], 0x3501 bit[7:0], 0x3502 bit[7:4]
 	exposure_time->numerator = (u32)reg_3500<<12 | (u32)reg_3501<<4 | (u32)reg_3502>>4;
-	exposure_time->denominator = 29520;
+	exposure_time->denominator = 23616;
 	pr_info("%s: exposure_lines = %lu\n", __func__, exposure_time->numerator);
 
 	return 0;
