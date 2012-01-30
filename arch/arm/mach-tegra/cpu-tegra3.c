@@ -79,10 +79,6 @@ static struct {
 	unsigned int up_down_count;
 } hp_stats[CONFIG_NR_CPUS + 1];	/* Append LP CPU entry at the end */
 
-#if defined(CONFIG_ARCH_ACER_T30)
-extern int is_cpu_in_tegra_idle(unsigned int cpu);
-#endif
-
 static void hp_init_stats(void)
 {
 	int i;
@@ -282,19 +278,10 @@ static void tegra_auto_hotplug_work_func(struct work_struct *work)
 	mutex_unlock(tegra3_cpu_lock);
 
 	if (cpu < nr_cpu_ids) {
-#if defined(CONFIG_ARCH_ACER_T30)
-	if (is_cpu_in_tegra_idle(cpu) == 0) {
 		if (up)
 			cpu_up(cpu);
 		else
 			cpu_down(cpu);
-	}
-#else
-		if (up)
-			cpu_up(cpu);
-		else
-			cpu_down(cpu);
-#endif
 	}
 }
 
