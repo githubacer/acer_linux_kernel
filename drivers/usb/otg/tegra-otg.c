@@ -350,6 +350,10 @@ static int tegra_otg_set_peripheral(struct otg_transceiver *otg,
 		schedule_work (&tegra->work);
 	}
 
+#if defined(CONFIG_ARCH_ACER_T30)
+	tegra->intr_reg_data = readl(tegra->regs + USB_PHY_WAKEUP);
+#endif
+
 	return 0;
 }
 
