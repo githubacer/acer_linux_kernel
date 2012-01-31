@@ -25,6 +25,7 @@
 #include <linux/timer.h>
 #include <linux/workqueue.h>
 #include <linux/kthread.h>
+#include <linux/suspend.h>
 
 #include <asm/cputime.h>
 
@@ -44,6 +45,9 @@ struct cpufreq_interactive_cpuinfo {
 	struct cpufreq_frequency_table *freq_table;
 	unsigned int target_freq;
 	int governor_enabled;
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	unsigned int in_suspend;
+#endif
 };
 
 static DEFINE_PER_CPU(struct cpufreq_interactive_cpuinfo, cpuinfo);
@@ -179,6 +183,34 @@ struct cpufreq_governor cpufreq_gov_interactive = {
 	.owner = THIS_MODULE,
 };
 
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+static int cpufreq_pm_notify(struct notifier_block *nb, unsigned long event,
+	void *dummy)
+{
+	unsigned int cpu;
+	struct cpufreq_interactive_cpuinfo *pcpu;
+
+	if (event == PM_SUSPEND_PREPARE) {
+		for_each_possible_cpu(cpu) {
+			pcpu = &per_cpu(cpuinfo, cpu);
+			del_timer(&pcpu->cpu_timer);
+			pcpu->in_suspend = 1;
+		}
+	} else if (event == PM_POST_SUSPEND) {
+		for_each_possible_cpu(cpu) {
+			pcpu = &per_cpu(cpuinfo, cpu);
+			mod_timer(&pcpu->cpu_timer, jiffies + 2);
+			pcpu->in_suspend = 0;
+		}
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block cpufreq_cpu_pm_notifier = {
+	.notifier_call = cpufreq_pm_notify,
+};
+#endif
 static unsigned int cpufreq_interactive_get_target(
 	int cpu_load, int load_since_change, struct cpufreq_policy *policy)
 {
@@ -369,7 +401,14 @@ rearm:
 
 		pcpu->time_in_idle = get_cpu_idle_time_us(
 			data, &pcpu->idle_exit_time);
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+		if (pcpu->in_suspend == 1 || !cpu_online(pcpu->policy->cpu))
+			del_timer(&pcpu->cpu_timer);
+		else
+			mod_timer(&pcpu->cpu_timer, jiffies + 2);
+#else
 		mod_timer(&pcpu->cpu_timer, jiffies + 2);
+#endif
 		dbgpr("timer %d: set timer for %lu exit=%llu\n", (int) data, pcpu->cpu_timer.expires, pcpu->idle_exit_time);
 	}
 
@@ -382,6 +421,13 @@ static void cpufreq_interactive_idle(void)
 	struct cpufreq_interactive_cpuinfo *pcpu =
 		&per_cpu(cpuinfo, smp_processor_id());
 	int pending;
+
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	if (!cpu_online(smp_processor_id())) {
+		local_irq_enable();
+		return;
+	}
+#endif
 
 	if (!pcpu->governor_enabled) {
 		pm_idle_old();
@@ -406,7 +452,14 @@ static void cpufreq_interactive_idle(void)
 			pcpu->time_in_idle = get_cpu_idle_time_us(
 				smp_processor_id(), &pcpu->idle_exit_time);
 			pcpu->timer_idlecancel = 0;
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+			if (pcpu->in_suspend == 1 || !cpu_online(smp_processor_id()))
+				del_timer(&pcpu->cpu_timer);
+			else
+				mod_timer(&pcpu->cpu_timer, jiffies + 2);
+#else
 			mod_timer(&pcpu->cpu_timer, jiffies + 2);
+#endif
 			dbgpr("idle: enter at %d, set timer for %lu exit=%llu\n",
 			      pcpu->target_freq, pcpu->cpu_timer.expires,
 			      pcpu->idle_exit_time);
@@ -454,7 +507,14 @@ static void cpufreq_interactive_idle(void)
 			get_cpu_idle_time_us(smp_processor_id(),
 					     &pcpu->idle_exit_time);
 		pcpu->timer_idlecancel = 0;
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+		if (pcpu->in_suspend == 1 || !cpu_online(smp_processor_id()))
+			del_timer(&pcpu->cpu_timer);
+		else
+			mod_timer(&pcpu->cpu_timer, jiffies + 2);
+#else
 		mod_timer(&pcpu->cpu_timer, jiffies + 2);
+#endif
 		dbgpr("idle: exit, set timer for %lu exit=%llu\n", pcpu->cpu_timer.expires, pcpu->idle_exit_time);
 #if DEBUG
 	} else if (timer_pending(&pcpu->cpu_timer) == 0 &&
@@ -796,6 +856,10 @@ static int __init cpufreq_interactive_init(void)
 	spin_lock_init(&dbgpr_lock);
 	dbg_proc = create_proc_entry("igov", S_IWUSR | S_IRUGO, NULL);
 	dbg_proc->read_proc = dbg_proc_read;
+#endif
+
+#if defined(CONFIG_ARCH_ACER_T20) || defined(CONFIG_ARCH_ACER_T30)
+	register_pm_notifier(&cpufreq_cpu_pm_notifier);
 #endif
 
 	return cpufreq_register_governor(&cpufreq_gov_interactive);
