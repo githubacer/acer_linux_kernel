@@ -44,7 +44,7 @@ extern int acer_board_id;
 extern int acer_board_type;
 #endif
 
-#define DRIVER_VERSION			"1.4.9"
+#define DRIVER_VERSION			"1.5.0"
 
 #ifdef CONFIG_BATTERY_BQ27541
 
@@ -1054,11 +1054,11 @@ int bq27541_low_temp_check(void)
 
 	if((rsoc > 40) && (temp < 2744) && (temp > 2647))
 		return RSOC_NOT_QUALIFY;
-	else if((rsoc < 40) && (temp < 2744) && (temp > 2647))
+	else if((rsoc <= 40) && (temp <= 2744) && (temp > 2647))
 		return TEMP_UNDER_ZERO;
 	else if((rsoc > 60) && (temp < 2647))
 		return RSOC_NOT_QUALIFY;
-	else if((rsoc < 60) && (temp < 2647))
+	else if((rsoc <= 60) && (temp <= 2647))
 		return TEMP_UNDER_NAT_TEN;
 	else
 		return REPORT_NORMAL_VAL;
@@ -1203,8 +1203,6 @@ static int bq27541_battery_rsoc(struct bq27541_device_info *di)
 	LTcheck = bq27541_low_temp_check();
 	if((LTcheck == TEMP_UNDER_ZERO) || (LTcheck == TEMP_UNDER_NAT_TEN))
 		return 0;
-	else if(LTcheck == RSOC_NOT_QUALIFY)
-		return NULL;
 	else
 	{
 		/* Capacity mapping for 5% preserved engrgy */
@@ -1246,28 +1244,23 @@ static int bq27541_battery_status(struct bq27541_device_info *di)
 		return 0;
 	}
 
-	if(bq27541_low_temp_check() == RSOC_NOT_QUALIFY)
-		status = POWER_SUPPLY_STATUS_UNKNOWN;
-	else
+	if(Capacity < 100)
 	{
-		if(Capacity < 100)
-		{
-			if(gpio_get_value(gpio)){
-				gpio_direction_output(CHARGING_FULL, 1);
-				status = POWER_SUPPLY_STATUS_CHARGING;
-			}
-			else
-				status = POWER_SUPPLY_STATUS_DISCHARGING;
+		if(gpio_get_value(gpio)){
+			gpio_direction_output(CHARGING_FULL, 1);
+			status = POWER_SUPPLY_STATUS_CHARGING;
 		}
 		else
-		{
-			if(gpio_get_value(gpio)){
-				gpio_direction_output(CHARGING_FULL, 1);
-				status = POWER_SUPPLY_STATUS_FULL;
-			}
-			else
-				status = POWER_SUPPLY_STATUS_NOT_CHARGING;
+			status = POWER_SUPPLY_STATUS_DISCHARGING;
+	}
+	else
+	{
+		if(gpio_get_value(gpio)){
+			gpio_direction_output(CHARGING_FULL, 1);
+			status = POWER_SUPPLY_STATUS_FULL;
 		}
+		else
+			status = POWER_SUPPLY_STATUS_NOT_CHARGING;
 	}
 	return status;
 
@@ -1336,7 +1329,7 @@ static int bq27541_battery_get_property(struct power_supply *psy,
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = bq27541_battery_temperature(di);
-		printk("AC_IN = %d, Capacity = %d, ROSC = %d, Temperature = %d, LT_Check = %d, Charging_count = %d\n",
+		printk("AC_IN = %d, Capacity = %d, RSOC = %d, Temperature = %d, LT_Check = %d, Charging_count = %d\n",
 			gpio_get_value(gpio), old_rsoc, bq27541_battery_check(1), val->intval, bq27541_low_temp_check(),
 			counter);
 		break;
