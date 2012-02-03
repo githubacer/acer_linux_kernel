@@ -672,7 +672,11 @@ static struct tegra_utmip_config utmip_default[] = {
 		.elastic_limit = 16,
 		.term_range_adj = 6,
 		.xcvr_setup = 9,
+#ifdef CONFIG_ARCH_ACER_T30
+		.xcvr_setup_offset = 4,
+#else
 		.xcvr_setup_offset = 0,
+#endif
 		.xcvr_use_fuses = 1,
 		.xcvr_lsfslew = 2,
 		.xcvr_lsrslew = 2,
@@ -1126,11 +1130,17 @@ static int utmi_phy_power_on(struct tegra_usb_phy *phy, bool is_dpd)
 		val |= UTMIP_XCVR_SETUP_MSB(7);
 	}
 #endif
+#ifdef CONFIG_ARCH_ACER_T30
+	val = val & 0xffffffef;
+#endif
 	writel(val, base + UTMIP_XCVR_CFG0);
 
 	val = readl(base + UTMIP_XCVR_CFG1);
 	val &= ~(UTMIP_FORCE_PDDISC_POWERDOWN | UTMIP_FORCE_PDCHRP_POWERDOWN |
 		 UTMIP_FORCE_PDDR_POWERDOWN | UTMIP_XCVR_TERM_RANGE_ADJ(~0));
+#ifdef CONFIG_ARCH_ACER_T30
+	config->term_range_adj =1;
+#endif
 	val |= UTMIP_XCVR_TERM_RANGE_ADJ(config->term_range_adj);
 	writel(val, base + UTMIP_XCVR_CFG1);
 
