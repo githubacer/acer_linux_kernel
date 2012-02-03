@@ -751,8 +751,7 @@ static int __devinit nct1008_configure_irq(struct nct1008_data *data)
 		return 0;
 	else
 		return request_irq(data->client->irq, nct1008_irq,
-			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-			DRIVER_NAME, data);
+			IRQF_TRIGGER_FALLING, DRIVER_NAME, data);
 }
 
 static unsigned int get_ext_mode_delay_ms(unsigned int conv_rate)
