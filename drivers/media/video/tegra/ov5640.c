@@ -615,7 +615,7 @@ static long ov5640_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static int ov5640_initialize(struct ov5640_info *info)
 {
-	int err;
+	int err, retry = 0;
 	u8 reg_300E;
 	u8 high_byte = 0, low_byte = 0;
 	u16 chip_id = 0;
@@ -670,14 +670,20 @@ static int ov5640_initialize(struct ov5640_info *info)
 
 	// write AF firmware code
 	ov5640_write_table(info, af_firmware_code);
-	ov5640_read_reg(info->i2c_client, OV5640_AF_FW_STATUS, &fw_status);
-	if (fw_status == OV5640_FW_S_IDLE)
-		info->af_initialized = 1;
-	else {
-		pr_err("%s: failed to initialize AF firmware, fw_status = %02X\n",
-			__func__, fw_status);
-		info->af_initialized = 0;
-	}
+	do {
+		ov5640_read_reg(info->i2c_client, OV5640_AF_FW_STATUS, &fw_status);
+		if (fw_status == OV5640_FW_S_IDLE) {
+			pr_err("%s: AF firmware is initialized\n", __func__);
+			info->af_initialized = 1;
+			break;
+
+		} else {
+			pr_err("%s: fw_status = 0x%02X, retry\n", __func__, fw_status);
+			info->af_initialized = 0;
+		}
+		retry++;
+		msleep(5);
+	} while (retry <= OV5640_MAX_RETRIES);
 
 	// 0x300E[4:3] stands for MIPI TX/RX PHY power down
 	// while in MIPI mode, set register 0x300E[4:3] to 2'b11
