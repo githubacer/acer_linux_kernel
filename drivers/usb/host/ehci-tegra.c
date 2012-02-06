@@ -96,6 +96,10 @@ static void tegra_ehci_power_up(struct usb_hcd *hcd, bool is_dpd)
 	}
 	tegra->host_resumed = 1;
 #else
+#ifdef CONFIG_ARCH_ACER_T30
+	clk_enable(tegra->emc_clk);
+	clk_enable(tegra->sclk_clk);
+#endif
 #ifndef CONFIG_USB_HOTPLUG
 	clk_enable(tegra->clk);
 #endif
@@ -127,6 +131,10 @@ static void tegra_ehci_power_down(struct usb_hcd *hcd, bool is_dpd)
 #else
 	tegra->host_resumed = 0;
 	tegra_usb_phy_power_off(tegra->phy, is_dpd);
+#ifdef CONFIG_ARCH_ACER_T30
+	clk_disable(tegra->emc_clk);
+	clk_disable(tegra->sclk_clk);
+#endif
 #ifndef CONFIG_USB_HOTPLUG
 	clk_disable(tegra->clk);
 #endif

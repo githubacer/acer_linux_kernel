@@ -434,7 +434,7 @@ static void init_worker(struct work_struct *work)
 			goto still_disable_irq;
 		}
 	} else {
-		if (reenter_count == reenter_times) {
+		if (reenter_count >= reenter_times) {
 			/* Directly enter touch irq */
 			mxt_debug(DEBUG_DETAIL, "mXT1386E: Enable touch irq directly\n");
 			if (ATMEL_Init_OBJ(mxt) < 0) {
