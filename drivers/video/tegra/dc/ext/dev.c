@@ -289,6 +289,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 
 	/* unpin and deref previous front buffers */
 	for (i = 0; i < nr_unpin; i++) {
+#ifdef USE_NVMAP_MAGIC
+		if (*(u32*)unpin_handles[i] != NVMAP_MAGIC)
+			continue;
+#endif
 		nvmap_unpin(ext->nvmap, unpin_handles[i]);
 		nvmap_free(ext->nvmap, unpin_handles[i]);
 	}
