@@ -37,6 +37,7 @@
 #include <linux/stk_lk_defs.h>
 #include <linux/stk_i2c_als_220xgeneric.h>
 #include "../../arch/arm/mach-tegra/board-acer-t30.h"
+#include <linux/i2c/at24.h>
 extern int acer_board_id;
 
 #define STK_DRIVER_VER	"1.6.2"
@@ -65,6 +66,7 @@ static struct mutex stkals_io_lock;
 struct stkals_data* pStkAlsData = NULL;
 static struct workqueue_struct *stk_oss_work_queue = NULL;
 static int32_t als_transmittance = DEFAULT_ALS_TRANSMITTANCE;
+char buff[10];
 
 inline void report_event(struct input_dev* dev,int32_t report_value)
 {
@@ -81,10 +83,23 @@ inline int32_t get_reading(void)
 inline int32_t alscode2lux(int32_t alscode)
 {
 #ifdef CONFIG_MACH_PICASSO_M
-	if (acer_board_id == BOARD_PVT)
-		alscode<<=10;
-	else
+	if (acer_board_id == BOARD_PVT) {
+		if ((buff[1]-48) == 1) {
+			if ((buff[6]-48) >= 1) {
+				alscode<<=10;
+			}
+			else if ((buff[7]-48) <= 5) {
+				alscode<<=9;
+			}
+			else {
+				alscode<<=10;
+			}
+		} else {
+			alscode<<=10;
+		}
+	} else {
 		alscode<<=9;
+	}
 #else
 	alscode<<=10;
 #endif
@@ -154,10 +169,24 @@ static int32_t init_all_setting()
 
 	enable_als(0);
 #ifdef CONFIG_MACH_PICASSO_M
-	if (acer_board_id == BOARD_PVT)
-		set_gain(1);
-	else
+	if (acer_board_id == BOARD_PVT) {
+		if ((buff[1]-48) == 1) {
+			if ((buff[6]-48) >= 1) {
+				set_gain(1);
+			}
+			else if ((buff[7]-48) <= 5) {
+				set_gain(2);
+			}
+			else {
+				set_gain(1);
+			}
+		} else {
+			set_gain(1);
+		}
+	}
+	else {
 		set_gain(2);
+	}
 #else
 	set_gain(1);
 #endif
@@ -368,6 +397,7 @@ static int stk_als_probe(struct i2c_client *client,
 {
 	int32_t err= -EINVAL;
 	struct stkals_data*  als_data;
+	int result = 0;
 
 	if (i2c_smbus_read_byte_data(client,STK_ALS_CMD_REG)<0) {
 		ERR("STKALS : no device found\n");
@@ -424,6 +454,11 @@ static int stk_als_probe(struct i2c_client *client,
 		pStkAlsData = NULL;
 		return err;
 	}
+
+	memset(buff,'\0',sizeof(buff));
+	result = Get_Light_Sensor(buff);
+	if (result != 0)
+		printk("LightBuffer = %s \n", buff);
 
 	init_all_setting();
 
