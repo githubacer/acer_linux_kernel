@@ -16,10 +16,10 @@ extern int acer_board_type;
 #define MXT_MAX_TOUCH_SIZE                    255
 
 #define Firmware_Number                       4099
-#define ConfigChecksum                        3979405 /* 3CB88D */
+#define ConfigChecksum                        15475657 /* EC23C9 */
 #define Chip_Vendor                           "AT"
 #define Reseved_Chip_Vendor                   "0"
-#define ConfigVersion                         1179927 /* 120117 */
+#define ConfigVersion                         1180176  /* 120210 */
 #define Reseved_Firmware_Info                 0
 #define Reseved_ConfigVersion                 0
 #define Reservedinfo                          0
@@ -41,7 +41,7 @@ enum {
 u8 T07OBJ[3]  = {  50, 255,  10};
 
 /* GEN_ACQUISITIONCONFIG_T8 INSTANCE 0 */
-u8 T08OBJ[10] = {  30,   0,  10,  10,   0,   0,   5,  17,  15,   0};
+u8 T08OBJ[10] = {  28,   0,  10,  10,   0,   0,   5,  17,  15,   0};
 
 /* TOUCH_MULTITOUCHSCREEN_T9 INSTATNCE 0 */
 u8 T09OBJ[35] = { 131,   0,   0,  30,  42,   0,  16,  80,   1,   5,
@@ -81,7 +81,7 @@ u8 T42OBJ[10] = {  33,  15,  55,  55,   0,   3,   0,   0,  10,   3};
 u8 T43OBJ[7]  = {   0,   0,   0,   0,   0,   0,   0};
 
 /* SPT_CTECONFIG_T46 INSTANCE 0 */
-u8 T46OBJ[9]  = {  64,   0,   8,  16,   0,   0,   1,   0,   0};
+u8 T46OBJ[9]  = {  64,   0,  16,  32,   0,   0,   1,   0,   0};
 
 /* SPT_CTECONFIG_T46 INSTANCE 0 */
 u8 T46OBJ_0[9]= {   4,   0,   8,  16,   0,   0,   1,   0,   0};
@@ -92,7 +92,7 @@ u8 T47OBJ[10] = {   0,   0,   0,   0,   0,   0,   0,   0,   0,   0};
 /* PROCG_NOISESUPPRESSION_T48 INSTATNCE 0 */
 u8 T48OBJ[54]  = {   1, 128,   2,   0,   0,   0,   0,   0,   0,   0,
                     16,  60,   0,  10,   0,   0,   0,  32,   0,   0,
-                    10,   0,  20,   0,   0,   0,   0,  16,   0,   0,
+                    10,   0,  20,   0,   0,   0,   0,  63,   0,   0,
                      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
                      0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
                      0,   0,   0,   0};
