@@ -143,24 +143,30 @@ static int hp_state_set(const char *arg, const struct kernel_param *kp)
 	mutex_lock(tegra3_cpu_lock);
 
 	old_state = hp_state;
-	ret = param_set_bool(arg, kp);	/* set idle or disabled only */
+	ret = param_set_int(arg, kp);
 
 	if (ret == 0) {
-		if ((hp_state == TEGRA_HP_DISABLED) &&
-		    (old_state != TEGRA_HP_DISABLED))
-			pr_info("Tegra auto-hotplug disabled\n");
-		else if (hp_state != TEGRA_HP_DISABLED) {
+		switch (hp_state) {
+		case TEGRA_HP_DISABLED:
+			if (old_state != TEGRA_HP_DISABLED)
+				pr_info("Tegra auto-hotplug disabled\n");
+			break;
+		case TEGRA_HP_IDLE:
+		case TEGRA_HP_DOWN:
+		case TEGRA_HP_UP:
 			if (old_state == TEGRA_HP_DISABLED) {
-				pr_info("Tegra auto-hotplug enabled\n");
 				hp_init_stats();
+				queue_delayed_work(
+					hotplug_wq, &hotplug_work, down_delay);
+				pr_info("Tegra auto-hotplug enabled\n");
 			}
-			/* catch-up with governor target speed */
-			tegra_cpu_set_speed_cap(NULL);
+			break;
+		default:
+			pr_warn("%s: unable to set tegra hotplug state %d\n",
+				__func__, hp_state);
+			hp_state = old_state;
 		}
-	} else
-		pr_warn("%s: unable to set tegra hotplug state %s\n",
-				__func__, arg);
-
+	}
 	mutex_unlock(tegra3_cpu_lock);
 	return ret;
 }
@@ -287,7 +293,7 @@ static void tegra_auto_hotplug_work_func(struct work_struct *work)
 
 void tegra_auto_hotplug_governor(unsigned int cpu_freq, bool suspend)
 {
-	unsigned long up_delay, top_freq, bottom_freq;
+	unsigned long up_delay;
 
 	if (!is_g_cluster_present())
 		return;
@@ -297,45 +303,37 @@ void tegra_auto_hotplug_governor(unsigned int cpu_freq, bool suspend)
 		return;
 	}
 
-	if (is_lp_cluster()) {
-		up_delay = up2g0_delay;
-		top_freq = idle_top_freq;
-		bottom_freq = 0;
-	} else {
-		up_delay = up2gn_delay;
-		top_freq = idle_bottom_freq;
-		bottom_freq = idle_bottom_freq;
-	}
+	up_delay = is_lp_cluster() ? up2g0_delay : up2gn_delay;
 
 	switch (hp_state) {
 	case TEGRA_HP_DISABLED:
 		break;
 	case TEGRA_HP_IDLE:
-		if (cpu_freq > top_freq) {
+		if (cpu_freq > idle_top_freq) {
 			hp_state = TEGRA_HP_UP;
 			queue_delayed_work(
 				hotplug_wq, &hotplug_work, up_delay);
-		} else if (cpu_freq <= bottom_freq) {
+		} else if (cpu_freq <= idle_bottom_freq) {
 			hp_state = TEGRA_HP_DOWN;
 			queue_delayed_work(
 				hotplug_wq, &hotplug_work, down_delay);
 		}
 		break;
 	case TEGRA_HP_DOWN:
-		if (cpu_freq > top_freq) {
+		if (cpu_freq > idle_top_freq) {
 			hp_state = TEGRA_HP_UP;
 			queue_delayed_work(
 				hotplug_wq, &hotplug_work, up_delay);
-		} else if (cpu_freq > bottom_freq) {
+		} else if (cpu_freq > idle_bottom_freq) {
 			hp_state = TEGRA_HP_IDLE;
 		}
 		break;
 	case TEGRA_HP_UP:
-		if (cpu_freq <= bottom_freq) {
+		if (cpu_freq <= idle_bottom_freq) {
 			hp_state = TEGRA_HP_DOWN;
 			queue_delayed_work(
 				hotplug_wq, &hotplug_work, down_delay);
-		} else if (cpu_freq <= top_freq) {
+		} else if (cpu_freq <= idle_top_freq) {
 			hp_state = TEGRA_HP_IDLE;
 		}
 		break;
