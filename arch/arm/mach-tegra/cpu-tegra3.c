@@ -41,7 +41,11 @@
 #define INITIAL_STATE		TEGRA_HP_DISABLED
 #define UP2G0_DELAY_MS		200
 #define UP2Gn_DELAY_MS		1000
+#if defined(CONFIG_MACH_PICASSO2) || defined(CONFIG_MACH_PICASSO_M)
+#define DOWN_DELAY_MS		50000
+#else
 #define DOWN_DELAY_MS		2000
+#endif
 
 static struct mutex *tegra3_cpu_lock;
 
